@@ -1,0 +1,11 @@
+# files
+.env
+coverage.json
+yarn-error.log
+*.hex
+
+# directories
+build/
+node_modules/
+.idea/
+coverage/
