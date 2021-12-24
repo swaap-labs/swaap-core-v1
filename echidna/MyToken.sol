@@ -1,7 +1,7 @@
-import "../crytic-export/flattening/BPool.sol";
+import "../crytic-export/flattening/Pool.sol";
 import "./CryticInterface.sol";
 
-contract MyToken is BToken, CryticInterface{
+contract MyToken is PoolToken, CryticInterface {
 
     constructor(uint balance, address allowed) public {
         // balance is the new totalSupply

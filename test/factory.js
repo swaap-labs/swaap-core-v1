@@ -1,9 +1,10 @@
-const BPool = artifacts.require('BPool');
-const BFactory = artifacts.require('BFactory');
+const Pool = artifacts.require('Pool');
+const Factory = artifacts.require('Factory');
 const TToken = artifacts.require('TToken');
+const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
 
-contract('BFactory', async (accounts) => {
+contract('Factory', async (accounts) => {
     const admin = accounts[0];
     const nonAdmin = accounts[1];
     const user2 = accounts[2];
@@ -21,9 +22,11 @@ contract('BFactory', async (accounts) => {
         let DAI;
         let weth;
         let dai;
+        let wethOracle;
+        let daiOracle;
 
         before(async () => {
-            factory = await BFactory.deployed();
+            factory = await Factory.deployed();
             weth = await TToken.new('Wrapped Ether', 'WETH', 18);
             dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
 
@@ -38,9 +41,9 @@ contract('BFactory', async (accounts) => {
             await weth.mint(nonAdmin, toWei('1'), { from: admin });
             await dai.mint(nonAdmin, toWei('50'), { from: admin });
 
-            POOL = await factory.newBPool.call(); // this works fine in clean room
-            await factory.newBPool();
-            pool = await BPool.at(POOL);
+            POOL = await factory.newPool.call(); // this works fine in clean room
+            await factory.newPool();
+            pool = await Pool.at(POOL);
 
             await weth.approve(POOL, MAX);
             await dai.approve(POOL, MAX);
@@ -49,28 +52,25 @@ contract('BFactory', async (accounts) => {
             await dai.approve(POOL, MAX, { from: nonAdmin });
         });
 
-        it('BFactory is bronze release', async () => {
-            const color = await factory.getColor();
-            assert.equal(hexToUtf8(color), 'BRONZE');
+        it('isPool on non pool returns false', async () => {
+            const isPool = await factory.isPool(admin);
+            assert.isFalse(isPool);
         });
 
-        it('isBPool on non pool returns false', async () => {
-            const isBPool = await factory.isBPool(admin);
-            assert.isFalse(isBPool);
-        });
-
-        it('isBPool on pool returns true', async () => {
-            const isBPool = await factory.isBPool(POOL);
-            assert.isTrue(isBPool);
+        it('isPool on pool returns true', async () => {
+            const isPool = await factory.isPool(POOL);
+            assert.isTrue(isPool);
         });
 
         it('fails nonAdmin calls collect', async () => {
-            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), 'ERR_NOT_BLABS');
+            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), 'ERR_NOT_SWAAPLABS');
         });
 
         it('admin collects fees', async () => {
-            await pool.bind(WETH, toWei('5'), toWei('5'));
-            await pool.bind(DAI, toWei('200'), toWei('5'));
+			wethOracle = await TConstantOracle.new(40);
+			daiOracle = await TConstantOracle.new(1);
+            await pool.bindMMM(WETH, toWei('5'), toWei('5'), wethOracle.address);
+            await pool.bindMMM(DAI, toWei('200'), toWei('5'), daiOracle.address);
 
             await pool.finalize();
 
@@ -84,13 +84,13 @@ contract('BFactory', async (accounts) => {
             assert.equal(fromWei(adminBalance), '100');
         });
 
-        it('nonadmin cant set blabs address', async () => {
-            await truffleAssert.reverts(factory.setBLabs(nonAdmin, { from: nonAdmin }), 'ERR_NOT_BLABS');
+        it('nonadmin cant set swaaplabs address', async () => {
+            await truffleAssert.reverts(factory.setSwaapLabs(nonAdmin, { from: nonAdmin }), 'ERR_NOT_SWAAPLABS');
         });
 
-        it('admin changes blabs address', async () => {
-            await factory.setBLabs(user2);
-            const blab = await factory.getBLabs();
+        it('admin changes swaaplabs address', async () => {
+            await factory.setSwaapLabs(user2);
+            const blab = await factory.getSwaapLabs();
             assert.equal(blab, user2);
         });
     });

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -11,52 +12,51 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.5.12;
+pragma solidity =0.8.0;
 
-import "../BMath.sol";
-import "../BNum.sol";
+import "../Num.sol";
 
 // Contract to wrap internal functions for testing
 
-contract TMath is BMath {
+contract TMath {
 
     function calc_btoi(uint a) external pure returns (uint) {
-        return btoi(a);
+        return Num.btoi(a);
     }
 
     function calc_bfloor(uint a) external pure returns (uint) {
-        return bfloor(a);
+        return Num.bfloor(a);
     }
 
     function calc_badd(uint a, uint b) external pure returns (uint) {
-        return badd(a, b);
+        return Num.badd(a, b);
     }
 
     function calc_bsub(uint a, uint b) external pure returns (uint) {
-        return bsub(a, b);
+        return Num.bsub(a, b);
     }
 
     function calc_bsubSign(uint a, uint b) external pure returns (uint, bool) {
-        return bsubSign(a, b);
+        return Num.bsubSign(a, b);
     }
 
     function calc_bmul(uint a, uint b) external pure returns (uint) {
-        return bmul(a, b);
+        return Num.bmul(a, b);
     }
 
     function calc_bdiv(uint a, uint b) external pure returns (uint) {
-        return bdiv(a, b);
+        return Num.bdiv(a, b);
     }
 
     function calc_bpowi(uint a, uint n) external pure returns (uint) {
-        return bpowi(a, n);
+        return Num.bpowi(a, n);
     }
 
     function calc_bpow(uint base, uint exp) external pure returns (uint) {
-        return bpow(base, exp);
+        return Num.bpow(base, exp);
     }
 
     function calc_bpowApprox(uint base, uint exp, uint precision) external pure returns (uint) {
-        return bpowApprox(base, exp, precision);
+        return Num.bpowApprox(base, exp, precision);
     }
 }

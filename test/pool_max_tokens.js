@@ -1,10 +1,11 @@
 const truffleAssert = require('truffle-assertions');
 
-const BPool = artifacts.require('BPool');
-const BFactory = artifacts.require('BFactory');
+const Pool = artifacts.require('Pool');
+const Factory = artifacts.require('Factory');
 const TToken = artifacts.require('TToken');
+const TConstantOracle = artifacts.require('TConstantOracle');
 
-contract('BPool', async (accounts) => {
+contract('Pool', async (accounts) => {
     const admin = accounts[0];
 
     const { toWei } = web3.utils;
@@ -16,18 +17,22 @@ contract('BPool', async (accounts) => {
         ZZZ; // addresses
     let aaa; let bbb; let ccc; let ddd; let eee; let fff; let ggg; let hhh; let
         zzz; // TTokens
-    let factory; // BPool factory
+    let aaaOracle; let bbbOracle; let cccOracle; let dddOracle; let eeeOracle; let fffOracle; let gggOracle; let hhhOracle; let
+        zzzOracle; // TTokens
+    let aaaOracleAddress; let bbbOracleAddress; let cccOracleAddress; let dddOracleAddress; let eeeOracleAddress;
+    	let fffOracleAddress; let gggOracleAddress; let hhhOracleAddress; let zzzOracleAddress; // TTokens
+    let factory; // Pool factory
     let FACTORY; // factory address
     let pool; // first pool w/ defaults
     let POOL; //   pool address
 
     before(async () => {
-        factory = await BFactory.deployed();
+        factory = await Factory.deployed();
         FACTORY = factory.address;
 
-        POOL = await factory.newBPool.call();
-        await factory.newBPool();
-        pool = await BPool.at(POOL);
+        POOL = await factory.newPool.call();
+        await factory.newPool();
+        pool = await Pool.at(POOL);
 
         aaa = await TToken.new('AAA', 'AAA', 18);
         bbb = await TToken.new('BBB', 'BBB', 18);
@@ -38,6 +43,17 @@ contract('BPool', async (accounts) => {
         ggg = await TToken.new('GGG', 'GGG', 18);
         hhh = await TToken.new('HHH', 'HHH', 18);
         zzz = await TToken.new('ZZZ', 'ZZZ', 18);
+
+		aaaOracle = await TConstantOracle.new(42);
+		aaaOracleAddress = aaaOracle.address
+		bbbOracleAddress = aaaOracleAddress
+		cccOracleAddress = aaaOracleAddress
+		dddOracleAddress = aaaOracleAddress
+		eeeOracleAddress = aaaOracleAddress
+		fffOracleAddress = aaaOracleAddress
+		gggOracleAddress = aaaOracleAddress
+		hhhOracleAddress = aaaOracleAddress
+		zzzOracleAddress = aaaOracleAddress
 
         AAA = aaa.address;
         BBB = bbb.address;
@@ -75,25 +91,25 @@ contract('BPool', async (accounts) => {
         });
 
         it('Admin binds tokens', async () => {
-            await pool.bind(AAA, toWei('50'), toWei('1'));
-            await pool.bind(BBB, toWei('50'), toWei('3'));
-            await pool.bind(CCC, toWei('50'), toWei('2.5'));
-            await pool.bind(DDD, toWei('50'), toWei('7'));
-            await pool.bind(EEE, toWei('50'), toWei('10'));
-            await pool.bind(FFF, toWei('50'), toWei('1.99'));
-            await pool.bind(GGG, toWei('40'), toWei('6'));
-            await pool.bind(HHH, toWei('70'), toWei('2.3'));
+            await pool.bindMMM(AAA, toWei('50'), toWei('1'), aaaOracleAddress);
+            await pool.bindMMM(BBB, toWei('50'), toWei('3'), bbbOracleAddress);
+            await pool.bindMMM(CCC, toWei('50'), toWei('2.5'), cccOracleAddress);
+            await pool.bindMMM(DDD, toWei('50'), toWei('7'), dddOracleAddress);
+            await pool.bindMMM(EEE, toWei('50'), toWei('10'), eeeOracleAddress);
+            await pool.bindMMM(FFF, toWei('50'), toWei('1.99'), fffOracleAddress);
+            await pool.bindMMM(GGG, toWei('40'), toWei('6'), gggOracleAddress);
+            await pool.bindMMM(HHH, toWei('70'), toWei('2.3'), hhhOracleAddress);
 
             const totalDernomWeight = await pool.getTotalDenormalizedWeight();
             assert.equal(33.79, fromWei(totalDernomWeight));
         });
 
         it('Fails binding more than 8 tokens', async () => {
-            await truffleAssert.reverts(pool.bind(ZZZ, toWei('50'), toWei('2')), 'ERR_MAX_TOKENS');
+            await truffleAssert.reverts(pool.bindMMM(ZZZ, toWei('50'), toWei('2'), zzzOracleAddress), 'ERR_MAX_TOKENS');
         });
 
         it('Rebind token at a smaller balance', async () => {
-            await pool.rebind(HHH, toWei('50'), toWei('2.1'));
+            await pool.rebindMMM(HHH, toWei('50'), toWei('2.1'), hhhOracleAddress);
             const balance = await pool.getBalance(HHH);
             assert.equal(fromWei(balance), 50);
 
@@ -122,7 +138,7 @@ contract('BPool', async (accounts) => {
         it('Fails swapExactAmountIn with limits', async () => {
             await pool.setPublicSwap(true);
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(
+                pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
                     BBB,
@@ -132,7 +148,7 @@ contract('BPool', async (accounts) => {
                 'ERR_BAD_LIMIT_PRICE',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(
+                pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
                     BBB,
@@ -142,7 +158,7 @@ contract('BPool', async (accounts) => {
                 'ERR_LIMIT_OUT',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(
+                pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
                     BBB,
@@ -153,47 +169,47 @@ contract('BPool', async (accounts) => {
             );
         });
 
-        it('Fails swapExactAmountOut with limits', async () => {
-            await truffleAssert.reverts(
-                pool.swapExactAmountOut(
-                    AAA,
-                    toWei('51'),
-                    BBB,
-                    toWei('40'),
-                    toWei('5'),
-                ),
-                'ERR_MAX_OUT_RATIO',
-            );
-            await truffleAssert.reverts(
-                pool.swapExactAmountOut(
-                    AAA,
-                    toWei('5'),
-                    BBB,
-                    toWei('1'),
-                    toWei('1'),
-                ),
-                'ERR_BAD_LIMIT_PRICE',
-            );
-            await truffleAssert.reverts(
-                pool.swapExactAmountOut(
-                    AAA,
-                    toWei('1'),
-                    BBB,
-                    toWei('1'),
-                    toWei('5'),
-                ),
-                'ERR_LIMIT_IN',
-            );
-            await truffleAssert.reverts(
-                pool.swapExactAmountOut(
-                    AAA,
-                    toWei('5'),
-                    BBB,
-                    toWei('1'),
-                    toWei('3.00001'),
-                ),
-                'ERR_LIMIT_PRICE',
-            );
-        });
+//        it('Fails swapExactAmountOut with limits', async () => {
+//            await truffleAssert.reverts(
+//                pool.swapExactAmountOut(
+//                    AAA,
+//                    toWei('51'),
+//                    BBB,
+//                    toWei('40'),
+//                    toWei('5'),
+//                ),
+//                'ERR_MAX_OUT_RATIO',
+//            );
+//            await truffleAssert.reverts(
+//                pool.swapExactAmountOut(
+//                    AAA,
+//                    toWei('5'),
+//                    BBB,
+//                    toWei('1'),
+//                    toWei('1'),
+//                ),
+//                'ERR_BAD_LIMIT_PRICE',
+//            );
+//            await truffleAssert.reverts(
+//                pool.swapExactAmountOut(
+//                    AAA,
+//                    toWei('1'),
+//                    BBB,
+//                    toWei('1'),
+//                    toWei('5'),
+//                ),
+//                'ERR_LIMIT_IN',
+//            );
+//            await truffleAssert.reverts(
+//                pool.swapExactAmountOut(
+//                    AAA,
+//                    toWei('5'),
+//                    BBB,
+//                    toWei('1'),
+//                    toWei('3.00001'),
+//                ),
+//                'ERR_LIMIT_PRICE',
+//            );
+//        });
     });
 });

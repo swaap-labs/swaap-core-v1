@@ -3,6 +3,7 @@
 coverage.json
 yarn-error.log
 *.hex
+package-lock.json
 
 # directories
 build/
