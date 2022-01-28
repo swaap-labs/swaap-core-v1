@@ -10,3 +10,5 @@ build/
 node_modules/
 .idea/
 coverage/
+corpus/
+crytic-export/
