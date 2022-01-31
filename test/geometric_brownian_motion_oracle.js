@@ -8,7 +8,7 @@ const TWETHOracle = artifacts.require('TWETHOracle');
 const TWBTCOracle = artifacts.require('TWBTCOracle');
 const TDAIOracle = artifacts.require('TDAIOracle');
 
-const errorDelta = 10 ** -8;
+const errorDelta = 10 ** -7;
 
 const verbose = process.env.VERBOSE;
 

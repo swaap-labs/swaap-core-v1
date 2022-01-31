@@ -122,8 +122,6 @@ library GeometricBrownianMotionOracle {
 
         }
 
-//        return gbmEstimation = Struct.GBMEstimation(int256(actualTimeWindowInSec), startIndexOut);
-
         if (actualTimeWindowInSec > 1) {
             (int256 mean, uint256 variance) = getStatistics(
                 // compute returns
@@ -218,7 +216,6 @@ library GeometricBrownianMotionOracle {
     internal pure returns (int256, uint256) {
 
         uint256 n = periodsReturn.length;
-//        if (n < 2 || actualTimeWindowInSec == 0) {
         if (actualTimeWindowInSec == 0) {
             return (0, 0);
         }
@@ -231,15 +228,14 @@ library GeometricBrownianMotionOracle {
             mean += periodsReturn[i];
         }
         mean = Num.bdivInt256(mean, int256(actualTimeWindowInSecWithPrecision));
-        uint256 meanSquare;
-        if (mean > 0) {
-            meanSquare = Num.bmul(uint256(mean), uint256(mean));
-        } else if (mean < 0){
-            meanSquare = Num.bmul(uint256(-mean), uint256(-mean));
-        }
 
         // variance
-        uint256 variance = Num.bmul(actualTimeWindowInSec - n, Const.BONE) * meanSquare;
+        uint256 variance;
+        if (mean > 0) {
+            variance = Num.bmul(Num.bmul(actualTimeWindowInSecWithPrecision - n * Const.BONE, uint256(mean)), uint256(mean));
+        } else if (mean < 0) {
+            variance = Num.bmul(Num.bmul(actualTimeWindowInSecWithPrecision - n * Const.BONE, uint256(-mean)), uint256(-mean));
+        }
         for (uint256 i; i < n; i++) {
             int256 d = periodsReturn[i] - mean;
             if (d < 0) {
