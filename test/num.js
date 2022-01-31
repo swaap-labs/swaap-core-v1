@@ -12,14 +12,6 @@ contract('TMath', async () => {
 //            tmath = await TMath.new();
         });
 
-        it('badd throws on overflow', async () => {
-            await truffleAssert.reverts(tmath.calc_badd(1, MAX), 'revert'); // ERR_ADD_OVERFLOW
-        });
-
-        it('bsub throws on underflow', async () => {
-            await truffleAssert.reverts(tmath.calc_bsub(1, 2), 'ERR_SUB_UNDERFLOW');
-        });
-
         it('bmul throws on overflow', async () => {
             await truffleAssert.reverts(tmath.calc_bmul(2, MAX), 'revert'); // ERR_MUL_OVERFLOW
         });

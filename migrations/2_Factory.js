@@ -23,6 +23,7 @@ module.exports = async function (deployer, network, accounts) {
 	if (network === 'dev' || network === 'coverage' || network === 'test') {
 		deployer.link(Num, TMath);
 		deployer.deploy(TMath);
+		deployer.link(Num, TGeometricBrownianMotionOracle);
 		deployer.link(GeometricBrownianMotionOracle, TGeometricBrownianMotionOracle);
 		deployer.deploy(TGeometricBrownianMotionOracle);
 		deployer.link(Math, TMathMMM);

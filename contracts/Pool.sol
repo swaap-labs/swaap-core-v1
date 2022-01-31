@@ -274,7 +274,7 @@ contract Pool is PoolToken {
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
             require(tokenAmountIn != 0, "ERR_MATH_APPROX");
             require(tokenAmountIn <= maxAmountsIn[i], "ERR_LIMIT_IN");
-            _records[t].balance = Num.badd(_records[t].balance, tokenAmountIn);
+            _records[t].balance = _records[t].balance + tokenAmountIn;
             emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
         }
@@ -291,7 +291,7 @@ contract Pool is PoolToken {
 
         uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
-        uint256 pAiAfterExitFee = Num.bsub(poolAmountIn, exitFee);
+        uint256 pAiAfterExitFee = poolAmountIn - exitFee;
         uint256 ratio = Num.bdiv(pAiAfterExitFee, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
@@ -305,7 +305,7 @@ contract Pool is PoolToken {
             uint256 tokenAmountOut = Num.bmul(ratio, bal);
             require(tokenAmountOut != 0, "ERR_MATH_APPROX");
             require(tokenAmountOut >= minAmountsOut[i], "ERR_LIMIT_OUT");
-            _records[t].balance = Num.bsub(_records[t].balance, tokenAmountOut);
+            _records[t].balance = _records[t].balance - tokenAmountOut;
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
         }
@@ -558,10 +558,10 @@ contract Pool is PoolToken {
         // Adjust the denorm and totalWeight
         uint256 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
-            _totalWeight = Num.badd(_totalWeight, Num.bsub(denorm, oldWeight));
+            _totalWeight = _totalWeight + denorm - oldWeight;
             require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
         } else if (denorm < oldWeight) {
-            _totalWeight = Num.bsub(_totalWeight, Num.bsub(oldWeight, denorm));
+            _totalWeight = _totalWeight - oldWeight + denorm;
         }
         _records[token].denorm = denorm;
 
@@ -569,12 +569,12 @@ contract Pool is PoolToken {
         uint256 oldBalance = _records[token].balance;
         _records[token].balance = balance;
         if (balance > oldBalance) {
-            _pullUnderlying(token, msg.sender, Num.bsub(balance, oldBalance));
+            _pullUnderlying(token, msg.sender, balance - oldBalance);
         } else if (balance < oldBalance) {
             // In this case liquidity is being withdrawn, so charge EXIT_FEE
-            uint256 tokenBalanceWithdrawn = Num.bsub(oldBalance, balance);
+            uint256 tokenBalanceWithdrawn = oldBalance - balance;
             uint256 tokenExitFee = Num.bmul(tokenBalanceWithdrawn, Const.EXIT_FEE);
-            _pushUnderlying(token, msg.sender, Num.bsub(tokenBalanceWithdrawn, tokenExitFee));
+            _pushUnderlying(token, msg.sender, tokenBalanceWithdrawn - tokenExitFee);
             _pushUnderlying(token, _factory, tokenExitFee);
         }
 
@@ -602,7 +602,7 @@ contract Pool is PoolToken {
         uint256 tokenBalance = _records[token].balance;
         uint256 tokenExitFee = Num.bmul(tokenBalance, Const.EXIT_FEE);
 
-        _totalWeight = Num.bsub(_totalWeight, _records[token].denorm);
+        _totalWeight = _totalWeight - _records[token].denorm;
 
         // Swap the token-to-unbind with the last token,
         // then delete the last token
@@ -622,7 +622,7 @@ contract Pool is PoolToken {
         _prices[token] = Price({oracle: IAggregatorV3(address(0)), initialPrice: 0});
         emit LOG_PRICE(token, address(_prices[token].oracle), _prices[token].initialPrice);
 
-        _pushUnderlying(token, msg.sender, Num.bsub(tokenBalance, tokenExitFee));
+        _pushUnderlying(token, msg.sender, tokenBalance - tokenExitFee);
         _pushUnderlying(token, _factory, tokenExitFee);
 
     }
@@ -725,8 +725,8 @@ contract Pool is PoolToken {
         );
         require(swapResult.amount >= minAmountOut, "ERR_LIMIT_OUT");
 
-        _records[address(tokenIn)].balance = Num.badd(tokenGlobalIn.info.balance, tokenAmountIn);
-        _records[address(tokenOut)].balance = Num.bsub(tokenGlobalOut.info.balance, swapResult.amount);
+        _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + tokenAmountIn;
+        _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - swapResult.amount;
 
         spotPriceAfter = Math.calcSpotPrice(
             _records[address(tokenIn)].balance,

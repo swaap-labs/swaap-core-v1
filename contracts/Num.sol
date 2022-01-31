@@ -32,24 +32,6 @@ library Num {
         return btoi(a) * Const.BONE;
     }
 
-    function badd(uint256 a, uint256 b)
-        public pure
-        returns (uint256)
-    {
-        uint256 c = a + b;
-        require(c >= a, "ERR_ADD_OVERFLOW");
-        return c;
-    }
-
-    function bsub(uint256 a, uint256 b)
-        public pure
-        returns (uint256)
-    {
-        (uint256 c, bool flag) = bsubSign(a, b);
-        require(!flag, "ERR_SUB_UNDERFLOW");
-        return c;
-    }
-
     function bsubSign(uint256 a, uint256 b)
         public pure
         returns (uint256, bool)
@@ -114,7 +96,7 @@ library Num {
         require(base <= Const.MAX_BPOW_BASE, "ERR_BPOW_BASE_TOO_HIGH");
 
         uint256 whole  = bfloor(exp);
-        uint256 remain = bsub(exp, whole);
+        uint256 remain = exp - whole;
 
         uint256 wholePow = bpowi(base, btoi(whole));
 
@@ -144,7 +126,7 @@ library Num {
         // continue until term is less than precision
         for (uint256 i = 1; term >= precision; i++) {
             uint256 bigK = i * Const.BONE;
-            (uint256 c, bool cneg) = bsubSign(a, bsub(bigK, Const.BONE));
+            (uint256 c, bool cneg) = bsubSign(a, bigK - Const.BONE);
             term = bmul(term, bmul(c, x));
             term = bdiv(term, bigK);
             if (term == 0) break;
@@ -152,9 +134,9 @@ library Num {
             if (xneg) negative = !negative;
             if (cneg) negative = !negative;
             if (negative) {
-                sum = bsub(sum, term);
+                sum -= term;
             } else {
-                sum = badd(sum, term);
+                sum += term;
             }
         }
 

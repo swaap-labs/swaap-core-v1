@@ -28,14 +28,6 @@ contract TMath {
         return Num.bfloor(a);
     }
 
-    function calc_badd(uint a, uint b) external pure returns (uint) {
-        return Num.badd(a, b);
-    }
-
-    function calc_bsub(uint a, uint b) external pure returns (uint) {
-        return Num.bsub(a, b);
-    }
-
     function calc_bsubSign(uint a, uint b) external pure returns (uint, bool) {
         return Num.bsubSign(a, b);
     }

@@ -49,8 +49,8 @@ contract TPoolJoinExitNoFee {
         require(_records_t_balance <= 10 ether);
         require(_records_t_balance >= 10**6);
 
-        poolTotal = Num.badd(poolTotal, poolAmountOut);
-        _records_t_balance = Num.badd(_records_t_balance, tokenAmountIn);
+        poolTotal += poolAmountOut;
+        _records_t_balance += tokenAmountIn;
 
         require(tokenAmountIn > 0); // prevent triggering the free token generation from joinPool 
 

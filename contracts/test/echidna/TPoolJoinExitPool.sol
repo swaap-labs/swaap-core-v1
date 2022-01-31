@@ -30,7 +30,7 @@ contract TPoolJoinExit {
         internal pure returns(uint)
     {
         uint exitFee = Num.bmul(poolAmountIn, EXIT_FEE);
-        uint pAiAfterExitFee = Num.bsub(poolAmountIn, exitFee);
+        uint pAiAfterExitFee = poolAmountIn - exitFee;
         uint ratio = Num.bdiv(pAiAfterExitFee, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
@@ -53,8 +53,8 @@ contract TPoolJoinExit {
         require(_records_t_balance <= 10 ether);
         require(_records_t_balance >= 10**6);
 
-        poolTotal = Num.badd(poolTotal, poolAmountOut);
-        _records_t_balance = Num.badd(_records_t_balance, tokenAmountIn);
+        poolTotal += poolAmountOut;
+        _records_t_balance += tokenAmountIn;
 
         require(tokenAmountIn > 0); // prevent triggering the free token generation from joinPool 
 
