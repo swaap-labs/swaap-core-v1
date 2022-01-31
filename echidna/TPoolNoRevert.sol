@@ -17,20 +17,29 @@ pragma solidity 0.8.0;
 import "./contracts/Pool.sol";
 import "./MyToken.sol";
 import "./CryticInterface.sol";
-import "./TWBTCOracle.sol";
+import "./contracts/test/TWBTCOracle.sol";
+import "./contracts/test/TWETHOracle.sol";
+
 
 contract TPoolNoRevert is CryticInterface, Pool {
 
     TWBTCOracle oracle;
 
-    constructor() { // out-of-gas?
+    constructor() {
+
         // Create a new token with initial_token_balance as total supply.
         // After the token is created, each user defined in CryticInterface
         // (crytic_owner, crytic_user and crytic_attacker) receives 1/3 of 
         // the initial balance
         MyToken t;
         t = new MyToken(initial_token_balance, address(this));
-        bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle)); 
+
+        // Create Oracle for the initial token
+        oracle = new TWBTCOracle();
+
+        // Bind the token with the provided parameters
+        bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));
+
     }
 
     // initial token balances is the max amount for uint256
@@ -43,9 +52,11 @@ contract TPoolNoRevert is CryticInterface, Pool {
         // (crytic_owner, crytic_user and crytic_attacker) receives 1/3 of 
         // the initial balance
         MyToken bt = new MyToken(initial_token_balance, address(this));
-        bt.approve(address(this), initial_token_balance); 
+        bt.approve(address(this), initial_token_balance);
+        // Create Oracle for the buy token
+        TWETHOracle oracleBT = new TWETHOracle();
         // Bind the token with the provided parameters
-        bindMMM(address(bt), balance, denorm, address(oracle)); 
+        bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks
         return address(bt);
     }

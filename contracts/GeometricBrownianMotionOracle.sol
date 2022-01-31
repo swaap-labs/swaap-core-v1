@@ -41,7 +41,7 @@ library GeometricBrownianMotionOracle {
         Struct.LatestRound memory inputIn, Struct.LatestRound memory inputOut,
         Struct.HistoricalPricesParameters memory hpParameters
     )
-    public view returns (Struct.GBMEstimation memory gbmEstimation) {
+    internal view returns (Struct.GBMEstimation memory gbmEstimation) {
 
         uint256 endTimestamp = hpParameters.timestamp;
         if (inputIn.timestamp > inputOut.timestamp) {
@@ -161,7 +161,7 @@ library GeometricBrownianMotionOracle {
     function getPairReturns(
         uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn,
         uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut
-    ) public pure returns (int256[] memory periodsReturn) {
+    ) internal pure returns (int256[] memory periodsReturn) {
 
         // compute the number of returns
         uint256 count;
@@ -215,7 +215,7 @@ library GeometricBrownianMotionOracle {
     * @return The asset-pair historical returns variance
     */
     function getStatistics(int256[] memory periodsReturn, uint256 actualTimeWindowInSec)
-    public pure returns (int256, uint256) {
+    internal pure returns (int256, uint256) {
 
         uint256 n = periodsReturn.length;
 //        if (n < 2 || actualTimeWindowInSec == 0) {
@@ -271,7 +271,7 @@ library GeometricBrownianMotionOracle {
     function getNextSample(
         uint256 startIndexIn, uint256 startIndexOut,
         uint256[] memory timestampsIn, uint256[] memory timestampsOut
-    ) public pure returns (bool, uint256, uint256) {
+    ) internal pure returns (bool, uint256, uint256) {
         bool skip = true;
         uint256 nextStartIndexIn = startIndexIn > 0 ? startIndexIn - 1 : startIndexIn;
         uint256 nextStartIndexOut = startIndexOut > 0 ? startIndexOut - 1 : startIndexOut;
@@ -340,7 +340,7 @@ library GeometricBrownianMotionOracle {
         Struct.HistoricalPricesParameters memory hpParameters,
         uint256 endTimestamp
     )
-    public view returns (uint256[] memory, uint256[] memory, uint256, bool)
+    internal view returns (uint256[] memory, uint256[] memory, uint256, bool)
     {
 
         IAggregatorV3 priceFeed = IAggregatorV3(input.oracle);
@@ -407,7 +407,7 @@ library GeometricBrownianMotionOracle {
     * @return The round price
     * @return The round timestamp
     */
-    function tryGetRoundData(IAggregatorV3 priceFeed, uint80 _roundId) public view returns (int256, uint256) {
+    function tryGetRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
         try priceFeed.getRoundData(_roundId) returns (
             uint80 ,
             int256 _price,

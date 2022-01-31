@@ -2,10 +2,10 @@
 
 pragma solidity =0.8.0;
 
-import "./TIAggregatorV3.sol";
+import "../interfaces/IAggregatorV3.sol";
 
 
-contract TWBTCOracle is TIAggregatorV3 {
+contract TWBTCOracle is IAggregatorV3 {
 
     uint80 latestRoundId = 2021;
     uint8 _decimals = 8;

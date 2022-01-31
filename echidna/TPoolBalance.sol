@@ -17,12 +17,12 @@ pragma solidity 0.8.0;
 import "../contracts/Pool.sol";
 import "./MyToken.sol";
 import "./CryticInterface.sol";
-import "./TWBTCOracle.sol";
+import "./contracts/test/TConstantOracle.sol";
 
 contract TPoolBalance is Pool, CryticInterface {
 
     MyToken public token;
-    TWBTCOracle public oracle;
+    TConstantOracle public oracle;
     
     uint internal initial_token_balance = type(uint).max;
 
@@ -33,8 +33,8 @@ contract TPoolBalance is Pool, CryticInterface {
         // the initial balance
         token = new MyToken(initial_token_balance, address(this));
         
-        // Create Oracle for each token
-        oracle = new TWBTCOracle();
+        // Create Oracle for the initial token
+        oracle = new TConstantOracle(1000000000);
 
         // Bind the token with the minimal balance/weights
         bindMMM(address(token), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));

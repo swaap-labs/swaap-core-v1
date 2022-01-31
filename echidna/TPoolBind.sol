@@ -17,11 +17,13 @@ pragma solidity =0.8.0;
 import "./contracts/Pool.sol";
 import "./MyToken.sol";
 import "./CryticInterface.sol";
-import "./TWBTCOracle.sol";
+import "./contracts/test/TWBTCOracle.sol";
+import "./contracts/test/TWETHOracle.sol";
+
 
 contract TPoolBindPrivileged is CryticInterface, Pool {
 
-    TWBTCOracle oracle; 
+    TWBTCOracle oracle;
 
     constructor() {
         // Create a new token with initial_token_balance as total supply.
@@ -30,11 +32,10 @@ contract TPoolBindPrivileged is CryticInterface, Pool {
         // the initial balance
         MyToken t;
         t = new MyToken(initial_token_balance, address(this));
-
-        // Create Oracle for each token
+        // Create Oracle for the initial token
         oracle = new TWBTCOracle();
-        
-        bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle)); 
+        // Bind the token with the provided parameters
+        bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));
     }
 
     // initial token balances is the max amount for uint256
@@ -51,9 +52,11 @@ contract TPoolBindPrivileged is CryticInterface, Pool {
         // (crytic_owner, crytic_user and crytic_attacker) receives 1/3 of 
         // the initial balance
         MyToken bt = new MyToken(initial_token_balance, address(this));
-        bt.approve(address(this), initial_token_balance); 
+        bt.approve(address(this), initial_token_balance);
+        // Create Oracle for the buy token
+        TWETHOracle oracleBT = new TWETHOracle();
         // Bind the token with the provided parameters
-        bindMMM(address(bt), balance, denorm, address(oracle)); 
+        bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks
         valid_balance_to_bind = balance;
         valid_denorm_to_bind = denorm;
@@ -69,7 +72,7 @@ contract TPoolBindPrivileged is CryticInterface, Pool {
         if (this.getCurrentTokens().length > 0 && this.getController() == crytic_owner && !this.isFinalized()) {
             // binding the first token should be enough, if we have this property to always revert
             bindMMM(this.getCurrentTokens()[0], valid_balance_to_bind, valid_denorm_to_bind, address(oracle));
-            // This return will make this property fail 
+            // This return will make this property to fail
             return true;
         }
         // If there are no tokens or if the controller was changed or if the pool was finalized, just revert.
@@ -134,19 +137,21 @@ contract TPoolBindUnprivileged is CryticInterface, Pool {
 
     MyToken t1;
     MyToken t2;
-    TWBTCOracle oracle;    
+    TWBTCOracle oracle1;
+    TWETHOracle oracle2;
     // initial token balances is the max amount for uint256
     uint internal initial_token_balance = type(uint).max;
  
     constructor() {
         // Create Oracle for each token
-        oracle = new TWBTCOracle();
-        
+        oracle1 = new TWBTCOracle();
+        oracle2 = new TWETHOracle();
+
         // two tokens with minimal balances and weights are created by the controller
         t1 = new MyToken(initial_token_balance, address(this));
-        bindMMM(address(t1), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));
+        bindMMM(address(t1), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle1));
         t2 = new MyToken(initial_token_balance, address(this));
-        bindMMM(address(t2), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));
+        bindMMM(address(t2), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle2));
     }
    
     // these two variables are used to save valid balances and denorm parameters
@@ -161,8 +166,10 @@ contract TPoolBindUnprivileged is CryticInterface, Pool {
         // the initial balance
         MyToken bt = new MyToken(initial_token_balance, address(this));
         bt.approve(address(this), initial_token_balance); 
+        // Create Oracle for the buy token
+        TWBTCOracle oracleBT = new TWBTCOracle();
         // Bind the token with the provided parameters
-        bindMMM(address(bt), balance, denorm, address(oracle)); 
+        bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks
         valid_balance_to_bind = balance;
         valid_denorm_to_bind = denorm;
@@ -182,8 +189,8 @@ contract TPoolBindUnprivileged is CryticInterface, Pool {
 
     function echidna_revert_when_rebind() public returns (bool) {
           // calling rebind on binded tokens will revert
-          rebindMMM(address(t1), valid_balance_to_bind, valid_denorm_to_bind, address(oracle));
-          rebindMMM(address(t2), valid_balance_to_bind, valid_denorm_to_bind, address(oracle));
+          rebindMMM(address(t1), valid_balance_to_bind, valid_denorm_to_bind, address(oracle1));
+          rebindMMM(address(t2), valid_balance_to_bind, valid_denorm_to_bind, address(oracle2));
           return true;
     }
 

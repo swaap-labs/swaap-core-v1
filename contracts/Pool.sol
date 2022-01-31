@@ -217,6 +217,7 @@ contract Pool is PoolToken {
     _lock_
     {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        require(manager != address(0), "ERR_NULL_CONTROLLER");
         _controller = manager;
     }
 
@@ -366,20 +367,21 @@ contract Pool is PoolToken {
 
     mapping(address=>Price) private _prices;
 
-    uint256 dynamicCoverageFeesZ = 6 * Const.BONE / 10;
-    uint256 dynamicCoverageFeesHorizon = 300 * Const.BONE;
+    uint256 dynamicCoverageFeesZ = Const.BASE_Z;
+    uint256 dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
 
-    uint256 priceStatisticsLookbackInRound = 4;
-    uint256 priceStatisticsLookbackInSec = 3600;
+    uint256 priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
+    uint256 priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
 
     function setDynamicCoverageFeesZ(uint256 _dynamicCoverageFeesZ)
     external
     _logs_
     _lock_
     {
-//        require(!_finalized, "ERR_IS_FINALIZED");
+        require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(_dynamicCoverageFeesZ >= 0, "ERR_MIN_Z");
+        require(_dynamicCoverageFeesZ <= Const.MAX_Z, "ERR_MAX_Z");
         dynamicCoverageFeesZ = _dynamicCoverageFeesZ;
     }
 
@@ -388,20 +390,22 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-//        require(!_finalized, "ERR_IS_FINALIZED");
+        require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_dynamicCoverageFeesHorizon >= 0, "ERR_MIN_HORIZON");
+        require(_dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "ERR_MIN_HORIZON");
+        require(_dynamicCoverageFeesHorizon <= Const.MAX_HORIZON, "ERR_MAX_HORIZON");
         dynamicCoverageFeesHorizon = _dynamicCoverageFeesHorizon;
     }
-//
+
     function setPriceStatisticsLookbackInRound(uint256 _priceStatisticsLookbackInRound)
     external
     _logs_
     _lock_
     {
-//        require(!_finalized, "ERR_IS_FINALIZED");
+        require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_priceStatisticsLookbackInRound >= 0, "ERR_MIN_LB_PERIODS");
+        require(_priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "ERR_MIN_LB_PERIODS");
+        require(_priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "ERR_MAX_LB_PERIODS");
         priceStatisticsLookbackInRound = _priceStatisticsLookbackInRound;
     }
 
@@ -410,9 +414,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-//        require(!_finalized, "ERR_IS_FINALIZED");
+        require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_priceStatisticsLookbackInSec >= 0, "ERR_MIN_LB_SECONDS");
+        require(_priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "ERR_MIN_LB_SECS");
+        require(_priceStatisticsLookbackInSec <= Const.MAX_LOOKBACK_IN_SEC, "ERR_MAX_LB_SECS");
         priceStatisticsLookbackInSec = _priceStatisticsLookbackInSec;
     }
 

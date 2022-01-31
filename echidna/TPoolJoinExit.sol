@@ -17,21 +17,24 @@ pragma solidity 0.8.0;
 import "./contracts/Pool.sol";
 import "./MyToken.sol";
 import "./CryticInterface.sol";
-import "./TWBTCOracle.sol";
+import "./contracts/test/TWBTCOracle.sol";
+import "./contracts/test/TWETHOracle.sol";
+
 
 contract TPoolJoinExit is CryticInterface, Pool {
 
     uint MAX_BALANCE = Const.BONE * 10**12;
     TWBTCOracle oracle;
-    
+
     constructor() {
         MyToken t;
         t = new MyToken(type(uint).max, address(this));
         
-        // Create Oracle for each token
+        // Create Oracle for the initial token
         oracle = new TWBTCOracle();
 
-        bindMMM(address(t), MAX_BALANCE, Const.MAX_WEIGHT, address(oracle)); 
+        // Bind the token with the provided parameters
+        bindMMM(address(t), MAX_BALANCE, Const.MAX_WEIGHT, address(oracle));
     }
 
     // initial token balances is the max amount for uint256
@@ -44,9 +47,11 @@ contract TPoolJoinExit is CryticInterface, Pool {
         // (crytic_owner, crytic_user and crytic_attacker) receives 1/3 of 
         // the initial balance
         MyToken bt = new MyToken(initial_token_balance, address(this));
-        bt.approve(address(this), initial_token_balance); 
+        bt.approve(address(this), initial_token_balance);
+        // Create Oracle for the buy token
+        TWETHOracle oracleBT = new TWETHOracle();
         // Bind the token with the provided parameters
-        bindMMM(address(bt), balance, denorm, address(oracle)); 
+        bindMMM(address(bt), balance, denorm, address(oracleBT));
         return address(bt);
     }
 

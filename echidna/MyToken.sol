@@ -17,6 +17,7 @@ pragma solidity 0.8.0;
 import "./contracts/PoolToken.sol";
 import "./CryticInterface.sol";
 
+
 contract MyToken is PoolToken, CryticInterface {
 
     constructor(uint balance, address allowed) {
@@ -32,4 +33,5 @@ contract MyToken is PoolToken, CryticInterface {
         _balance[crytic_attacker] = initialTotalSupply/3;
         _allowance[crytic_attacker][allowed] = balance;
     }
+
 }

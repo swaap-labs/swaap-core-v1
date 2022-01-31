@@ -44,6 +44,7 @@ contract TokenBase {
 
     function _move(address src, address dst, uint256 amt) internal {
         require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
+        require(dst != address(0), "ERR_NULL_ADDRESS");
         _balance[src] = Num.bsub(_balance[src], amt);
         _balance[dst] = Num.badd(_balance[dst], amt);
         emit Transfer(src, dst, amt);

@@ -17,11 +17,12 @@ pragma solidity 0.8.0;
 import "./contracts/Pool.sol";
 import "./CryticInterface.sol";
 
+
 contract TPoolControllerPrivileged is CryticInterface, Pool {
 
     function echidna_controller_should_change() public returns (bool) {
         if (this.getController() == crytic_owner) {
-            this.setController(crytic_user);
+            setController(crytic_user);
             return (this.getController() == crytic_user);
         }
         // if the controller was changed, this should return true
@@ -31,7 +32,7 @@ contract TPoolControllerPrivileged is CryticInterface, Pool {
     function echidna_revert_controller_cannot_be_null() public returns (bool) {
         if (this.getController() == crytic_owner) {
            // setting the controller to 0x0 should fail
-           this.setController(address(0x0));
+           setController(address(0x0));
            return true;
         }
         // if the controller was changed, this should revert anyway

@@ -44,6 +44,7 @@ contract TokenBase {
 
     function _move(address src, address dst, uint256 amt) internal {
         require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
+        require(dst != address(0), "ERR_NULL_ADDRESS");
         _balance[src] = Num.bsub(_balance[src], amt);
         _balance[dst] = Num.badd(_balance[dst], amt);
         emit Transfer(src, dst, amt);
@@ -76,11 +77,11 @@ contract PoolToken is TokenBase, IERC20 {
         return _decimals;
     }
 
-    function allowance(address src, address dst) external view override returns (uint256) {
+    function allowance(address src, address dst) public view override returns (uint256) {
         return _allowance[src][dst];
     }
 
-    function balanceOf(address whom) external view override returns (uint256) {
+    function balanceOf(address whom) public view override returns (uint256) {
         return _balance[whom];
     }
 
@@ -88,19 +89,19 @@ contract PoolToken is TokenBase, IERC20 {
         return _totalSupply;
     }
 
-    function approve(address dst, uint256 amt) external override returns (bool) {
+    function approve(address dst, uint256 amt) public override returns (bool) {
         _allowance[msg.sender][dst] = amt;
         emit Approval(msg.sender, dst, amt);
         return true;
     }
 
-    function increaseApproval(address dst, uint256 amt) external returns (bool) {
+    function increaseApproval(address dst, uint256 amt) public returns (bool) {
         _allowance[msg.sender][dst] = Num.badd(_allowance[msg.sender][dst], amt);
         emit Approval(msg.sender, dst, _allowance[msg.sender][dst]);
         return true;
     }
 
-    function decreaseApproval(address dst, uint256 amt) external returns (bool) {
+    function decreaseApproval(address dst, uint256 amt) public returns (bool) {
         uint256 oldValue = _allowance[msg.sender][dst];
         if (amt > oldValue) {
             _allowance[msg.sender][dst] = 0;
@@ -111,12 +112,12 @@ contract PoolToken is TokenBase, IERC20 {
         return true;
     }
 
-    function transfer(address dst, uint256 amt) external override returns (bool) {
+    function transfer(address dst, uint256 amt) public override returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
     }
 
-    function transferFrom(address src, address dst, uint256 amt) external override returns (bool) {
+    function transferFrom(address src, address dst, uint256 amt) public override returns (bool) {
         require(msg.sender == src || amt <= _allowance[src][msg.sender], "ERR_POOL_TOKEN_BAD_CALLER");
         _move(src, dst, amt);
         if (msg.sender != src && _allowance[src][msg.sender] != type(uint256).max) {

@@ -17,7 +17,9 @@ pragma solidity 0.8.0;
 import "./contracts/Pool.sol";
 import "./MyToken.sol";
 import "./CryticInterface.sol";
-import "./TWBTCOracle.sol";
+import "./contracts/test/TWBTCOracle.sol";
+import "./contracts/test/TWETHOracle.sol";
+
 
 contract TPoolLimits is CryticInterface, Pool {
 
@@ -45,8 +47,10 @@ contract TPoolLimits is CryticInterface, Pool {
         // the initial balance
         MyToken bt = new MyToken(initial_token_balance, address(this));
         bt.approve(address(this), initial_token_balance); 
+        // Create Oracle for the buy token
+        TWETHOracle oracleBT = new TWETHOracle();
         // Bind the token with the provided parameters
-        bindMMM(address(bt), balance, denorm, address(oracle)); 
+        bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks
         valid_balance_to_bind = balance;
         valid_denorm_to_bind = denorm;

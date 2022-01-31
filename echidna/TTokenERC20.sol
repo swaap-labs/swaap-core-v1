@@ -16,6 +16,7 @@ pragma solidity 0.8.0;
 import "./contracts/Pool.sol";
 import "./contracts/PoolToken.sol";
 
+
 contract CryticInterface{
     address internal crytic_owner = address(0x41414141);
     address internal crytic_user = address(0x42424242);
@@ -57,9 +58,9 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     */
     function echidna_approve_overwrites() public returns (bool) {
         bool approve_return; 
-        approve_return = this.approve(crytic_user, 10);
+        approve_return = approve(crytic_user, 10);
         require(approve_return);
-        approve_return = this.approve(crytic_user, 20);
+        approve_return = approve(crytic_user, 20);
         require(approve_return);
         return this.allowance(msg.sender, crytic_user) == 20;
     }
@@ -91,7 +92,7 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     function echidna_revert_transfer_to_zero() public returns (bool) {
         if (this.balanceOf(msg.sender) == 0)
           revert();
-        return this.transfer(address(0x0), this.balanceOf(msg.sender));
+        return transfer(address(0x0), this.balanceOf(msg.sender));
     }
 
     /*
@@ -100,8 +101,8 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     */
     function echidna_revert_transferFrom_to_zero() public returns (bool) {
         uint balance = this.balanceOf(msg.sender);
-        bool approve_return = this.approve(msg.sender, balance);
-        return this.transferFrom(msg.sender, address(0x0), this.balanceOf(msg.sender));
+        bool approve_return = approve(msg.sender, balance);
+        return transferFrom(msg.sender, address(0x0), this.balanceOf(msg.sender));
     }
 
     /*
@@ -111,8 +112,8 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     */
     function echidna_self_transferFrom() public returns(bool){
         uint balance = this.balanceOf(msg.sender);
-        bool approve_return = this.approve(msg.sender, balance);
-        bool transfer_return = this.transferFrom(msg.sender, msg.sender, balance);
+        bool approve_return = approve(msg.sender, balance);
+        bool transfer_return = transferFrom(msg.sender, msg.sender, balance);
         return (this.balanceOf(msg.sender) == balance) && approve_return && transfer_return;
     }
 
@@ -123,8 +124,8 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     */
     function echidna_self_transferFrom_to_other() public returns(bool){
         uint balance = this.balanceOf(msg.sender);
-        bool approve_return = this.approve(msg.sender, balance);
-        bool transfer_return = this.transferFrom(msg.sender, crytic_owner, balance);
+        bool approve_return = approve(msg.sender, balance);
+        bool transfer_return = transferFrom(msg.sender, crytic_owner, balance);
         return (this.balanceOf(msg.sender) == 0) && approve_return && transfer_return;
     }
 
@@ -135,7 +136,7 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
     */
     function echidna_self_transfer() public returns(bool){
         uint balance = this.balanceOf(msg.sender);
-        bool transfer_return = this.transfer(msg.sender, balance);
+        bool transfer_return = transfer(msg.sender, balance);
         return (this.balanceOf(msg.sender) == balance) && transfer_return;
     }
 
@@ -151,7 +152,7 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
            other = crytic_owner;
         }
         if (balance >= 1) {
-           bool transfer_other = this.transfer(other, 1);
+           bool transfer_other = transfer(other, 1);
            return (this.balanceOf(msg.sender) == balance-1) && (this.balanceOf(other) >= 1) && transfer_other;
         }
         return true;
@@ -166,7 +167,7 @@ contract TPoolTokenERC20 is CryticInterface, PoolToken {
         uint balance = this.balanceOf(msg.sender);
         if (balance == (2 ** 256 - 1))
             revert();
-        bool transfer_other = this.transfer(crytic_user, balance+1);
+        bool transfer_other = transfer(crytic_user, balance+1);
         return true;
     }
   
