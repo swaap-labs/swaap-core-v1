@@ -52,7 +52,7 @@ library Math {
         uint256 numer = Num.bdiv(tokenBalanceIn, tokenWeightIn);
         uint256 denom = Num.bdiv(tokenBalanceOut, tokenWeightOut);
         uint256 ratio = Num.bdiv(numer, denom);
-        uint256 scale = Num.bdiv(Const.BONE, Num.bsub(Const.BONE, swapFee));
+        uint256 scale = Num.bdiv(Const.BONE, Const.BONE - swapFee);
         return  (spotPrice = Num.bmul(ratio, scale));
     }
 
@@ -78,11 +78,11 @@ library Math {
     returns (uint256 tokenAmountOut)
     {
         uint256 weightRatio = Num.bdiv(tokenWeightIn, tokenWeightOut);
-        uint256 adjustedIn = Num.bsub(Const.BONE, swapFee);
+        uint256 adjustedIn = Const.BONE - swapFee;
         adjustedIn = Num.bmul(tokenAmountIn, adjustedIn);
-        uint256 y = Num.bdiv(tokenBalanceIn, Num.badd(tokenBalanceIn, adjustedIn));
+        uint256 y = Num.bdiv(tokenBalanceIn, tokenBalanceIn + adjustedIn);
         uint256 foo = Num.bpow(y, weightRatio);
-        uint256 bar = Num.bsub(Const.BONE, foo);
+        uint256 bar = Const.BONE - foo;
         tokenAmountOut = Num.bmul(tokenBalanceOut, bar);
         return tokenAmountOut;
     }
