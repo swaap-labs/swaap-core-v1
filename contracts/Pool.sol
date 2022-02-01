@@ -582,7 +582,7 @@ contract Pool is PoolToken {
         _prices[token] = Price(
             {
                 oracle: IAggregatorV3(_priceFeedAddress),
-                initialPrice: 0 // set right above
+                initialPrice: 0 // set right below
             }
         );
         _prices[token].initialPrice = _getTokenCurrentPrice(_prices[token].oracle);
@@ -620,7 +620,6 @@ contract Pool is PoolToken {
             }
         );
         _prices[token] = Price({oracle: IAggregatorV3(address(0)), initialPrice: 0});
-        emit LOG_PRICE(token, address(_prices[token].oracle), _prices[token].initialPrice);
 
         _pushUnderlying(token, msg.sender, tokenBalance - tokenExitFee);
         _pushUnderlying(token, _factory, tokenExitFee);
