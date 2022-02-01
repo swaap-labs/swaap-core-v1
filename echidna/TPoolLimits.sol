@@ -63,7 +63,7 @@ contract TPoolLimits is CryticInterface, Pool {
         uint nw = 0;
         for (uint i = 0; i < current_tokens.length; i++) {
             // accumulate the total normalized weights, checking for overflows
-            nw = Num.badd(nw,this.getNormalizedWeight(current_tokens[i]));
+            nw += this.getNormalizedWeight(current_tokens[i]);
         }
         // convert the sum of normalized weights into an integer
         nw = Num.btoi(nw);

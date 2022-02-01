@@ -100,7 +100,7 @@ contract TPoolJoinExit is CryticInterface, Pool {
 
         // check the precondition for exitPool
         uint exit_fee = Num.bmul(amount, Const.EXIT_FEE); 
-        uint pAiAfterExitFee = Num.bsub(amount, exit_fee);
+        uint pAiAfterExitFee = amount - exit_fee;
         if(Num.bdiv(pAiAfterExitFee, this.totalSupply()) == 0)
             return true;
 
