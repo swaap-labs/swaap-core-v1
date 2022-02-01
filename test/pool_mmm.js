@@ -525,34 +525,5 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
 		})
 
-
-//        it('swapExactAmountOutMMM', async () => {
-//            // ETH -> 1 WBTC
-//            // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
-//            const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.003);
-//            const txr = await pool.swapExactAmountOutMMM(
-//                WETH,
-//                toWei('3'),
-//                WBTC,
-//                toWei('1.0'),
-//                toWei('500'),
-//                { from: user2 },
-//            );
-//            const log = txr.logs[0];
-//            assert.equal(log.event, 'LOG_SWAP');
-//            // 2.758274824473420261
-//
-//            const actual = fromWei(log.args[3]);
-//            const relDif = calcRelativeDiff(expected, actual);
-//            if (verbose) {
-//                console.log('swapExactAmountOutMMM');
-//                console.log(`expected: ${expected}`);
-//                console.log(`actual  : ${actual}`);
-//                console.log(`relDif  : ${relDif}`);
-//            }
-//
-//            assert.isAtMost(relDif.toNumber(), errorDelta);
-//        });
-
     });
 });

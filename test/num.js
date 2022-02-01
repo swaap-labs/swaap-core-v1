@@ -9,7 +9,6 @@ contract('TMath', async () => {
         let tmath;
         before(async () => {
             tmath = await TMath.deployed();
-//            tmath = await TMath.new();
         });
 
         it('bmul throws on overflow', async () => {
