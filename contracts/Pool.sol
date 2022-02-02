@@ -361,8 +361,8 @@ contract Pool is PoolToken {
 
     event LOG_PRICE(
         address indexed token,
-        address indexed oracle,
-        uint256 indexed value
+        address oracle,
+        uint256 value
     ) anonymous;
 
     mapping(address=>Price) private _prices;
