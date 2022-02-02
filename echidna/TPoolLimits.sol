@@ -29,7 +29,7 @@ contract TPoolLimits is CryticInterface, Pool {
     constructor() {
         MyToken t;
         t = new MyToken(type(uint).max, address(this));
-        oracle = new TWBTCOracle();
+        oracle = new TWBTCOracle(block.timestamp);
         bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle)); 
     }
 
@@ -48,7 +48,7 @@ contract TPoolLimits is CryticInterface, Pool {
         MyToken bt = new MyToken(initial_token_balance, address(this));
         bt.approve(address(this), initial_token_balance); 
         // Create Oracle for the buy token
-        TWETHOracle oracleBT = new TWETHOracle();
+        TWETHOracle oracleBT = new TWETHOracle(block.timestamp);
         // Bind the token with the provided parameters
         bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks

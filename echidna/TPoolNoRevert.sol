@@ -35,7 +35,7 @@ contract TPoolNoRevert is CryticInterface, Pool {
         t = new MyToken(initial_token_balance, address(this));
 
         // Create Oracle for the initial token
-        oracle = new TWBTCOracle();
+        oracle = new TWBTCOracle(block.timestamp);
 
         // Bind the token with the provided parameters
         bindMMM(address(t), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));
@@ -54,7 +54,7 @@ contract TPoolNoRevert is CryticInterface, Pool {
         MyToken bt = new MyToken(initial_token_balance, address(this));
         bt.approve(address(this), initial_token_balance);
         // Create Oracle for the buy token
-        TWETHOracle oracleBT = new TWETHOracle();
+        TWETHOracle oracleBT = new TWETHOracle(block.timestamp);
         // Bind the token with the provided parameters
         bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks

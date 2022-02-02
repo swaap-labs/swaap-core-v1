@@ -9,6 +9,9 @@ const verbose = process.env.VERBOSE;
 const TConstantOracle = artifacts.require('TConstantOracle');
 
 contract('Pool', async (accounts) => {
+
+	const now = 1641893000;
+
     const admin = accounts[0];
     const user1 = accounts[1];
     const user2 = accounts[2];
@@ -57,10 +60,10 @@ contract('Pool', async (accounts) => {
         DAI = dai.address;
         XXX = xxx.address;
 
-		wethOracle = await TConstantOracle.new(200);
-		mkrOracle = await TConstantOracle.new(500);
-		daiOracle = await TConstantOracle.new(1);
-		xxxOracle = await TConstantOracle.new(0);
+		wethOracle = await TConstantOracle.new(200000000000, now);
+		mkrOracle = await TConstantOracle.new(50000000000, now);
+		daiOracle = await TConstantOracle.new(100000000, now);
+		xxxOracle = await TConstantOracle.new(1, now);
 
         WETHOracleAddress = wethOracle.address;
         MKROracleAddress = mkrOracle.address;

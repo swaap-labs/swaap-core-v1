@@ -5,6 +5,9 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
 
 contract('Factory', async (accounts) => {
+
+	let now = 1641893000;
+
     const admin = accounts[0];
     const nonAdmin = accounts[1];
     const user2 = accounts[2];
@@ -67,8 +70,8 @@ contract('Factory', async (accounts) => {
         });
 
         it('admin collects fees', async () => {
-			wethOracle = await TConstantOracle.new(40);
-			daiOracle = await TConstantOracle.new(1);
+			wethOracle = await TConstantOracle.new(40, now);
+			daiOracle = await TConstantOracle.new(1, now);
             await pool.bindMMM(WETH, toWei('5'), toWei('5'), wethOracle.address);
             await pool.bindMMM(DAI, toWei('200'), toWei('5'), daiOracle.address);
 

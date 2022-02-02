@@ -1,7 +1,14 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
 const { calcRelativeDiff } = require('../lib/calc_comparisons');
-const { getParametersEstimation, getPairReturns, getStatistics, getStartIndices, getTimeWindow } = require('../lib/gbm_oracle');
+const { getOracleDataHistoryAsList } = require('../lib/data');
+const {
+	getParametersEstimation,
+	getPairReturns,
+	getStatistics,
+	getStartIndices,
+	getTimeWindow
+} = require('../lib/gbm_oracle');
 
 const TGeometricBrownianMotionOracle = artifacts.require('TGeometricBrownianMotionOracle');
 const TWETHOracle = artifacts.require('TWETHOracle');
@@ -20,8 +27,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
     const MAX = web3.utils.toTwosComplement(-1);
 
 	let testData;
-	let now = Math.floor(Date.now() / 1000)
-	console.log("now:", now)
+	let now = 1641893000
 
 	const horizon = 120
 	const z = 0.75
@@ -34,20 +40,20 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 
 	async function loadTestOracleData() {
 
-		wethOracle = await TWETHOracle.new();
-		wbtcOracle = await TWBTCOracle.new();
-		daiOracle = await TDAIOracle.new();
+		wethOracle = await TWETHOracle.new(now);
+		wbtcOracle = await TWBTCOracle.new(now);
+		daiOracle = await TDAIOracle.new(now);
 
 		wethOracleAddress = wethOracle.address;
 		wbtcOracleAddress = wbtcOracle.address;
 		daiOracleAddress = daiOracle.address;
 
 		testData = {
-			'ETH': {'oracle': wethOracleAddress, 'data': [{'round_id': '2018', 'price': '312882040500', 'timestamp': '1641889937'}, {'round_id': '2017', 'price': '311613433829', 'timestamp': '1641886305'}, {'round_id': '2016', 'price': '311445000000', 'timestamp': '1641882671'}, {'round_id': '2015', 'price': '310672718218', 'timestamp': '1641879040'}, {'round_id': '2014', 'price': '311461368677', 'timestamp': '1641875409'}, {'round_id': '2013', 'price': '311394849384', 'timestamp': '1641871778'}]},
-			'BTC': {'oracle': wbtcOracleAddress, 'data': [{'round_id': '2021', 'price': '4201340255103', 'timestamp': '1641891047'}, {'round_id': '2020', 'price': '4245514000000', 'timestamp': '1641889577'}, {'round_id': '2019', 'price': '4197967571800', 'timestamp': '1641864920'}, {'round_id': '2018', 'price': '4155911000000', 'timestamp': '1641840072'}, {'round_id': '2017', 'price': '4114025628407', 'timestamp': '1641837070'}, {'round_id': '2016', 'price': '4072208879420', 'timestamp': '1641836334'}]},
-			'DAI': {'oracle': daiOracleAddress, 'data': [{'round_id': '2009', 'price': '99990575', 'timestamp': '1641892596'}, {'round_id': '2008', 'price': '100000000', 'timestamp': '1641806161'}, {'round_id': '2007', 'price': '100054178', 'timestamp': '1641719735'}, {'round_id': '2006', 'price': '100034433', 'timestamp': '1641633301'}, {'round_id': '2005', 'price': '100044915', 'timestamp': '1641546877'}, {'round_id': '2004', 'price': '100008103', 'timestamp': '1641460433'}]}
+			'ETH': {'oracle': wethOracleAddress, 'data': await getOracleDataHistoryAsList(wethOracle, 10)},
+			'BTC': {'oracle': wbtcOracleAddress, 'data': await getOracleDataHistoryAsList(wbtcOracle, 10)},
+			'DAI': {'oracle': daiOracleAddress, 'data': await getOracleDataHistoryAsList(daiOracle, 10)}
 		}
-		now = 1641892596
+
 	}
 
 	async function loadMainnetData() {
@@ -67,11 +73,18 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		return [inRoundId, inPrices, inTimestamps, outRoundId, outPrices, outTimestamps]
 	}
 
-	async function assertGetParametersEstimation(priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, inCurrency, outCurrency) {
+	async function assertGetParametersEstimation(
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, inCurrency, outCurrency
+		) {
 
-		const [inRoundId, inPrices, inTimestamps, outRoundId, outPrices, outTimestamps] = getHistoricalData(inCurrency, outCurrency)
+		const [inRoundId, inPrices, inTimestamps, outRoundId, outPrices, outTimestamps] = getHistoricalData(
+			inCurrency, outCurrency
+		)
 
-		const [inStartIndex, outStartIndex] = getStartIndices(inTimestamps, outTimestamps, priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now)
+		const [inStartIndex, outStartIndex] = getStartIndices(
+			inTimestamps, outTimestamps,
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+		)
 
 		// Library output
 
@@ -114,9 +127,21 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 
 		// debug only
 		if (verbose) {
-			console.log("spread in/out:", Math.exp((fromWei(mean) - fromWei(variance) / 2) * horizon + z * Math.sqrt(fromWei(variance) * 2 * horizon)) - 1)
+			console.log(
+				"spread in/out:",
+				Math.exp(
+					(fromWei(mean) - fromWei(variance) / 2) * horizon + z * Math.sqrt(fromWei(variance) * 2 * horizon)
+				) - 1
+			)
 
-			const [inRoundIdBis, inPricesBis, inTimestampsBis, outRoundIdBis, outPricesBis, outTimestampsBis] = getHistoricalData(inCurrency, outCurrency)
+			const [
+				inRoundIdBis,
+				inPricesBis,
+				inTimestampsBis,
+				outRoundIdBis,
+				outPricesBis,
+				outTimestampsBis
+			] = getHistoricalData(inCurrency, outCurrency)
 
 			// Library output
 			const resultBis = await gbmOracle.getParametersEstimation.call(
@@ -124,7 +149,12 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 				testData[inCurrency]["oracle"], inRoundIdBis, inPricesBis[0], inTimestampsBis[0],
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
-			console.log("spread out/in:", Math.exp((fromWei(resultBis[0]) - fromWei(resultBis[1]) / 2) * horizon + z * Math.sqrt(fromWei(resultBis[1]) * 2 * horizon)) - 1)
+			console.log(
+				"spread out/in:",
+				Math.exp(
+					(fromWei(resultBis[0]) - fromWei(resultBis[1]) / 2) * horizon + z * Math.sqrt(fromWei(resultBis[1]) * 2 * horizon)
+				) - 1
+			)
 		}
 
 	}
@@ -213,7 +243,9 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 				);
 
 				// Checking returns
-				let relDif = periodsReturn.reduce((acc, r, idx) => acc + (r - expectedPeriodsReturn[idx]) / expectedPeriodsReturn[idx], 0) / periodsReturn.length;
+				let relDif = periodsReturn.reduce((acc, r, idx) => {
+					return acc + (r - expectedPeriodsReturn[idx]) / expectedPeriodsReturn[idx]
+				}, 0) / periodsReturn.length
 				if (verbose) {
 					console.log('getPairReturns');
 					console.log(`expected: ${expectedPeriodsReturn}`);

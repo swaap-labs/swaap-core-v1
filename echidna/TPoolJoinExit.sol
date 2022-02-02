@@ -31,7 +31,7 @@ contract TPoolJoinExit is CryticInterface, Pool {
         t = new MyToken(type(uint).max, address(this));
         
         // Create Oracle for the initial token
-        oracle = new TWBTCOracle();
+        oracle = new TWBTCOracle(block.timestamp);
 
         // Bind the token with the provided parameters
         bindMMM(address(t), MAX_BALANCE, Const.MAX_WEIGHT, address(oracle));
@@ -49,7 +49,7 @@ contract TPoolJoinExit is CryticInterface, Pool {
         MyToken bt = new MyToken(initial_token_balance, address(this));
         bt.approve(address(this), initial_token_balance);
         // Create Oracle for the buy token
-        TWETHOracle oracleBT = new TWETHOracle();
+        TWETHOracle oracleBT = new TWETHOracle(block.timestamp);
         // Bind the token with the provided parameters
         bindMMM(address(bt), balance, denorm, address(oracleBT));
         return address(bt);

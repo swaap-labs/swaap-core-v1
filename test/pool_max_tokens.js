@@ -8,6 +8,8 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 contract('Pool', async (accounts) => {
     const admin = accounts[0];
 
+    const now = 1641893000;
+
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
 
@@ -44,7 +46,7 @@ contract('Pool', async (accounts) => {
         hhh = await TToken.new('HHH', 'HHH', 18);
         zzz = await TToken.new('ZZZ', 'ZZZ', 18);
 
-		aaaOracle = await TConstantOracle.new(42);
+		aaaOracle = await TConstantOracle.new(4200000000, now);
 		aaaOracleAddress = aaaOracle.address
 		bbbOracleAddress = aaaOracleAddress
 		cccOracleAddress = aaaOracleAddress

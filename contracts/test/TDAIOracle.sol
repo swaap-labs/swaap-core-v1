@@ -7,6 +7,8 @@ import "../interfaces/IAggregatorV3.sol";
 
 contract TDAIOracle is IAggregatorV3 {
 
+    uint256 timestamp;
+
     uint80 latestRoundId = 2009;
     uint8 _decimals = 8;
     int256 _precision = 100000000;
@@ -14,36 +16,40 @@ contract TDAIOracle is IAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor() {
+    constructor(uint256 timestamp_) {
+
+        timestamp = timestamp_;
+
         prices[latestRoundId] = 99990575;
-        timestamps[latestRoundId] = 1641892596;
+        timestamps[latestRoundId] = timestamp - 404;
 
         prices[latestRoundId - 1] = 100000000;
-        timestamps[latestRoundId - 1] = 1641806161;
+        timestamps[latestRoundId - 1] = timestamp - 86839;
 
         prices[latestRoundId - 2] = 100054178;
-        timestamps[latestRoundId - 2] = 1641719735;
+        timestamps[latestRoundId - 2] = timestamp - 173265;
 
         prices[latestRoundId - 3] = 100034433;
-        timestamps[latestRoundId - 3] = 1641633301;
+        timestamps[latestRoundId - 3] = timestamp - 259699;
 
         prices[latestRoundId - 4] = 100044915;
-        timestamps[latestRoundId - 4] = 1641546877;
+        timestamps[latestRoundId - 4] = timestamp - 346123;
 
         prices[latestRoundId - 5] = 100008103;
-        timestamps[latestRoundId - 5] = 1641460433;
+        timestamps[latestRoundId - 5] = timestamp - 432567;
 
         prices[latestRoundId - 6] = 99986759;
-        timestamps[latestRoundId - 6] = 1641374018;
+        timestamps[latestRoundId - 6] = timestamp - 518982;
 
         prices[latestRoundId - 7] = 100000000;
-        timestamps[latestRoundId - 7] = 1641287588;
+        timestamps[latestRoundId - 7] = timestamp - 605412;
 
         prices[latestRoundId - 8] = 100000000;
-        timestamps[latestRoundId - 8] = 1641187676;
+        timestamps[latestRoundId - 8] = timestamp - 705324;
 
         prices[latestRoundId - 9] = 100006444;
-        timestamps[latestRoundId - 9] = 1641101258;
+        timestamps[latestRoundId - 9] = timestamp - 791742;
+
     }
 
     function decimals() public view override returns (uint8) {
@@ -89,4 +95,15 @@ contract TDAIOracle is IAggregatorV3 {
         uint256 ts = timestamps[latestRoundId];
         return (latestRoundId, a, ts, ts, latestRoundId);
     }
+
+    function updateTimestamp(uint256 timestamp_) public {
+        timestamp = timestamp_;
+    }
+
+    function addDataPoint(int256 price_, uint256 timestamp_) public {
+        latestRoundId++;
+        prices[latestRoundId] = price_;
+        timestamps[latestRoundId] = timestamp_;
+    }
+
 }

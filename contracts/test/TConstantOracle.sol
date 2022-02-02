@@ -7,6 +7,8 @@ import "./TIAggregatorV3.sol";
 
 contract TConstantOracle is TIAggregatorV3 {
 
+    uint256 timestamp;
+
     uint80 latestRoundId = 1;
     uint8 _decimals = 8;
     int256 _precision = 100000000;
@@ -14,9 +16,10 @@ contract TConstantOracle is TIAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(int256 value) {
-        prices[latestRoundId] = value;
-        timestamps[latestRoundId] = 16000;
+    constructor(int256 value_, uint256 timestamp_) {
+        timestamp = timestamp_;
+        prices[latestRoundId] = value_;
+        timestamps[latestRoundId] = timestamp;
 
     }
 
@@ -63,4 +66,15 @@ contract TConstantOracle is TIAggregatorV3 {
         uint256 ts = timestamps[latestRoundId];
         return (latestRoundId, a, ts, ts, latestRoundId);
     }
+
+    function updateTimestamp(uint256 timestamp_) public {
+        timestamp = timestamp_;
+    }
+
+    function addDataPoint(int256 price_, uint256 timestamp_) public {
+        latestRoundId++;
+        prices[latestRoundId] = price_;
+        timestamps[latestRoundId] = timestamp_;
+    }
+
 }

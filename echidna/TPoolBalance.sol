@@ -34,7 +34,7 @@ contract TPoolBalance is Pool, CryticInterface {
         token = new MyToken(initial_token_balance, address(this));
         
         // Create Oracle for the initial token
-        oracle = new TConstantOracle(1000000000);
+        oracle = new TConstantOracle(1000000000, block.timestamp);
 
         // Bind the token with the minimal balance/weights
         bindMMM(address(token), Const.MIN_BALANCE, Const.MIN_WEIGHT, address(oracle));

@@ -14,6 +14,9 @@ const verbose = process.env.VERBOSE;
 
 
 contract('Pool', async (accounts) => {
+
+	const now = 1641893000;
+
     const admin = accounts[0];
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
@@ -107,8 +110,8 @@ contract('Pool', async (accounts) => {
         await weth.approve(POOL, MAX);
         await dai.approve(POOL, MAX);
 
-		wethOracle = await TConstantOracle.new(3000);
-		daiOracle = await TConstantOracle.new(1);
+		wethOracle = await TConstantOracle.new(300000000000, now);
+        daiOracle = await TConstantOracle.new(100000000, now);
 
         await pool.bindMMM(WETH, toWei(wethBalance), toWei(wethDenorm), wethOracle.address);
         await pool.bindMMM(DAI, toWei(daiBalance), toWei(daiDenorm), daiOracle.address);
