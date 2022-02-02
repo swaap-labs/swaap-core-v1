@@ -558,10 +558,10 @@ contract Pool is PoolToken {
         // Adjust the denorm and totalWeight
         uint256 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
-            _totalWeight = _totalWeight + denorm - oldWeight;
+            _totalWeight = _totalWeight + (denorm - oldWeight);
             require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
         } else if (denorm < oldWeight) {
-            _totalWeight = _totalWeight - oldWeight + denorm;
+            _totalWeight = (_totalWeight - oldWeight) + denorm;
         }
         _records[token].denorm = denorm;
 
@@ -635,7 +635,7 @@ contract Pool is PoolToken {
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-
+        
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,

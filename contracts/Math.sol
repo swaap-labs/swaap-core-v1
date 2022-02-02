@@ -185,7 +185,7 @@ library Math {
         if (gbmEstimation.mean == 0 && gbmEstimation.variance == 0) {
             return 0;
         }
-        int256 driftTerm = gbmEstimation.mean - int256(gbmEstimation.variance) / 2;
+        int256 driftTerm = gbmEstimation.mean - (int256(gbmEstimation.variance) / 2);
         if (driftTerm < 0) {
             driftTerm = -int256(Num.bmul(uint256(-driftTerm), gbmParameters.horizon));
         } else {
