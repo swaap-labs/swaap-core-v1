@@ -44,87 +44,58 @@ library GeometricBrownianMotionOracle {
     internal view returns (Struct.GBMEstimation memory gbmEstimation) {
 
         uint256 endTimestamp = hpParameters.timestamp;
-        if (inputIn.timestamp > inputOut.timestamp) {
-            if (inputIn.timestamp > endTimestamp) {
-                endTimestamp = inputIn.timestamp;
-            }
-        } else {
-            if (inputOut.timestamp > endTimestamp) {
-                endTimestamp = inputOut.timestamp;
-            }
-        }
 
         // retrieve historical prices of tokenIn
         (uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn) = getHistoricalPrices(
             inputIn, hpParameters, endTimestamp
         );
-        // startIndex convention to detect empty arrays, cf getHistoricalPrices definition
-        if (startIndexIn == hpParameters.lookbackInRound) {
-            return gbmEstimation = Struct.GBMEstimation(0, 0);
+        {
+            uint256 reducedLookbackInSecCandidate = endTimestamp - timestampsIn[startIndexIn];
+            if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
+                hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
+            }
         }
         // retrieve historical prices of tokenOut
         (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
             inputOut, hpParameters, endTimestamp
         );
-        // startIndex convention to detect empty arrays, cf getHistoricalPrices definition
-        if (startIndexOut == hpParameters.lookbackInRound) {
-            return gbmEstimation = Struct.GBMEstimation(0, 0);
-        }
 
+        // no price return can be calculated with only 1 data point
         if (startIndexIn == 0 && startIndexOut == 0) {
             return gbmEstimation = Struct.GBMEstimation(0, 0);
         }
 
         uint256 actualTimeWindowInSec;
         if (noMoreDataPointIn && noMoreDataPointOut) {
-            // considering full lookback time window
+            // considering the full lookback time window
             actualTimeWindowInSec = hpParameters.lookbackInSec;
         } else {
             uint256 startTimestamp = timestampsOut[startIndexOut];
-            if (noMoreDataPointIn) {
-                startTimestamp = timestampsOut[startIndexOut];
-                while ((startIndexIn > 0) && (timestampsIn[startIndexIn - 1] <= startTimestamp)) {
-                    startIndexIn--;
-                }
-            } else if (noMoreDataPointOut) {
+            // trim prices/timestamps by adjusting startIndexes
+            if (timestampsIn[startIndexIn] > timestampsOut[startIndexOut]) {
                 startTimestamp = timestampsIn[startIndexIn];
                 while ((startIndexOut > 0) && (timestampsOut[startIndexOut - 1] <= startTimestamp)) {
                     startIndexOut--;
                 }
             } else {
-                // trim prices/timestamps by adjusting startIndexes
-                if (timestampsIn[startIndexIn] > timestampsOut[startIndexOut]) {
-                    startTimestamp = timestampsIn[startIndexIn];
-                    while ((startIndexOut > 0) && (timestampsOut[startIndexOut - 1] <= startTimestamp)) {
-                        startIndexOut--;
-                    }
-                } else {
-                    startTimestamp = timestampsOut[startIndexOut];
-                    while ((startIndexIn > 0) && (timestampsIn[startIndexIn - 1] <= startTimestamp)) {
-                        startIndexIn--;
-                    }
+                startTimestamp = timestampsOut[startIndexOut];
+                while ((startIndexIn > 0) && (timestampsIn[startIndexIn - 1] <= startTimestamp)) {
+                    startIndexIn--;
                 }
             }
 
+            // no price return can be calculated with only 1 data point
             if (startIndexIn == 0 && startIndexOut == 0) {
                 return gbmEstimation = Struct.GBMEstimation(0, 0);
             }
 
-            if (endTimestamp <= hpParameters.lookbackInSec) {
-                actualTimeWindowInSec = hpParameters.lookbackInSec;
-            } else {
-                if (endTimestamp - hpParameters.lookbackInSec > startTimestamp) {
-                actualTimeWindowInSec = hpParameters.lookbackInSec;
-                } else {
-                    actualTimeWindowInSec = endTimestamp - startTimestamp;
-                }
-            }
+            actualTimeWindowInSec = endTimestamp - startTimestamp; // will always be < than lookbackInSec
 
         }
 
         if (actualTimeWindowInSec > 1) {
             (int256 mean, uint256 variance) = getStatistics(
-                // compute returns
+            // compute returns
                 getPairReturns(
                     pricesIn, timestampsIn, startIndexIn,
                     pricesOut, timestampsOut, startIndexOut
@@ -353,67 +324,60 @@ library GeometricBrownianMotionOracle {
         // result variables
         uint256[] memory prices = new uint256[](hpParameters.lookbackInRound);
         uint256[] memory timestamps = new uint256[](hpParameters.lookbackInRound);
-        uint256 count = hpParameters.lookbackInRound + 1; // will mean 'empty arrays' in the following
+        uint256 idx = hpParameters.lookbackInRound + 1; // will mean 'empty arrays' in the following
 
         {
 
-            if (latestTimestamp > 0 && latestPrice > 0) {
+            prices[0] = uint256(latestPrice); // is supposed to be well valid
+            timestamps[0] = latestTimestamp; // is supposed to be well valid
 
-                prices[0] = uint256(latestPrice);
-                timestamps[0] = latestTimestamp;
+            if (latestTimestamp < timeLimit) {
+                return (prices, timestamps, 0, true);
+            }
 
-                if (latestTimestamp < timeLimit) {
-                    return (prices, timestamps, 0, true);
-                }
+            idx = 1;
+            uint80 count = 1;
 
-                count = 1;
+            // buffer variables
+            uint80 _roundId = latestRoundId;
 
-                // buffer variables
-                uint80 _roundId = latestRoundId;
+            while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
 
-                while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
+                _roundId--;
+                (int256 _price, uint256 _timestamp) = getRoundData(priceFeed, _roundId);
 
-                    _roundId--;
-                    (int256 _price, uint256 _timestamp) = tryGetRoundData(priceFeed, _roundId);
+                if (_price > 0 && _timestamp > 0) {
 
-                    if (_price <= 0 || _timestamp <= 0) {
-                        break;
-                    }
-
-                    prices[count] = uint256(_price);
-                    timestamps[count] = _timestamp;
-                    count += 1;
+                    prices[idx] = uint256(_price);
+                    timestamps[idx] = _timestamp;
+                    idx += 1;
 
                     if (_timestamp < timeLimit) {
-                        return (prices, timestamps, count - 1, true);
+                        return (prices, timestamps, idx - 1, true);
                     }
 
                 }
+
+                count += 1;
+
             }
 
         }
 
-        return (prices, timestamps, count - 1, false);
+        return (prices, timestamps, idx - 1, false);
     }
 
     /**
-    * @notice Retrieves historical data from round id or returns null values if not possible.
+    * @notice Retrieves historical data from round id.
+    * @dev Will not fail and return (0, 0) if no data can be found.
     * @param priceFeed The oracle of interest
     * @param _roundId The the round of interest ID
     * @return The round price
     * @return The round timestamp
     */
-    function tryGetRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
-        try priceFeed.getRoundData(_roundId) returns (
-            uint80 ,
-            int256 _price,
-            uint256 ,
-            uint256 _timestamp,
-            uint80
-        ) {
-            return (_price, _timestamp);
-        } catch {}
-        return (0, 0);
+    function getRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
+        (, int256 _price, , uint256 _timestamp, ) = priceFeed.getRoundData(_roundId);
+        return (_price, _timestamp);
     }
 
 }
