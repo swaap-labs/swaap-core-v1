@@ -627,7 +627,7 @@ contract Pool is PoolToken {
     }
 
     function _getSpotPriceMMMWithTimestamp(address tokenIn, address tokenOut, uint256 swapFee, uint256 timestamp)
-    public view _viewlock_
+    internal view _viewlock_
     returns (uint256 spotPrice)
     {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
@@ -694,7 +694,7 @@ contract Pool is PoolToken {
         uint256 maxPrice,
         uint256 timestamp
     )
-    public
+    internal
     _logs_
     _lock_
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
