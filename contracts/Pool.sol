@@ -463,7 +463,7 @@ contract Pool is PoolToken {
         return _prices[token].initialPrice;
     }
 
-    function getTokenPriceMMM(address token)
+    function getTokenPriceOracle(address token)
     external view
     _viewlock_
     returns (address)
