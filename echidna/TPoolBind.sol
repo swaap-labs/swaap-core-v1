@@ -111,7 +111,8 @@ contract TPoolBindPrivileged is CryticInterface, Pool {
             address[] memory current_tokens = this.getCurrentTokens();
             for (uint i = 0; i < current_tokens.length; i++) {
                 // rebind all the tokens, one by one, using valid parameters
-                rebindMMM(current_tokens[i], valid_balance_to_bind, valid_denorm_to_bind, address(oracle));
+                uint256 oldWeight = this.getDenormalizedWeight(current_tokens[i]);
+                rebindMMM(current_tokens[i], valid_balance_to_bind, oldWeight, address(oracle));
             }
             // at the end, the list of current tokens should have not change in size
             return current_tokens.length == this.getCurrentTokens().length;
