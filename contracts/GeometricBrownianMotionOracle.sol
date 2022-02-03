@@ -64,9 +64,9 @@ library GeometricBrownianMotionOracle {
         }
 
         uint256 actualTimeWindowInSec;
-        // TODO add comment
         
-        (startIndexIn, startIndexOut, actualTimeWindowInSec) = getActualTimeWindow(
+        // retrieve the final time window and the last valid indexes of the historical prices
+        (actualTimeWindowInSec, startIndexIn, startIndexOut) = getActualTimeWindow(
             hpParameters,
             noMoreDataPointIn, noMoreDataPointOut,
             startIndexIn, startIndexOut, 
@@ -104,7 +104,7 @@ library GeometricBrownianMotionOracle {
     * - the time steps (t) are expressed in seconds
     * @param pricesIn The historical prices of tokenIn
     * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
-    * @param startIndexIn The historical prices of tokenOut
+    * @param startIndexIn The tokenIn historical data's last valid index
     * @param pricesOut The tokenIn historical data's last valid index
     * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
     * @param startIndexOut The tokenOut historical data's last valid index
@@ -210,7 +210,7 @@ library GeometricBrownianMotionOracle {
     * - when we reach the last point of a token, we consider it's value constant going forward with the other token
     * - we exit when both tokens
     * As a result the variance of those returns will be underestimated.
-    * @param startIndexIn The historical prices of tokenOut
+    * @param startIndexIn The tokenIn historical data's last valid index
     * @param startIndexOut The tokenOut historical data's last valid index
     * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
     * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
@@ -284,6 +284,7 @@ library GeometricBrownianMotionOracle {
     * @return The historical prices
     * @return The historical timestamps
     * @return The last valid value index
+    * @return True if the reported historical prices reaches the lookback time limit
     */
     function getHistoricalPrices(
         Struct.LatestRound memory input,
@@ -342,11 +343,26 @@ library GeometricBrownianMotionOracle {
             }
 
         }
-
+        
         return (prices, timestamps, idx - 1, false);
     }
 
-    // TODO
+    /**
+    * @notice Gets the actual time window as well the last valid indexes of that time window
+    * @dev We need to find the common time window of the reported historical prices of the tokens:
+    * - if both tokens' reported timestamps exceed the lookback timelimit, the common window will be equal to the time limit
+    * - else the common time window will be equal to the smaller lookback time window of the pair
+    * @param hpParameters The parameters for historical prices retrieval
+    * @param noMoreDataPointIn True if the reported historical prices reaches the lookback time limit 
+    * @param noMoreDataPointOut True if the reported historical prices reaches the lookback time limit
+    * @param startIndexIn The tokenIn historical data's last valid index
+    * @param startIndexOut The tokenOut historical data's last valid index
+    * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
+    * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
+    * @return The common time window used to calculate the price's spread of the tokenIn/Out pair
+    * @return The (corrected) tokenIn historical data's last valid index
+    * @return The (corrected) tokenOut historical data's last valid index
+    */
     function getActualTimeWindow(
         Struct.HistoricalPricesParameters memory hpParameters,
         bool noMoreDataPointIn,
@@ -365,18 +381,21 @@ library GeometricBrownianMotionOracle {
             // considering the full lookback time window
             actualTimeWindowInSec = hpParameters.lookbackInSec;
         } else {
-            uint256 startTimestamp = timestampsOut[startIndexOut];
+            uint256 startTimestamp;
             // trim prices/timestamps by adjusting startIndexes
             if (timestampsIn[startIndexIn] > timestampsOut[startIndexOut]) {
                 startTimestamp = timestampsIn[startIndexIn];
                 while ((startIndexOut > 0) && (timestampsOut[startIndexOut - 1] <= startTimestamp)) {
                     startIndexOut--;
                 }
-            } else {
+            } else if (timestampsIn[startIndexIn] < timestampsOut[startIndexOut]) {
                 startTimestamp = timestampsOut[startIndexOut];
                 while ((startIndexIn > 0) && (timestampsIn[startIndexIn - 1] <= startTimestamp)) {
                     startIndexIn--;
                 }
+            } else {
+                // timestampsIn[startIndexIn] == timestampsOut[startIndexOut]
+                startTimestamp = timestampsIn[startIndexIn];
             }
 
             // endTimestamp >= startTimestamp
@@ -384,7 +403,7 @@ library GeometricBrownianMotionOracle {
 
         }
 
-        return (startIndexIn, startIndexOut, actualTimeWindowInSec);
+        return (actualTimeWindowInSec, startIndexIn, startIndexOut);
     }
 
     /**
