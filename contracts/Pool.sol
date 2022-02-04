@@ -518,6 +518,13 @@ contract Pool is PoolToken {
         return Num.bdiv(_getAdjustedTokenWeight(token), _getTotalDenormalizedWeightMMM());
     }
 
+    /**
+    * @notice Add a new token to the pool
+    * @param token The token's address
+    * @param balance The token's balance
+    * @param denorm The token's weight
+    * @param _priceFeedAddress The token's Chainlink price feed
+    */
     function bindMMM(address token, uint256 balance, uint256 denorm, address _priceFeedAddress)
     external
     _logs_
@@ -541,6 +548,13 @@ contract Pool is PoolToken {
         rebindMMM(token, balance, denorm, _priceFeedAddress);
     }
 
+    /**
+    * @notice Replace an already pool's token
+    * @param token The token's address
+    * @param balance The token's balance
+    * @param denorm The token's weight
+    * @param _priceFeedAddress The token's Chainlink price feed
+    */
     function rebindMMM(address token, uint256 balance, uint256 denorm, address _priceFeedAddress)
     public
     _logs_
@@ -589,6 +603,10 @@ contract Pool is PoolToken {
         emit LOG_PRICE(token, address(_prices[token].oracle), _prices[token].initialPrice);
     }
 
+    /**
+    * @notice Remove a new token from the pool
+    * @param token The token's address
+    */
     function unbindMMM(address token)
     external
     _logs_
@@ -802,18 +820,42 @@ contract Pool is PoolToken {
 
     }
 
+    /**
+    * @notice Compute the token historical performance since pool's inception
+    * @param initialPrice The token's initial price
+    * @param initialPrice The token's latest price
+    * @return tokenGlobal The token historical performance since pool's inception
+    */
+    function _getTokenPerformance(uint256 initialPrice, uint256 latestPrice)
+    internal pure returns (uint256) {
+        return Num.bdiv(
+            latestPrice,
+            initialPrice
+        );
+    }
+
     function _getAdjustedTokenWeight(address token)
     internal view returns (uint256) {
         // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
         return Num.bmul(
             _records[token].denorm,
-            Num.bdiv(
+            _getTokenPerformance(
                 _getTokenCurrentPrice(_prices[token].oracle),
                 _prices[token].initialPrice
             )
         );
     }
 
+    /**
+    * @notice Retrieves the given token's latest oracle data.
+    * @dev We get:
+    * - latest round Id
+    * - latest price
+    * - latest round timestamp
+    * - token historical performance since pool's inception
+    * @param token The token's address
+    * @return tokenGlobal The latest tokenIn oracle data
+    */
     function getTokenLatestInfo(address token)
     internal view returns (Struct.TokenGlobal memory tokenGlobal) {
         Record memory record = _records[token];
@@ -824,8 +866,8 @@ contract Pool is PoolToken {
             // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
             Num.bmul(
                 record.denorm,
-                Num.bdiv(
-                    _toUInt256Unsafe(latestPrice),
+                _getTokenPerformance(
+                    _toUInt256Unsafe(latestPrice), // we consider the token price to be > 0
                     price.initialPrice
                 )
             )
@@ -840,9 +882,15 @@ contract Pool is PoolToken {
         );
     }
 
+    /**
+    * @notice Retrieves the latest price from the given oracle price feed
+    * @dev We consider the token price to be > 0
+    * @param priceFeed The price feed of interest
+    * @return The latest price
+    */
     function _getTokenCurrentPrice(IAggregatorV3 priceFeed) internal view returns (uint256) {
         (, int256 price, , ,) = priceFeed.latestRoundData();
-        return _toUInt256Unsafe(price);
+        return _toUInt256Unsafe(price);  // we consider the token price to be > 0
     }
 
     function _getTokenPriceDecimals(IAggregatorV3 priceFeed) internal view returns (uint8) {
@@ -856,15 +904,22 @@ contract Pool is PoolToken {
         return uint256(value);
     }
 
+    /**
+    * @notice Computes the price of tokenOut in tokenIn terms
+    * @param latestRoundIn The latest oracle data for tokenIn
+    * @param latestRoundOut The latest oracle data for tokenOut
+    * @return The price of tokenOut in tokenIn terms
+    */
     function getTokenOutPriceInTokenInTerms(
-        Struct.LatestRound memory tokenIn, Struct.LatestRound memory tokenOut
+        Struct.LatestRound memory latestRoundIn, Struct.LatestRound memory latestRoundOut
     )
     internal
     view
     returns (uint256) {
-        uint8 decimalIn = IAggregatorV3(tokenIn.oracle).decimals();
-        uint8 decimalOut = IAggregatorV3(tokenOut.oracle).decimals();
-        uint256 rawDiv = Num.bdiv(_toUInt256Unsafe(tokenOut.price), _toUInt256Unsafe(tokenIn.price));
+        uint8 decimalIn = IAggregatorV3(latestRoundIn.oracle).decimals();
+        uint8 decimalOut = IAggregatorV3(latestRoundOut.oracle).decimals();
+        // we consider tokens price to be > 0
+        uint256 rawDiv = Num.bdiv(_toUInt256Unsafe(latestRoundOut.price), _toUInt256Unsafe(latestRoundIn.price));
         if (decimalIn == decimalOut) {
             return rawDiv;
         } else if (decimalIn > decimalOut) {

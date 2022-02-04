@@ -300,7 +300,8 @@ library Math {
             return _calcOutGivenInMMM(
                 tokenIn, tokenOut,
                 swapParameters, gbmParameters, gbmEstimation,
-                quantityInAtEquilibrium);
+                quantityInAtEquilibrium
+            );
         }
 
     }
@@ -350,13 +351,13 @@ library Math {
             return (
                 Struct.SwapResult(
                     calcOutGivenIn(
-                            tokenIn.balance,
-                            tokenIn.weight,
-                            tokenOut.balance,
-                            adjustedTokenOutWeight,
-                            swapParameters.amount,
-                            swapParameters.fee
-                        ),
+                        tokenIn.balance,
+                        tokenIn.weight,
+                        tokenOut.balance,
+                        adjustedTokenOutWeight,
+                        swapParameters.amount,
+                        swapParameters.fee
+                    ),
                     spread
                 )
             );
@@ -371,7 +372,7 @@ library Math {
                     adjustedTokenOutWeight,
                     quantityInAtEquilibrium - tokenIn.balance
                 ),
-                 spread // TODO: apply only on tokenInSellAmountForEquilibrium
+                 spread // TODO: broadcast necessary data to compute accurate fee revenue
             )
         );
     }
@@ -462,12 +463,6 @@ library Math {
     public pure
     returns (uint256 amountInAtPrice)
     {
-        //        uint256 localInvariant = tokenBalanceIn^tokenWeightIn * tokenBalanceOut^tokenWeightOut
-        //        uint256 price = tokenBalanceIn / (localInvariant / tokenBalanceIn^wIn)^(1/wOut) * tokenWeightOut / tokenWeightIn;
-        //        uint256 price = tokenBalanceIn^(1+wIn/wOut) / (localInvariant)^(1/wOut) * tokenWeightOut / tokenWeightIn;
-        //        uint256 tokenBalanceIn^(1+wIn/wOut) = price * (localInvariant)^(1/wOut) * tokenWeightIn / tokenWeightOut;
-        //        uint256 tokenBalanceIn = (price * (localInvariant)^(1/wOut) * tokenWeightIn / tokenWeightOut)^(wOut/(wIn+wOut));
-        //        uint256 tokenBalanceIn = (price * tokenWeightIn / tokenWeightOut)^(wOut/(wIn+wOut)) * (localInvariant)^(1/(wIn+wOut);
         {
             uint256 weightSum = tokenWeightIn + tokenWeightOut;
             uint256 wOutOverSum = Num.bdiv(tokenWeightOut, weightSum);

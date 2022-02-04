@@ -141,38 +141,38 @@ contract('Pool', async (accounts) => {
     	const _now = lastBlock.timestamp
     	if (_now != now) {
     		now = _now
-			const [wethOracleStartIndexWETHDAI, daiOracleStartIndexWETHDAI] = getStartIndices(
+			const [wethOracleStartIndexWETHDAI, daiOracleStartIndexWETHDAI, wWETHDAI] = getStartIndices(
 				_wethOracleTimestamps, _daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWETHDAI, _expectedVarianceWETHDAI] = getParametersEstimation(
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWETHDAI,
 				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWETHDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWETHDAI
 			);
 			expectedMeanWETHDAI = _expectedMeanWETHDAI;
 			expectedVarianceWETHDAI = _expectedVarianceWETHDAI;
 
-			const [wbtcOracleStartIndexWBTCDAI, daiOracleStartIndexWBTCDAI] = getStartIndices(
+			const [wbtcOracleStartIndexWBTCDAI, daiOracleStartIndexWBTCDAI, wWBTCDAI] = getStartIndices(
 				_wbtcOracleTimestamps, _daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCDAI, _expectedVarianceWBTCDAI] = getParametersEstimation(
 				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCDAI,
 				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWBTCDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWBTCDAI
 			);
 			expectedMeanWBTCDAI = _expectedMeanWBTCDAI;
 			expectedVarianceWBTCDAI = _expectedVarianceWBTCDAI;
 
-			const [wbtcOracleStartIndexWBTCWETH, wethOracleStartIndexWBTCWETH] = getStartIndices(
+			const [wbtcOracleStartIndexWBTCWETH, wethOracleStartIndexWBTCWETH, wWBTCWETH] = getStartIndices(
 				_wbtcOracleTimestamps, _wethOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCWETH, _expectedVarianceWBTCWETH] = getParametersEstimation(
 				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCWETH,
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWBTCWETH,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWBTCWETH
 			);
 			expectedMeanWBTCWETH = _expectedMeanWBTCWETH;
 			expectedVarianceWBTCWETH = _expectedVarianceWBTCWETH;

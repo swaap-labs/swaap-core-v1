@@ -48,18 +48,17 @@ contract TPoolSwap is CryticInterface, Pool {
         finalize();
     }
 
-    function rebind_t1(uint256 balance, uint256 denorm) public {
-        rebind(address(t1), denorm);
-    }
-
-    function rebind_t2(uint256 balance, uint256 denorm) public {
-        rebind(address(t2), denorm);
-    }
+//    function rebind_t1(uint256 balance, uint256 denorm) public {
+//        rebind(address(t1), denorm);
+//    }
+//
+//    function rebind_t2(uint256 balance, uint256 denorm) public {
+//        rebind(address(t2), denorm);
+//    }
 
     function rebind(address token, uint256 denorm) public {
         rebindMMM(
             token,
-//            balance % (IERC20(token).balanceOf(msg.sender) / 2),
             balance,
             denorm % (Const.MAX_WEIGHT / 2),
             address(oracle2)
@@ -67,15 +66,21 @@ contract TPoolSwap is CryticInterface, Pool {
     }
 
     function add_oracle_data_point_t1(int256 value) public {
-        oracle1.addDataPoint(value, block.timestamp);
+        if (value > 0) {
+            oracle1.addDataPoint(value, block.timestamp);
+        }
     }
 
     function add_oracle_data_point_t2(int256 value) public {
-        oracle2.addDataPoint(value, block.timestamp);
+        if (value > 0) {
+            oracle2.addDataPoint(value, block.timestamp);
+        }
     }
 
     function set_seed(uint256 value) public {
-        seed = value;
+        if (value > 0) {
+            seed = value;
+        }
     }
 
     function echidna_swap_t1_t2() public returns (bool) {
@@ -87,25 +92,34 @@ contract TPoolSwap is CryticInterface, Pool {
     }
 
     function swap(address tokenIn, address tokenOut, uint256 s) internal returns (bool) {
-        uint256 reserveIn = this.getBalance(tokenIn);
-        // if the user has a small balance, it should be able to swap it
-        uint256 tokenAmountIn = s % (reserveIn / 100);
-        uint tokenAmountInBack = tokenAmountIn;
-        if (IERC20(tokenIn).balanceOf(msg.sender) > tokenAmountIn) {
-            (uint256 tokenAmountOut, ) = swapExactAmountInMMM(
-                tokenIn,
-                tokenAmountIn,
-                tokenOut,
-                0,
-                type(uint).max
-            );
-            (tokenAmountInBack, ) = swapExactAmountInMMM(
-                tokenOut,
-                tokenAmountOut,
-                tokenIn,
-                0,
-                type(uint).max
-            );
+        uint256 maxTokenAmountIn = this.getBalance(tokenIn) / 100;
+        if (maxTokenAmountIn == 0) {
+            return true;
+        }
+        uint256 tokenAmountIn = s % maxTokenAmountIn;
+        if (tokenAmountIn == 0) {
+            return true;
+        }
+        uint256 tokenAmountInBack = tokenAmountIn;
+        if (IERC20(tokenIn).balanceOf(msg.sender) >= tokenAmountIn) {
+            if (getAmountOutGivenInMMM(tokenIn, tokenAmountIn, tokenOut) > 0) {
+                (uint256 tokenAmountOut, ) = swapExactAmountInMMM(
+                    tokenIn,
+                    tokenAmountIn,
+                    tokenOut,
+                    0,
+                    type(uint).max
+                );
+                if (getAmountOutGivenInMMM(tokenOut, tokenAmountOut, tokenIn) > 0) {
+                    (tokenAmountInBack, ) = swapExactAmountInMMM(
+                        tokenOut,
+                        tokenAmountOut,
+                        tokenIn,
+                        0,
+                        type(uint).max
+                    );
+                }
+            }
         }
         return tokenAmountIn >= tokenAmountInBack;
     }
