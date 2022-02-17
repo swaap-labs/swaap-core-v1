@@ -677,7 +677,7 @@ contract Pool is PoolToken {
         return Math.calcSpotPriceMMM(
             tokenGlobalIn.info, tokenGlobalIn.latestRound,
             tokenGlobalOut.info, tokenGlobalOut.latestRound,
-            getTokenOutPriceInTokenInTerms(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
             swapFee, gbmParameters,
             hpParameters
         );
@@ -773,7 +773,27 @@ contract Pool is PoolToken {
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
 
-        return (tokenAmountOut = swapResult.amount, spotPriceAfter = spotPriceAfter);
+        return (tokenAmountOut = swapResult.amount, spotPriceAfter);
+    }
+
+    function swapExactAmountOutMMM(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    )
+    external
+    returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
+    {
+        return _swapExactAmountOutMMMWithTimestamp(
+            tokenIn,
+            maxAmountIn,
+            tokenOut,
+            tokenAmountOut,
+            maxPrice,
+            block.timestamp
+        );
     }
 
     function getAmountOutGivenInMMM(
@@ -823,7 +843,124 @@ contract Pool is PoolToken {
             tokenGlobalIn.latestRound,
             tokenGlobalOut.info,
             tokenGlobalOut.latestRound,
-            getTokenOutPriceInTokenInTerms(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            swapParameters,
+            gbmParameters,
+            hpParameters
+        );
+
+    }
+
+    function _swapExactAmountOutMMMWithTimestamp(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice,
+        uint256 timestamp
+    )
+    internal
+    _logs_
+    _lock_
+    returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
+    {
+
+        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
+        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
+
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_IN_RATIO");
+
+        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
+        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
+
+        // TODO: Re-check the necessity to calculate spotPriceBefore (and the conditions used in it later)
+        uint256 spotPriceBefore = Math.calcSpotPrice(
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
+            _swapFee
+        );
+        
+        require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+
+        Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
+            tokenGlobalIn,
+            tokenGlobalOut,
+            tokenAmountOut,
+            timestamp
+        );
+
+        require(swapResult.amount <= maxAmountIn, "ERR_LIMIT_OUT");
+
+        _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + swapResult.amount;
+        _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - tokenAmountOut;
+
+        spotPriceAfter = Math.calcSpotPrice(
+            _records[address(tokenIn)].balance,
+            tokenGlobalIn.info.weight,
+            _records[address(tokenOut)].balance,
+            tokenGlobalOut.info.weight,
+            _swapFee
+        );
+        require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
+        require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
+        require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "ERR_MATH_APPROX");
+
+        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
+
+        _pullUnderlying(tokenIn, msg.sender, swapResult.amount);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+
+        return (tokenAmountIn = swapResult.amount, spotPriceAfter);
+    }
+
+    function getAmountInGivenOutMMM(
+        address tokenIn,
+        address tokenOut,
+        uint256 tokenAmountOut
+    )
+    public view
+    returns (uint256 tokenAmountIn)
+    {
+
+        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
+        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
+
+        Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
+            tokenGlobalIn,
+            tokenGlobalOut,
+            tokenAmountOut,
+            block.timestamp
+        );
+
+        return tokenAmountIn = swapResult.amount;
+    }
+
+    function _getAmountInGivenOutMMMWithTimestamp(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
+        uint256 tokenAmountOut,
+        uint256 timestamp
+    )
+    internal view
+    returns (Struct.SwapResult memory)
+    {
+        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountOut, _swapFee);
+        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+        Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
+            priceStatisticsLookbackInRound,
+            priceStatisticsLookbackInSec,
+            timestamp
+        );
+
+        return Math.calcInGivenOutMMM(
+            tokenGlobalIn.info,
+            tokenGlobalIn.latestRound,
+            tokenGlobalOut.info,
+            tokenGlobalOut.latestRound,
+            getTokenRelativePrice(tokenGlobalOut.latestRound, tokenGlobalIn.latestRound),
             swapParameters,
             gbmParameters,
             hpParameters
@@ -915,32 +1052,32 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Computes the price of tokenOut in tokenIn terms
-    * @param latestRoundIn The latest oracle data for tokenIn
-    * @param latestRoundOut The latest oracle data for tokenOut
-    * @return The price of tokenOut in tokenIn terms
+    * @notice Computes the price of token 2 in terms token 1
+    * @param latestRound_1 The latest oracle data for token 1
+    * @param latestRound_2 The latest oracle data for token 2
+    * @return The price of token 2 in terms of token 1
     */
-    function getTokenOutPriceInTokenInTerms(
-        Struct.LatestRound memory latestRoundIn, Struct.LatestRound memory latestRoundOut
+    function getTokenRelativePrice(
+        Struct.LatestRound memory latestRound_1, Struct.LatestRound memory latestRound_2
     )
     internal
     view
     returns (uint256) {
-        uint8 decimalIn = IAggregatorV3(latestRoundIn.oracle).decimals();
-        uint8 decimalOut = IAggregatorV3(latestRoundOut.oracle).decimals();
+        uint8 decimal_1 = IAggregatorV3(latestRound_1.oracle).decimals();
+        uint8 decimal_2 = IAggregatorV3(latestRound_2.oracle).decimals();
         // we consider tokens price to be > 0
-        uint256 rawDiv = Num.bdiv(_toUInt256Unsafe(latestRoundOut.price), _toUInt256Unsafe(latestRoundIn.price));
-        if (decimalIn == decimalOut) {
+        uint256 rawDiv = Num.bdiv(_toUInt256Unsafe(latestRound_2.price), _toUInt256Unsafe(latestRound_1.price));
+        if (decimal_1 == decimal_2) {
             return rawDiv;
-        } else if (decimalIn > decimalOut) {
+        } else if (decimal_1 > decimal_2) {
             return Num.bmul(
                 rawDiv,
-                10**(decimalIn - decimalOut)*Const.BONE
+                10**(decimal_1 - decimal_2)*Const.BONE
             );
         } else {
             return Num.bdiv(
                 rawDiv,
-                10**(decimalOut - decimalIn)*Const.BONE
+                10**(decimal_2 - decimal_1)*Const.BONE
             );
         }
     }
