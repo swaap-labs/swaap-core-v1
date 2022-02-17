@@ -87,7 +87,6 @@ library Math {
         return tokenAmountOut;
     }
 
-
     /**********************************************************************************************
     // calcInGivenOut                                                                            //
     // aI = tokenAmountIn                                                                        //
@@ -338,75 +337,6 @@ library Math {
     }
 
     /**
-    * @notice Computes the amount of tokenIn needed in order to receive a given amount of tokenOut
-    * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
-    * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param latestRoundIn The oracle-related information regarding tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param latestRoundOut The oracle-related information regarding tokenOut
-    * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
-    * @param swapParameters Amount of token out and swap fee
-    * @param gbmParameters The GBM forecast parameters (Z, horizon)
-    * @param hpParameters The parameters for historical prices retrieval
-    * @return The swap execution conditions
-    */
-    function calcInGivenOutMMM(     
-        Struct.TokenRecord memory tokenIn,
-        Struct.LatestRound memory latestRoundIn,
-        Struct.TokenRecord memory tokenOut,
-        Struct.LatestRound memory latestRoundOut,
-        uint256 relativePrice,
-        Struct.SwapParameters memory swapParameters,
-        Struct.GBMParameters memory gbmParameters,
-        Struct.HistoricalPricesParameters memory hpParameters
-    )
-    public view
-    returns (Struct.SwapResult memory)
-    {
-
-        // determines the balance of tokenOut at equilibrium (cf definitions)
-        uint256 balanceOutAtEquilibrium = getTokenBalanceAtEquilibrium(
-            tokenOut.balance,
-            tokenOut.weight,
-            tokenIn.balance,
-            tokenIn.weight,
-            relativePrice
-        );
-
-        // from abundance of tokenOut to abundance of tokenOut --> no spread // TODO: make sure there is no overflow ever (change - to +)
-        if (tokenOut.balance > balanceOutAtEquilibrium && swapParameters.amount < tokenOut.balance - balanceOutAtEquilibrium) {
-            return (
-                Struct.SwapResult(
-                    calcInGivenOut(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        tokenOut.weight,
-                        swapParameters.amount,
-                        swapParameters.fee
-                    ),
-                    0
-                )
-            );
-        }
-
-        {
-            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
-                latestRoundIn, latestRoundOut,
-                hpParameters
-            );
-
-            return _calcInGivenOutMMM(
-                tokenIn, tokenOut,
-                swapParameters, gbmParameters, gbmEstimation,
-                balanceOutAtEquilibrium
-            );
-        }
-
-    }
-
-    /**
     * @notice Implements calcOutGivenInMMM in a subspace
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
@@ -478,6 +408,136 @@ library Math {
     }
 
     /**
+    * @notice Implements 'calcOutGivenInMMM' in the case of abundance of tokenOut
+    * @dev Two cases to consider:
+    * 1) amount of tokenIn won't drive the pool from abundance of tokenOut to shortage ==> 1 pricing (no spread)
+    * 2) amount of tokenIn will drive the pool from abundance of tokenOut to shortage ==> 2 pricing, one for each phase
+    * @param tokenIn The pool record on tokenIn
+    * @param tokenOut The pool record on tokenOut
+    * @param swapParameters The parameters of the swap
+    * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
+    * @param tokenInSellAmountForEquilibrium TokenIn needed to reach equilibrium
+    * @return tokenAmountOut The swap execution conditions
+    */
+    function _calcOutGivenInMMMAbundance(
+        Struct.TokenRecord memory tokenIn,
+        Struct.TokenRecord memory tokenOut,
+        Struct.SwapParameters memory swapParameters,
+        uint256 adjustedTokenWeightOut,
+        uint256 tokenInSellAmountForEquilibrium
+    )
+    internal pure
+    returns (uint256 tokenAmountOut)
+    {
+        // should not enter if called from calcOutGivenInMMM, as this latter returns before
+        // calling this function if the following condition is met
+        if (swapParameters.amount <= tokenInSellAmountForEquilibrium) {
+            // toward equilibrium --> no spread
+            return (
+                tokenAmountOut = calcOutGivenIn(
+                    tokenIn.balance,
+                    tokenIn.weight,
+                    tokenOut.balance,
+                    tokenOut.weight,
+                    swapParameters.amount,
+                    swapParameters.fee
+                )
+            );
+        }
+
+        // 'abundance of tokenOut' phase --> no spread
+        uint256 tokenAmountOutPart1 = calcOutGivenIn(
+            tokenIn.balance,
+            tokenIn.weight,
+            tokenOut.balance,
+            tokenOut.weight,
+            tokenInSellAmountForEquilibrium,
+            swapParameters.fee
+        );
+
+        // 'shortage of tokenOut phase' --> apply spread
+        uint256 tokenAmountOutPart2 = calcOutGivenIn(
+            tokenIn.balance + tokenInSellAmountForEquilibrium,
+            tokenIn.weight,
+            tokenOut.balance - tokenAmountOutPart1,
+            adjustedTokenWeightOut,
+            swapParameters.amount - tokenInSellAmountForEquilibrium, // tokenAmountIn > tokenInSellAmountForEquilibrium
+            swapParameters.fee
+        );
+
+        return (tokenAmountOut = tokenAmountOutPart1 + tokenAmountOutPart2);
+    }
+
+    /**
+    * @notice Computes the amount of tokenIn needed in order to receive a given amount of tokenOut
+    * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
+    * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
+    * @param tokenIn The pool record on tokenIn
+    * @param latestRoundIn The oracle-related information regarding tokenIn
+    * @param tokenOut The pool record on tokenOut
+    * @param latestRoundOut The oracle-related information regarding tokenOut
+    * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
+    * @param swapParameters Amount of token out and swap fee
+    * @param gbmParameters The GBM forecast parameters (Z, horizon)
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return The swap execution conditions
+    */
+    function calcInGivenOutMMM(     
+        Struct.TokenRecord memory tokenIn,
+        Struct.LatestRound memory latestRoundIn,
+        Struct.TokenRecord memory tokenOut,
+        Struct.LatestRound memory latestRoundOut,
+        uint256 relativePrice,
+        Struct.SwapParameters memory swapParameters,
+        Struct.GBMParameters memory gbmParameters,
+        Struct.HistoricalPricesParameters memory hpParameters
+    )
+    public view
+    returns (Struct.SwapResult memory)
+    {
+
+        // determines the balance of tokenOut at equilibrium (cf definitions)
+        uint256 balanceOutAtEquilibrium = getTokenBalanceAtEquilibrium(
+            tokenOut.balance,
+            tokenOut.weight,
+            tokenIn.balance,
+            tokenIn.weight,
+            relativePrice
+        );
+
+        // from abundance of tokenOut to abundance of tokenOut --> no spread
+        if (tokenOut.balance > balanceOutAtEquilibrium && swapParameters.amount < tokenOut.balance - balanceOutAtEquilibrium) {
+            return (
+                Struct.SwapResult(
+                    calcInGivenOut(
+                        tokenIn.balance,
+                        tokenIn.weight,
+                        tokenOut.balance,
+                        tokenOut.weight,
+                        swapParameters.amount,
+                        swapParameters.fee
+                    ),
+                    0
+                )
+            );
+        }
+
+        {
+            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
+                latestRoundIn, latestRoundOut,
+                hpParameters
+            );
+
+            return _calcInGivenOutMMM(
+                tokenIn, tokenOut,
+                swapParameters, gbmParameters, gbmEstimation,
+                balanceOutAtEquilibrium
+            );
+        }
+
+    }
+
+    /**
     * @notice Implements calcInGivenOutMMM in a subspace
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
@@ -546,67 +606,6 @@ library Math {
                 spread // TODO: broadcast necessary data to compute accurate fee revenue
             )
         );
-    }
-
-    /**
-    * @notice Implements 'calcOutGivenInMMM' in the case of abundance of tokenOut
-    * @dev Two cases to consider:
-    * 1) amount of tokenIn won't drive the pool from abundance of tokenOut to shortage ==> 1 pricing (no spread)
-    * 2) amount of tokenIn will drive the pool from abundance of tokenOut to shortage ==> 2 pricing, one for each phase
-    * @param tokenIn The pool record on tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param swapParameters The parameters of the swap
-    * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
-    * @param tokenInSellAmountForEquilibrium TokenIn needed to reach equilibrium
-    * @return tokenAmountOut The swap execution conditions
-    */
-    function _calcOutGivenInMMMAbundance(
-        Struct.TokenRecord memory tokenIn,
-        Struct.TokenRecord memory tokenOut,
-        Struct.SwapParameters memory swapParameters,
-        uint256 adjustedTokenWeightOut,
-        uint256 tokenInSellAmountForEquilibrium
-    )
-    internal pure
-    returns (uint256 tokenAmountOut)
-    {
-        // should not enter if called from calcOutGivenInMMM, as this latter returns before
-        // calling this function if the following condition is met
-        if (swapParameters.amount <= tokenInSellAmountForEquilibrium) {
-            // toward equilibrium --> no spread
-            return (
-                tokenAmountOut = calcOutGivenIn(
-                    tokenIn.balance,
-                    tokenIn.weight,
-                    tokenOut.balance,
-                    tokenOut.weight,
-                    swapParameters.amount,
-                    swapParameters.fee
-                )
-            );
-        }
-
-        // 'abundance of tokenOut' phase --> no spread
-        uint256 tokenAmountOutPart1 = calcOutGivenIn(
-            tokenIn.balance,
-            tokenIn.weight,
-            tokenOut.balance,
-            tokenOut.weight,
-            tokenInSellAmountForEquilibrium,
-            swapParameters.fee
-        );
-
-        // 'shortage of tokenOut phase' --> apply spread
-        uint256 tokenAmountOutPart2 = calcOutGivenIn(
-            tokenIn.balance + tokenInSellAmountForEquilibrium,
-            tokenIn.weight,
-            tokenOut.balance - tokenAmountOutPart1,
-            adjustedTokenWeightOut,
-            swapParameters.amount - tokenInSellAmountForEquilibrium, // tokenAmountIn > tokenInSellAmountForEquilibrium
-            swapParameters.fee
-        );
-
-        return (tokenAmountOut = tokenAmountOutPart1 + tokenAmountOutPart2);
     }
 
     /**
