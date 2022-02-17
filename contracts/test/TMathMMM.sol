@@ -52,7 +52,7 @@ library TMathMMM {
     public pure
     returns (uint256 amountOutAtPrice)
     {
-        return Math.getInAmountAtPrice(
+        return Math.getTokenBalanceAtEquilibrium(
             tokenBalanceIn,
             tokenWeightIn,
             tokenBalanceOut,
