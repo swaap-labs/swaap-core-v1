@@ -338,6 +338,65 @@ contract Pool is PoolToken {
 
     }
 
+    function joinPoolGivenTokenInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
+        external
+        _logs_
+        _lock_
+        returns (uint poolAmountOut)
+
+    {        
+        require(_finalized, "ERR_NOT_FINALIZED");
+        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
+        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
+
+        Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
+
+        uint nTokens = _tokens.length;
+        Struct.TokenGlobal[] memory tokensInfoOut = new Struct.TokenGlobal[](nTokens - 1);
+        
+        // Extracting tokenOut info
+        uint count = 0;
+        for (uint i = 0; i < (nTokens - 1); i++) {
+            if (_tokens[i] == tokenIn){
+                continue;
+            }
+            tokensInfoOut[count] = getTokenLatestInfo(_tokens[i]);
+            count++;
+        }
+
+        {
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, _swapFee);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+            Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
+                priceStatisticsLookbackInRound,
+                priceStatisticsLookbackInSec,
+                block.timestamp
+            );
+
+            poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
+                _totalSupply,
+                tokenInfoIn,
+                tokensInfoOut,
+                swapParameters,
+                gbmParameters,
+                hpParameters
+            );
+        }
+
+        require(poolAmountOut >= minPoolAmountOut, "ERR_LIMIT_OUT");
+
+        _records[tokenIn].balance += tokenAmountIn;
+
+        emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
+
+        _mintPoolShare(poolAmountOut);
+        _pushPoolShare(msg.sender, poolAmountOut);
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+
+        return poolAmountOut;
+    }
+
+
     // ==
     // 'Underlying' token-manipulation functions make external calls but are NOT locked
     // You must `_lock_` or otherwise ensure reentry-safety
