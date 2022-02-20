@@ -118,6 +118,111 @@ library Math {
         return tokenAmountIn;
     }
 
+    /**********************************************************************************************
+    // calcPoolOutGivenSingleIn                                                                  //
+    // pAo = poolAmountOut         /                                              \              //
+    // tAi = tokenAmountIn        ///      /     //    wI \      \\       \     wI \             //
+    // wI = tokenWeightIn        //| tAi *| 1 - || 1 - --  | * sF || + tBi \    --  \            //
+    // tW = totalWeight     pAo=||  \      \     \\    tW /      //         | ^ tW   | * pS - pS //
+    // tBi = tokenBalanceIn      \\  ------------------------------------- /        /            //
+    // pS = poolSupply            \\                    tBi               /        /             //
+    // sF = swapFee                \                                              /              //
+    **********************************************************************************************/
+    function calcPoolOutGivenSingleIn(
+        uint tokenBalanceIn,
+        uint tokenWeightIn,
+        uint poolSupply,
+        uint totalWeight,
+        uint tokenAmountIn,
+        uint swapFee
+    )
+        public pure
+        returns (uint poolAmountOut)
+    {
+        // Charge the trading fee for the proportion of tokenAi
+        //  which is implicitly traded to the other pool tokens.
+        // That proportion is (1- weightTokenIn)
+        // tokenAiAfterFee = tAi * (1 - (1-weightTi) * poolFee);
+        uint normalizedWeight = Num.bdiv(tokenWeightIn, totalWeight);
+        uint zaz = Num.bmul(Const.BONE - normalizedWeight, swapFee); 
+        uint tokenAmountInAfterFee = Num.bmul(tokenAmountIn, Const.BONE - zaz);
+
+        uint newTokenBalanceIn = tokenBalanceIn + tokenAmountInAfterFee;
+        uint tokenInRatio = Num.bdiv(newTokenBalanceIn, tokenBalanceIn);
+
+        // uint newPoolSupply = (ratioTi ^ weightTi) * poolSupply;
+        uint poolRatio = Num.bpow(tokenInRatio, normalizedWeight);
+        uint newPoolSupply = Num.bmul(poolRatio, poolSupply);
+        poolAmountOut = newPoolSupply - poolSupply;
+        return poolAmountOut;
+    }
+
+    function calcPoolOutGivenSingleInMMM(
+        uint poolSupply,
+        Struct.TokenGlobal memory tokenIn,
+        Struct.TokenGlobal[] memory tokensOut,
+        Struct.SwapParameters memory swapParameters,
+        Struct.GBMParameters memory gbmParameters,
+        Struct.HistoricalPricesParameters memory hpParameters
+    )
+        public view
+        returns (uint poolAmountOut)
+    {
+
+        bool noMoreDataPointIn;
+        Struct.HistoricalPricesData memory hpDataIn;
+
+        {   
+            uint256[] memory pricesIn;
+            uint256[] memory timestampsIn;
+            uint256 startIndexIn;
+            // retrieve historical prices of tokenIn
+            (pricesIn,
+             timestampsIn,
+             startIndexIn,
+             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenIn.latestRound, hpParameters);
+
+            hpDataIn = Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn);
+
+            // reducing lookback time window    
+            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
+            if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
+                hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
+            }   
+        }
+
+        // to get the total adjusted weight, we assume all the tokens Out are in shortage
+        uint totalAdjustedWeight = tokenIn.info.weight;
+        for(uint i = 0; i < tokensOut.length; i++) {
+
+            (uint256[] memory pricesOut,
+            uint256[] memory timestampsOut,
+            uint256 startIndexOut,
+            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensOut[i].latestRound, hpParameters);
+        
+            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
+                    noMoreDataPointIn && noMoreDataPointOut,
+                    hpDataIn,
+                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
+                    hpParameters
+            );
+            
+            (uint256 adjustedWeightOut, ) = getMMMWeight(tokensOut[i].info.weight, gbmEstimation, gbmParameters);
+            totalAdjustedWeight += adjustedWeightOut;
+        }
+
+        poolAmountOut = calcPoolOutGivenSingleIn(
+        tokenIn.info.balance,
+        tokenIn.info.weight,
+        poolSupply,
+        totalAdjustedWeight,
+        swapParameters.amount,
+        swapParameters.fee
+        );
+
+        return poolAmountOut;
+    }
+
     /**
     * @notice Computes the spot price of tokenOut in tokenIn terms
     * @dev Two cases to consider:
