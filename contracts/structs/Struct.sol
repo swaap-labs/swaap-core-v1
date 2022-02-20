@@ -36,7 +36,13 @@ contract Struct {
         uint256 lookbackInSec;
         uint256 timestamp;
     }
-
+    
+    struct HistoricalPricesData {
+        uint256 startIndex;
+        uint256[] timestamps;
+        uint256[] prices;
+    }
+    
     struct SwapResult {
         uint256 amount;
         uint256 spread;

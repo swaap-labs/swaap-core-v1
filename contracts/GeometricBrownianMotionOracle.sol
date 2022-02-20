@@ -29,52 +29,78 @@ import "./structs/Struct.sol";
 */
 library GeometricBrownianMotionOracle {
 
+
     /**
     * @notice Gets asset-pair approximate historical returns mean and variance
     * @dev Because of Chainlink sparse sampling, a lot of tradeoffs have been made.
-    * @param inputIn The round-to-start-from's data including its ID of tokenIn
-    * @param inputOut The round-to-start-from's data including its ID of tokenOut
+    * @param latestRoundIn The round-to-start-from's data including its ID of tokenIn
+    * @param latestRoundOut The round-to-start-from's data including its ID of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
     * @return gbmEstimation The asset-pair historical returns mean and variance
     */
     function getParametersEstimation(
-        Struct.LatestRound memory inputIn, Struct.LatestRound memory inputOut,
+        Struct.LatestRound memory latestRoundIn,
+        Struct.LatestRound memory latestRoundOut,
         Struct.HistoricalPricesParameters memory hpParameters
     )
     internal view returns (Struct.GBMEstimation memory gbmEstimation) {
 
         // retrieve historical prices of tokenIn
         (uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn) = getHistoricalPrices(
-            inputIn, hpParameters
+            latestRoundIn, hpParameters
         );
-        {
-            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
-            if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
-                hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
-            }
+        
+        uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
+        if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
+            hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
         }
+    
         // retrieve historical prices of tokenOut
         (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
-            inputOut, hpParameters
+            latestRoundOut, hpParameters
         );
 
+        return _getParametersEstimation(
+                    noMoreDataPointIn && noMoreDataPointOut,
+                    Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn),
+                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
+                    hpParameters
+                );
+    }
+
+    /**
+    * @notice Gets asset-pair historical data returns mean and variance
+    * @dev Because of Chainlink sparse sampling, a lot of tradeoffs have been made.
+    * @param hpDataIn Historical prices data of tokenIn
+    * @param hpDataOut Historical prices data of tokenOut
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return gbmEstimation The asset-pair historical returns mean and variance
+    */
+    function _getParametersEstimation(
+        bool noMoreDataPoints,
+        Struct.HistoricalPricesData memory hpDataIn,
+        Struct.HistoricalPricesData memory hpDataOut,
+        Struct.HistoricalPricesParameters memory hpParameters
+    )
+    internal pure returns (Struct.GBMEstimation memory gbmEstimation) {
+
         // no price return can be calculated with only 1 data point
-        if (startIndexIn == 0 && startIndexOut == 0) {
+        if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
             return gbmEstimation = Struct.GBMEstimation(0, 0);
         }
 
         uint256 actualTimeWindowInSec;
         
         // retrieve the final time window and the last valid indexes of the historical prices
-        (actualTimeWindowInSec, startIndexIn, startIndexOut) = getActualTimeWindow(
+        (actualTimeWindowInSec, hpDataIn.startIndex, hpDataOut.startIndex) = getActualTimeWindow(
             hpParameters,
-            noMoreDataPointIn, noMoreDataPointOut,
-            startIndexIn, startIndexOut, 
-            timestampsIn, timestampsOut
+            noMoreDataPoints,
+            hpDataIn.startIndex, hpDataOut.startIndex, 
+            hpDataIn.timestamps, hpDataOut.timestamps
         );
         
         // no price return can be calculated with only 1 data point
-        if (startIndexIn == 0 && startIndexOut == 0) {
+        if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
             return gbmEstimation = Struct.GBMEstimation(0, 0);
         }
 
@@ -82,8 +108,8 @@ library GeometricBrownianMotionOracle {
         (int256 mean, uint256 variance) = getStatistics(
             // compute returns
             getPairReturns(
-                pricesIn, timestampsIn, startIndexIn,
-                pricesOut, timestampsOut, startIndexOut
+                hpDataIn.prices, hpDataIn.timestamps, hpDataIn.startIndex,
+                hpDataOut.prices, hpDataOut.timestamps, hpDataOut.startIndex
             ),
             actualTimeWindowInSec
         );
@@ -278,7 +304,7 @@ library GeometricBrownianMotionOracle {
     * a) round data are 0 or when
     * b) hpParameters.lookbackInRound rounds have already been found
     * c) time window induced by hpParameters.lookbackInRound is no more satisfied
-    * @param input The round-to-start-from's data including its ID
+    * @param latestRound The round-to-start-from's data including its ID
     * @param hpParameters The parameters for historical prices retrieval
     * @return The historical prices
     * @return The historical timestamps
@@ -286,16 +312,16 @@ library GeometricBrownianMotionOracle {
     * @return True if the reported historical prices reaches the lookback time limit
     */
     function getHistoricalPrices(
-        Struct.LatestRound memory input,
+        Struct.LatestRound memory latestRound,
         Struct.HistoricalPricesParameters memory hpParameters
     )
     internal view returns (uint256[] memory, uint256[] memory, uint256, bool)
     {
-        IAggregatorV3 priceFeed = IAggregatorV3(input.oracle);
+        IAggregatorV3 priceFeed = IAggregatorV3(latestRound.oracle);
 
-        uint80 latestRoundId = input.roundId;
-        int256 latestPrice = input.price;
-        uint256 latestTimestamp = input.timestamp;
+        uint80 latestRoundId = latestRound.roundId;
+        int256 latestPrice = latestRound.price;
+        uint256 latestTimestamp = latestRound.timestamp;
 
         // historical price endtimestamp >= lookback window or it reverts
         uint256 timeLimit = hpParameters.timestamp - hpParameters.lookbackInSec;
@@ -351,8 +377,7 @@ library GeometricBrownianMotionOracle {
     * - if both tokens' reported timestamps exceed the lookback timelimit, the common window will be equal to the time limit
     * - else the common time window will be equal to the smaller lookback time window of the pair
     * @param hpParameters The parameters for historical prices retrieval
-    * @param noMoreDataPointIn True if the reported historical prices reaches the lookback time limit 
-    * @param noMoreDataPointOut True if the reported historical prices reaches the lookback time limit
+    * @param noMoreDataPoints True if the reported historical prices reaches the lookback time limit
     * @param startIndexIn The tokenIn historical data's last valid index
     * @param startIndexOut The tokenOut historical data's last valid index
     * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
@@ -363,8 +388,7 @@ library GeometricBrownianMotionOracle {
     */
     function getActualTimeWindow(
         Struct.HistoricalPricesParameters memory hpParameters,
-        bool noMoreDataPointIn,
-        bool noMoreDataPointOut,
+        bool noMoreDataPoints,
         uint256 startIndexIn,
         uint256 startIndexOut,
         uint256[] memory timestampsIn,
@@ -375,7 +399,7 @@ library GeometricBrownianMotionOracle {
         
         uint256 actualTimeWindowInSec;
         
-        if (noMoreDataPointIn && noMoreDataPointOut) {
+        if (noMoreDataPoints) {
             // considering the full lookback time window
             actualTimeWindowInSec = hpParameters.lookbackInSec;
         } else {
