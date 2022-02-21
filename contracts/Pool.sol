@@ -338,7 +338,7 @@ contract Pool is PoolToken {
 
     }
 
-    function joinPoolGivenTokenInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
+    function joinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
         external
         _logs_
         _lock_
