@@ -869,11 +869,11 @@ contract Pool is PoolToken {
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
         require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
 
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_IN_RATIO");
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_OUT_RATIO");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-
+    
         // TODO: Re-check the necessity to calculate spotPriceBefore (and the conditions used in it later)
         uint256 spotPriceBefore = Math.calcSpotPrice(
             tokenGlobalIn.info.balance,
@@ -892,7 +892,7 @@ contract Pool is PoolToken {
             timestamp
         );
 
-        require(swapResult.amount <= maxAmountIn, "ERR_LIMIT_OUT");
+        require(swapResult.amount <= maxAmountIn, "ERR_LIMIT_IN");
 
         _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + swapResult.amount;
         _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - tokenAmountOut;
