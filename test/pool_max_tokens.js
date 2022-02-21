@@ -171,5 +171,47 @@ contract('Pool', async (accounts) => {
             );
         });
 
+        it('Fails swapExactAmountOutMMM with limits', async () => {
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('51'),
+                    BBB,
+                    toWei('40'),
+                    toWei('5'),
+                ),
+                'ERR_MAX_OUT_RATIO',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('5'),
+                    BBB,
+                    toWei('1'),
+                    toWei('1'),
+                ),
+                'ERR_BAD_LIMIT_PRICE',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('1'),
+                    BBB,
+                    toWei('1'),
+                    toWei('5'),
+                ),
+                'ERR_LIMIT_IN',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('5'),
+                    BBB,
+                    toWei('1'),
+                    toWei('3.00001'),
+                ),
+                'ERR_LIMIT_PRICE',
+            );
+        });
     });
 });

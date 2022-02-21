@@ -183,6 +183,65 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
         });
 
+        it('swapExactAmountOutMMM', async () => {
+            const tokenIn = DAI;
+            const maxAmountIn = MAX;
+            const tokenOut = WETH;
+            const tokenAmountOut = '1';
+            const maxPrice = MAX;
+
+            const output = await pool.swapExactAmountOutMMM.call(
+                tokenIn,
+                maxAmountIn,
+                tokenOut,
+                toWei(tokenAmountOut),
+                maxPrice,
+            );
+
+            // Checking outputs
+            // let expected = (48 / (4 - 1) - 12) / (1 - swapFee);
+            let expected = calcInGivenOut(
+                currentDaiBalance,
+                daiNorm,
+                currentWethBalance,
+                wethNorm,
+                tokenAmountOut,
+                swapFee,
+            );
+
+            let actual = fromWei(output[0]);
+            let relDif = calcRelativeDiff(expected, actual);
+
+            if (verbose) {
+                console.log('output[0]');
+                console.log(`expected: ${expected})`);
+                console.log(`actual  : ${actual})`);
+                console.log(`relDif  : ${relDif})`);
+            }
+
+            assert.isAtMost(relDif.toNumber(), errorDelta);
+
+            expected = calcSpotPrice(
+                currentDaiBalance.plus(actual),
+                daiNorm,
+                currentWethBalance.sub(Decimal(1)),
+                wethNorm,
+                swapFee,
+            );
+
+            actual = fromWei(output[1]);
+            relDif = calcRelativeDiff(expected, actual);
+
+            if (verbose) {
+                console.log('output[1]');
+                console.log(`expected: ${expected})`);
+                console.log(`actual  : ${actual})`);
+                console.log(`relDif  : ${relDif})`);
+            }
+
+            assert.isAtMost(relDif.toNumber(), errorDelta);
+        });
+
         it('joinPool', async () => {
             currentPoolBalance = '100';
             await pool.finalize();

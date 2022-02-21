@@ -521,5 +521,79 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
 		})
 
+		it('swapExactAmountOutMMM WBTC -> WETH', async () => {
+            // 10 WBTC -> WETH
+            const amount = 10
+
+            const wbtcBalance = await pool.getBalance(WBTC);
+            const wethBalance = await pool.getBalance(WETH);
+
+            const relativePrice = wethOraclePriceLast / wbtcOraclePriceLast;
+
+			const [expectedAmount, expectedSpread] = calcOutGivenInMMM(
+				parseFloat(fromWei(wbtcBalance)),
+				5,
+				parseFloat(fromWei(wethBalance)),
+				5,
+				amount,
+				0.003,
+				expectedMeanWBTCWETH,
+				expectedVarianceWBTCWETH,
+				z,
+				horizon,
+				relativePrice
+			);
+
+			if (verbose) {
+				const gas = await pool.swapExactAmountOutMMM.estimateGas(
+					WBTC,
+					toWei('1000000000000000000000000000'),
+					WETH,
+					toWei(expectedAmount.toString()),
+					toWei('10000'),
+					{ from: user2 }
+				);
+				console.log("gas:", gas)
+			}
+
+            const txr = await pool.swapExactAmountOutMMM(
+                WBTC,
+                toWei('1000000000000000000000000000'),
+                WETH,
+                toWei(expectedAmount.toString()),
+                toWei('10000'),
+                { from: user2 }
+            );
+            const log = txr.logs[0];
+            assert.equal(log.event, 'LOG_SWAP');
+
+            const actualAmount = fromWei(log.args[3]);
+            const relDifAmount = calcRelativeDiff(amount, actualAmount);
+            if (verbose) {
+                console.log('swapExactAmountOutMMM');
+                console.log(`expected: ${amount}`);
+                console.log(`actual  : ${actualAmount}`);
+                console.log(`relDif  : ${relDifAmount}`);
+            }
+            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
+
+			const actualSpread = fromWei(log.args[5]);
+            const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
+            if (verbose) {
+                console.log('swapExactAmountOutMMM spread');
+                console.log(`expected: ${expectedSpread}`);
+                console.log(`actual  : ${actualSpread}`);
+                console.log(`relDif  : ${relDifSpread}`);
+            }
+            assert.isAtMost(relDifSpread.toNumber(), errorDelta);
+
+            const wbtcPrice = await pool.getSpotPriceMMM(WETH, WBTC);
+            const wbtcPriceFeeCheck = (((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5)) * (1 / (1 - 0.003));
+            assert.approximately(Number(fromWei(wbtcPrice)), Number(wbtcPriceFeeCheck), errorDelta);
+
+            const wethNormWeight = await pool.getNormalizedWeight(WETH);
+            assert.equal(0.333333333333333333, fromWei(wethNormWeight));
+        });
+
     });
 });

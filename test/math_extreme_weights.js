@@ -161,6 +161,45 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
         });
 
+        it('swapExactAmountOutMMM', async () => {
+            const tokenIn = WETH;
+            const maxAmountIn = MAX;
+            const tokenOut = DAI;
+            const tokenAmountOut = toWei('333.333333333333333333');
+            const maxPrice = MAX;
+
+            const output = await pool.swapExactAmountOutMMM.call(
+                tokenIn, maxAmountIn, tokenOut, tokenAmountOut, maxPrice,
+            );
+
+            // Checking outputs
+            let expected = Decimal('425506505648.348073');
+            let actual = Decimal(fromWei(output.tokenAmountIn));
+            let relDif = calcRelativeDiff(expected, actual);
+
+            if (verbose) {
+                console.log('output[0]');
+                console.log(`expected: ${expected})`);
+                console.log(`actual  : ${actual})`);
+                console.log(`relDif  : ${relDif})`);
+            }
+
+            assert.isAtMost(relDif.toNumber(), errorDelta);
+
+            expected = Decimal('31306034272.9265099');
+            actual = Decimal(fromWei(output.spotPriceAfter));
+            relDif = calcRelativeDiff(expected, actual);
+
+            if (verbose) {
+                console.log('output[1]');
+                console.log(`expected: ${expected})`);
+                console.log(`actual  : ${actual})`);
+                console.log(`relDif  : ${relDif})`);
+            }
+
+            assert.isAtMost(relDif.toNumber(), errorDelta);
+        });
+
         it('joinPool', async () => {
             currentPoolBalance = '100';
             await pool.finalize();

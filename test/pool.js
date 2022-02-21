@@ -249,6 +249,14 @@ contract('Pool', async (accounts) => {
                 pool.swapExactAmountInMMM(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')),
                 'ERR_SWAP_NOT_PUBLIC',
             );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')),
+                'ERR_SWAP_NOT_PUBLIC',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')),
+                'ERR_SWAP_NOT_PUBLIC',
+            );
         });
 
         it('Only controller can setPublicSwap', async () => {
@@ -445,6 +453,34 @@ contract('Pool', async (accounts) => {
             assert.equal(0.333333333333333333, fromWei(daiNormWeight));
         });
 
+        it('swapExactAmountOut', async () => {
+            // ETH -> 1 MKR
+            // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
+            const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.003);
+            const txr = await pool.swapExactAmountOutMMM(
+                WETH,
+                toWei('3'),
+                MKR,
+                toWei('1.0'),
+                toWei('500'),
+                { from: user2 },
+            );
+            const log = txr.logs[0];
+            assert.equal(log.event, 'LOG_SWAP');
+            // 2.758274824473420261
+
+            const actual = fromWei(log.args[3]);
+            const relDif = calcRelativeDiff(expected, actual);
+            if (verbose) {
+                console.log('swapExactAmountOut');
+                console.log(`expected: ${expected})`);
+                console.log(`actual  : ${actual})`);
+                console.log(`relDif  : ${relDif})`);
+            }
+
+            assert.isAtMost(relDif.toNumber(), errorDelta);
+        });
+
         it('Fails joins exits with limits', async () => {
             await truffleAssert.reverts(
                 pool.joinPool(toWei('10'), [toWei('1'), toWei('1'), toWei('1')]),
@@ -464,6 +500,14 @@ contract('Pool', async (accounts) => {
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')),
+                'ERR_NOT_BOUND',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')),
+                'ERR_NOT_BOUND',
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')),
                 'ERR_NOT_BOUND',
             );
         });
@@ -500,7 +544,7 @@ contract('Pool', async (accounts) => {
         });
     });
 
-    describe('BToken interactions', () => {
+    describe('Token interactions', () => {
         it('Token descriptors', async () => {
             const name = await pool.name();
             assert.equal(name, 'Swaap Pool Token');

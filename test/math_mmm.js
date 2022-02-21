@@ -1,7 +1,7 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
 const { calcRelativeDiff } = require('../lib/calc_comparisons');
-const { getLogSpreadFactor, getMMMWeight, getInAmountAtPrice, calcOutGivenInMMM } = require('../lib/mmm');
+const { getLogSpreadFactor, getMMMWeight, getTokenBalanceAtEquilibrium, calcOutGivenInMMM } = require('../lib/mmm');
 
 const TMathMMM = artifacts.require('TMathMMM');
 
@@ -95,7 +95,7 @@ contract('MMM Math', async (accounts) => {
 
 	}
 
-	async function assertGetInAmountAtPrice(
+	async function assertTokenBalanceAtEquilibrium(
 		tokenBalanceIn,
 		tokenWeightIn,
 		tokenBalanceOut,
@@ -113,7 +113,7 @@ contract('MMM Math', async (accounts) => {
 		);
 
 		// Expected InAmountAtPrice output
-		const expectedInAmountAtPrice = getInAmountAtPrice(
+		const expectedInAmountAtPrice = getTokenBalanceAtEquilibrium(
 			tokenBalanceIn,
 			tokenWeightIn,
 			tokenBalanceOut,
@@ -148,7 +148,7 @@ contract('MMM Math', async (accounts) => {
 	) {
 
 		// Library AmountOutMMM output
-		const expectedInAmountAtPrice = getInAmountAtPrice(
+		const expectedInAmountAtPrice = getTokenBalanceAtEquilibrium(
 			tokenBalanceIn,
 			tokenWeightIn,
 			tokenBalanceOut,
@@ -259,9 +259,9 @@ contract('MMM Math', async (accounts) => {
 						[1, 2.2].forEach(async _relativePrice => {
 							[0.025/100].forEach(async _swapFee => {
 								it(
-									`GetInAmountAtPrice ${_tokenBalanceIn} ${_tokenWeightIn} ${_tokenBalanceOut} ${_tokenWeightOut} ${_relativePrice} ${_swapFee}`,
+									`TokenBalanceAtEquilibrium ${_tokenBalanceIn} ${_tokenWeightIn} ${_tokenBalanceOut} ${_tokenWeightOut} ${_relativePrice} ${_swapFee}`,
 									async () => {
-										await assertGetInAmountAtPrice(
+										await assertTokenBalanceAtEquilibrium(
 											_tokenBalanceIn,
 											_tokenWeightIn,
 											_tokenBalanceOut,
