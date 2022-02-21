@@ -189,6 +189,76 @@ library Math {
         return poolAmountOut;
     }
 
+    /**********************************************************************************************
+    // calcSingleInGivenPoolOut                                                                  //
+    // tAi = tokenAmountIn              //(pS + pAo)\     /    1    \\                           //
+    // pS = poolSupply                 || ---------  | ^ | --------- || * bI - bI                //
+    // pAo = poolAmountOut              \\    pS    /     \(wI / tW)//                           //
+    // bI = balanceIn          tAi =  --------------------------------------------               //
+    // wI = weightIn                              /      wI  \                                   //
+    // tW = totalWeight                          |  1 - ----  |  * sF                            //
+    // sF = swapFee                               \      tW  /                                   //
+    **********************************************************************************************/
+    function calcSingleInGivenPoolOut(
+        uint tokenBalanceIn,
+        uint tokenWeightIn,
+        uint poolSupply,
+        uint totalWeight,
+        uint poolAmountOut,
+        uint swapFee
+    )
+        public pure
+        returns (uint tokenAmountIn)
+    {
+        uint normalizedWeight = Num.bdiv(tokenWeightIn, totalWeight);
+        uint newPoolSupply = poolSupply + poolAmountOut;
+        uint poolRatio = Num.bdiv(newPoolSupply, poolSupply);
+      
+        //uint newBalTi = poolRatio^(1/weightTi) * balTi;
+        uint boo = Num.bdiv(Const.BONE, normalizedWeight); 
+        uint tokenInRatio = Num.bpow(poolRatio, boo);
+        uint newTokenBalanceIn = Num.bmul(tokenInRatio, tokenBalanceIn);
+        uint tokenAmountInAfterFee = newTokenBalanceIn - tokenBalanceIn;
+        // Do reverse order of fees charged in joinswap_ExternAmountIn, this way 
+        //     ``` pAo == joinswap_ExternAmountIn(Ti, joinswap_PoolAmountOut(pAo, Ti)) ```
+        //uint tAi = tAiAfterFee / (1 - (1-weightTi) * swapFee) ;
+        uint zar = Num.bmul(Const.BONE - normalizedWeight, swapFee);
+        tokenAmountIn = Num.bdiv(tokenAmountInAfterFee, Const.BONE - zar);
+        return tokenAmountIn;
+    }
+
+    function calcSingleInGivenPoolOutMMM(
+        uint poolSupply,
+        Struct.TokenGlobal memory tokenIn,
+        Struct.TokenGlobal[] memory tokensOut,
+        Struct.SwapParameters memory swapParameters,
+        Struct.GBMParameters memory gbmParameters,
+        Struct.HistoricalPricesParameters memory hpParameters
+    )
+        public view
+        returns (uint tokenAmountIn)
+    {
+
+        // to get the total adjusted weight, we assume all the tokens Out are in shortage
+        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+            tokenIn,
+            tokensOut,
+            gbmParameters,
+            hpParameters
+        );
+
+        tokenAmountIn = calcSingleInGivenPoolOut(
+        tokenIn.info.balance,
+        tokenIn.info.weight,
+        poolSupply,
+        totalAdjustedWeight,
+        swapParameters.amount,
+        swapParameters.fee
+        );
+
+        return tokenAmountIn;
+    }
+
     /**
     * @notice Computes the spot price of tokenOut in tokenIn terms
     * @dev Two cases to consider:
