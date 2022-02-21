@@ -366,7 +366,7 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDifAmount.toNumber(), errorDelta);
 
 			const actualSpread = fromWei(log.args[5]);
-            const relDifSpread = calcRelativeDiff(expectedAmount, actualAmount);
+            const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
             if (verbose) {
                 console.log('swapExactAmountInMMM spread');
                 console.log(`expected: ${expectedSpread}`);
@@ -444,7 +444,7 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDifAmount.toNumber(), errorDelta);
 
 			const actualSpread = fromWei(log.args[5]);
-            const relDifSpread = calcRelativeDiff(expectedAmount, actualAmount);
+            const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
             if (verbose) {
                 console.log('swapExactAmountInMMM spread');
                 console.log(`expected: ${expectedSpread}`);
