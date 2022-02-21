@@ -97,10 +97,32 @@ contract TPoolNoRevert is CryticInterface, Pool {
         address[] memory current_tokens = this.getCurrentTokens();
         for (uint i = 0; i < current_tokens.length; i++) {
             // a small balance is 1% of the total balance available
-            uint small_balance = this.getBalance(current_tokens[i])/100; 
+            uint small_balance = this.getBalance(current_tokens[i]) / 100;
             // if the user has a small balance, it should be able to swap it
             if (IERC20(current_tokens[i]).balanceOf(crytic_owner) > small_balance)
                swapExactAmountInMMM(address(current_tokens[i]), small_balance, address(current_tokens[i]), 0, type(uint).max);
+        }
+
+        return true;
+    }
+
+    function echidna_swapExactAmountOut_no_revert() public returns (bool) {
+
+        // if the controller was changed, return true
+        if (this.getController() != crytic_owner)
+            return true;
+
+        // if the pool was not finalized, enable the public swap
+        if (!this.isFinalized())
+            setPublicSwap(true);
+
+        address[] memory current_tokens = this.getCurrentTokens();
+        for (uint i = 0; i < current_tokens.length; i++) {
+            // a small balance is 1% of the total balance available
+            uint small_balance = this.getBalance(current_tokens[i]) / 100;
+            // if the user has a small balance, it should be able to swap it
+            if (IERC20(current_tokens[i]).balanceOf(crytic_owner) > small_balance)
+                swapExactAmountOutMMM(address(current_tokens[i]), type(uint).max, address(current_tokens[i]), small_balance, type(uint).max);
         }
 
         return true;

@@ -119,7 +119,32 @@ contract TPoolLimits is CryticInterface, Pool {
         // verify that the swap fee is less or equal than `MAX_FEE`
         return this.getSwapFee() <= Const.MAX_FEE;
     }
-    
+
+    function echidna_revert_max_swapExactAmountOut() public returns (bool) {
+        // if the controller was changed, revert
+        if (this.getController() != crytic_owner)
+            revert();
+
+        // if the pool is not finalized, make sure public swap is enabled
+        if (!this.isFinalized())
+            setPublicSwap(true);
+
+        address[] memory current_tokens = this.getCurrentTokens();
+        // if there is not token, revert
+        if (current_tokens.length == 0)
+            revert();
+
+        uint large_balance = this.getBalance(current_tokens[0])/3 + 2;
+
+        // check that the balance is large enough
+        if (IERC20(current_tokens[0]).balanceOf(crytic_owner) < large_balance)
+            revert();
+
+        // call swapExactAmountOutMMM with more than 1/3 of the balance should revert
+        swapExactAmountOutMMM(address(current_tokens[0]), type(uint256).max, address(current_tokens[0]), large_balance, type(uint256).max);
+        return true;
+    }
+
     function echidna_revert_max_swapExactAmountIn() public returns (bool) {
         // if the controller was changed, revert
         if (this.getController() != crytic_owner)
