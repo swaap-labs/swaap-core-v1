@@ -169,47 +169,13 @@ library Math {
         returns (uint poolAmountOut)
     {
 
-        bool noMoreDataPointIn;
-        Struct.HistoricalPricesData memory hpDataIn;
-
-        {   
-            uint256[] memory pricesIn;
-            uint256[] memory timestampsIn;
-            uint256 startIndexIn;
-            // retrieve historical prices of tokenIn
-            (pricesIn,
-             timestampsIn,
-             startIndexIn,
-             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenIn.latestRound, hpParameters);
-
-            hpDataIn = Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn);
-
-            // reducing lookback time window    
-            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
-            if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
-                hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
-            }   
-        }
-
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        uint totalAdjustedWeight = tokenIn.info.weight;
-        for(uint i = 0; i < tokensOut.length; i++) {
-
-            (uint256[] memory pricesOut,
-            uint256[] memory timestampsOut,
-            uint256 startIndexOut,
-            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensOut[i].latestRound, hpParameters);
-        
-            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
-                    noMoreDataPointIn && noMoreDataPointOut,
-                    hpDataIn,
-                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
-                    hpParameters
-            );
-            
-            (uint256 adjustedWeightOut, ) = getMMMWeight(tokensOut[i].info.weight, gbmEstimation, gbmParameters);
-            totalAdjustedWeight += adjustedWeightOut;
-        }
+        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+            tokenIn,
+            tokensOut,
+            gbmParameters,
+            hpParameters
+        );
 
         poolAmountOut = calcPoolOutGivenSingleIn(
         tokenIn.info.balance,
@@ -370,6 +336,70 @@ library Math {
         }
         uint256 spread = spreadFactor - Const.BONE;
         return (Num.bmul(tokenWeightOut, spreadFactor), spread);
+    }
+    
+    /**
+    * @notice Computes the total denormalized weight assuming that all the tokens out are in shortage 
+    * @dev The initial weights of the tokens are the ones adjusted by their price performance only
+    * @param tokenIn The tokenIn's global information (token records + latest round info)
+    * @param tokensOut All the tokenOuts' global information (token records + latest rounds info)
+    * @param gbmParameters The GBM forecast parameters (Z, horizon)
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return totalAdjustedWeight The total adjusted weight where tokens out are only in shortage
+    */
+    function getTotalWeightGivenShortageMMM(
+        Struct.TokenGlobal memory tokenIn,
+        Struct.TokenGlobal[] memory tokensOut,
+        Struct.GBMParameters memory gbmParameters,
+        Struct.HistoricalPricesParameters memory hpParameters
+    ) 
+        internal view 
+        returns (uint totalAdjustedWeight)
+    {
+        
+        bool noMoreDataPointIn;
+        Struct.HistoricalPricesData memory hpDataIn;
+
+        {   
+            uint256[] memory pricesIn;
+            uint256[] memory timestampsIn;
+            uint256 startIndexIn;
+            // retrieve historical prices of tokenIn
+            (pricesIn,
+             timestampsIn,
+             startIndexIn,
+             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenIn.latestRound, hpParameters);
+
+            hpDataIn = Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn);
+
+            // reducing lookback time window    
+            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
+            if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
+                hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
+            }   
+        }
+
+        // to get the total adjusted weight, we assume all the tokens Out are in shortage
+        totalAdjustedWeight = tokenIn.info.weight;
+        for(uint i = 0; i < tokensOut.length; i++) {
+
+            (uint256[] memory pricesOut,
+            uint256[] memory timestampsOut,
+            uint256 startIndexOut,
+            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensOut[i].latestRound, hpParameters);
+        
+            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
+                    noMoreDataPointIn && noMoreDataPointOut,
+                    hpDataIn,
+                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
+                    hpParameters
+            );
+            
+            (uint256 adjustedWeightOut, ) = getMMMWeight(tokensOut[i].info.weight, gbmEstimation, gbmParameters);
+            totalAdjustedWeight += adjustedWeightOut;
+        }
+
+        return totalAdjustedWeight;
     }
 
     /**
