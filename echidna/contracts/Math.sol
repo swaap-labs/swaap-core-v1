@@ -700,7 +700,7 @@ library Math {
             uint256 wOutOverSum = Num.bdiv(tokenWeight2, weightSum);
             balance1AtEquilibrium = Num.bmul(
                 LogExpMath.pow(
-                    Num.bmul(relativePrice, Num.bdiv(tokenWeight1, tokenWeight1)),
+                    Num.bmul(relativePrice, Num.bdiv(tokenWeight1, tokenWeight2)),
                     wOutOverSum
                 ),
                 Num.bmul(
