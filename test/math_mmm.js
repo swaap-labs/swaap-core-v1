@@ -104,7 +104,7 @@ contract('MMM Math', async (accounts) => {
 	) {
 
 		// Library InAmountAtPrice output
-		const inAmountAtPrice = await math.getInAmountAtPrice.call(
+		const inAmountAtPrice = await math.getTokenBalanceAtEquilibrium.call(
 			toWei(tokenBalanceIn.toString()),
 			toWei(tokenWeightIn.toString()),
 			toWei(tokenBalanceOut.toString()),

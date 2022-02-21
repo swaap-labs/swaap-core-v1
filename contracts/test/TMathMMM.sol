@@ -42,21 +42,21 @@ library TMathMMM {
         return Math.getMMMWeight(tokenWeightOut, gbmEstimation, gbmParameters);
     }
 
-    function getInAmountAtPrice(
-        uint256 tokenBalanceIn,
-        uint256 tokenWeightIn,
-        uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
+    function getTokenBalanceAtEquilibrium(
+        uint256 tokenBalance1,
+        uint256 tokenWeight1,
+        uint256 tokenBalance2,
+        uint256 tokenWeight2,
         uint256 relativePrice
     )
     public pure
-    returns (uint256 amountOutAtPrice)
+    returns (uint256 balanceAtEquilibrium)
     {
-        return Math.getTokenBalanceAtEquilibrium(
-            tokenBalanceIn,
-            tokenWeightIn,
-            tokenBalanceOut,
-            tokenWeightOut,
+        return balanceAtEquilibrium = Math.getTokenBalanceAtEquilibrium(
+            tokenBalance1,
+            tokenWeight1,
+            tokenBalance2,
+            tokenWeight2,
             relativePrice
         );
     }
