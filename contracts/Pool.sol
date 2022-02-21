@@ -455,6 +455,67 @@ contract Pool is PoolToken {
         return tokenAmountIn;
     }
 
+    function exitswapPoolAmountIn(address tokenOut, uint poolAmountIn, uint minAmountOut)
+        external
+        _logs_
+        _lock_
+        returns (uint tokenAmountOut)
+    {
+        require(_finalized, "ERR_NOT_FINALIZED");
+        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+
+        Struct.TokenGlobal memory tokenInfoOut = getTokenLatestInfo(tokenOut);
+
+        uint nTokens = _tokens.length;
+        Struct.TokenGlobal[] memory remainingTokensInfo = new Struct.TokenGlobal[](nTokens - 1);
+        
+        // Extracting the remaining unswaped tokens' info
+        uint count = 0;
+        for (uint i = 0; i < (nTokens - 1); i++) {
+            if (_tokens[i] == tokenOut){
+                continue;
+            }
+            remainingTokensInfo[count] = getTokenLatestInfo(_tokens[i]);
+            count++;
+        }
+
+        {
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(poolAmountIn, _swapFee);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+            Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
+                priceStatisticsLookbackInRound,
+                priceStatisticsLookbackInSec,
+                block.timestamp
+            );
+
+        tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
+                            _totalSupply,
+                            tokenInfoOut,
+                            remainingTokensInfo,
+                            swapParameters,
+                            gbmParameters,
+                            hpParameters
+                        );
+        }
+
+        require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
+        
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_OUT_RATIO");
+
+        _records[tokenOut].balance -= tokenAmountOut;
+
+        uint exitFee =  Num.bmul(poolAmountIn, Const.EXIT_FEE);
+
+        emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
+
+        _pullPoolShare(msg.sender, poolAmountIn);
+        _burnPoolShare(poolAmountIn - exitFee);
+        _pushPoolShare(_factory, exitFee);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+
+        return tokenAmountOut;
+    }
+
     // ==
     // 'Underlying' token-manipulation functions make external calls but are NOT locked
     // You must `_lock_` or otherwise ensure reentry-safety
