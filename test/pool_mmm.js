@@ -227,7 +227,7 @@ contract('Pool', async (accounts) => {
             assert.equal(0.003, fromWei(swapFee));
         });
 
-        it('Admin sets dynamic spread parmeters', async () => {
+        it('Admin sets dynamic spread parameters', async () => {
             await pool.setDynamicCoverageFeesZ(toWei(z.toString()));
             await pool.setDynamicCoverageFeesHorizon(toWei(horizon.toString()));
             await pool.setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
