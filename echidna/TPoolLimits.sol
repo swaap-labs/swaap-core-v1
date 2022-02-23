@@ -35,9 +35,6 @@ contract TPoolLimits is CryticInterface, Pool {
 
     // initial token balances is the max amount for uint256
     uint internal initial_token_balance = type(uint).max;
-    // these two variables are used to save valid balances and denorm parameters
-    uint internal valid_balance_to_bind = Const.MIN_BALANCE;
-    uint internal valid_denorm_to_bind = Const.MIN_WEIGHT;
 
     // this function allows to create as many tokens as needed
     function create_and_bind(uint balance, uint denorm) public returns (address) {
@@ -52,8 +49,6 @@ contract TPoolLimits is CryticInterface, Pool {
         // Bind the token with the provided parameters
         bindMMM(address(bt), balance, denorm, address(oracleBT));
         // Save the balance and denorm values used. These are used in the rebind checks
-        valid_balance_to_bind = balance;
-        valid_denorm_to_bind = denorm;
         return address(bt);
     }
 
@@ -134,13 +129,13 @@ contract TPoolLimits is CryticInterface, Pool {
         if (current_tokens.length == 0)
             revert();
 
-        uint large_balance = this.getBalance(current_tokens[0])/3 + 2;
+        uint large_balance = Num.bmul(this.getBalance(current_tokens[0]), Const.MAX_OUT_RATIO) + 2;
 
         // check that the balance is large enough
         if (IERC20(current_tokens[0]).balanceOf(crytic_owner) < large_balance)
             revert();
 
-        // call swapExactAmountOutMMM with more than 1/3 of the balance should revert
+        // call swapExactAmountOutMMM with more than MAX_OUT_RATIO of the balance should revert
         swapExactAmountOutMMM(address(current_tokens[0]), type(uint256).max, address(current_tokens[0]), large_balance, type(uint256).max);
         return true;
     }
@@ -159,11 +154,12 @@ contract TPoolLimits is CryticInterface, Pool {
         if (current_tokens.length == 0)
             revert();
 
-        uint large_balance = this.getBalance(current_tokens[0])/2 + 1;
+        uint large_balance = Num.bmul(this.getBalance(current_tokens[0]), Const.MAX_IN_RATIO) + 1;
 
         if (IERC20(current_tokens[0]).balanceOf(crytic_owner) < large_balance)
             revert();
 
+        // call swapExactAmountOutIn with more than MAX_IN_RATIO of the balance should revert
         swapExactAmountInMMM(address(current_tokens[0]), large_balance, address(current_tokens[0]), 0, type(uint).max);
 
         return true;
