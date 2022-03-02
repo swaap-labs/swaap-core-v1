@@ -25,9 +25,9 @@ library Const {
     uint256 public constant MAX_FEE                = BONE / 10;
     uint256 public constant EXIT_FEE               = 0;
 
-    uint256 public constant MIN_WEIGHT             = BONE;
-    uint256 public constant MAX_WEIGHT             = BONE * 50;
-    uint256 public constant MAX_TOTAL_WEIGHT       = BONE * 50;
+    uint80 public constant MIN_WEIGHT             = uint80(BONE);
+    uint80 public constant MAX_WEIGHT             = uint80(BONE * 50);
+    uint80 public constant MAX_TOTAL_WEIGHT       = uint80(BONE * 50);
     uint256 public constant MIN_BALANCE            = BONE / 10**12;
 
     uint256 public constant INIT_POOL_SUPPLY       = BONE * 100;
@@ -39,16 +39,16 @@ library Const {
     uint256 public constant MAX_IN_RATIO           = BONE / 2;
     uint256 public constant MAX_OUT_RATIO          = (BONE / 3) + 1 wei;
 
-    uint256 public constant BASE_Z                 = 6 * BONE / 10;
-    uint256 public constant MAX_Z                  = 4 * BONE;
+    uint64 public constant BASE_Z                 = uint64(6 * BONE / 10);
+    uint64 public constant MAX_Z                  = uint64(4 * BONE);
 
     uint256 public constant MIN_HORIZON            = 1 * BONE;
     uint256 public constant BASE_HORIZON           = 300 * BONE;
     uint256 public constant MAX_HORIZON            = 86400 * BONE;
 
-    uint256 public constant MIN_LOOKBACK_IN_ROUND  = 1;
-    uint256 public constant BASE_LOOKBACK_IN_ROUND = 4;
-    uint256 public constant MAX_LOOKBACK_IN_ROUND  = 100;
+    uint8 public constant MIN_LOOKBACK_IN_ROUND  = 1;
+    uint8 public constant BASE_LOOKBACK_IN_ROUND = 4;
+    uint8 public constant MAX_LOOKBACK_IN_ROUND  = 100;
 
     uint256 public constant MIN_LOOKBACK_IN_SEC    = 1;
     uint256 public constant BASE_LOOKBACK_IN_SEC   = 3600;

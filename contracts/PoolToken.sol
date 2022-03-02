@@ -34,14 +34,12 @@ contract TokenBase {
     }
 
     function _burn(uint256 amt) internal {
-        require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_BAL");
         _balance[address(this)] = _balance[address(this)] - amt;
         _totalSupply = _totalSupply - amt;
         emit Transfer(address(this), address(0), amt);
     }
 
     function _move(address src, address dst, uint256 amt) internal {
-        require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
         require(dst != address(0), "ERR_NULL_ADDRESS");
         _balance[src] = _balance[src] - amt;
         _balance[dst] = _balance[dst] + amt;
@@ -59,19 +57,19 @@ contract TokenBase {
 
 contract PoolToken is TokenBase, IERC20 {
 
-    string  private _name     = "Swaap Pool Token";
-    string  private _symbol   = "SPT";
-    uint8   private _decimals = 18;
+    string constant private _name     = "Swaap Pool Token";
+    string constant private _symbol   = "SPT";
+    uint8  constant private _decimals = 18;
 
-    function name() public view override returns (string memory) {
+    function name() external pure override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view override returns (string memory) {
+    function symbol() external pure override returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view override returns(uint8) {
+    function decimals() external pure override returns(uint8) {
         return _decimals;
     }
 
@@ -116,7 +114,6 @@ contract PoolToken is TokenBase, IERC20 {
     }
 
     function transferFrom(address src, address dst, uint256 amt) external override returns (bool) {
-        require(msg.sender == src || amt <= _allowance[src][msg.sender], "ERR_POOL_TOKEN_BAD_CALLER");
         _move(src, dst, amt);
         if (msg.sender != src && _allowance[src][msg.sender] != type(uint256).max) {
             _allowance[src][msg.sender] = _allowance[src][msg.sender] - amt;

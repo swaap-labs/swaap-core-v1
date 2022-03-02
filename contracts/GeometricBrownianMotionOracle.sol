@@ -199,7 +199,7 @@ library GeometricBrownianMotionOracle {
             variance += Num.bmul(dAbs, dAbs);
         }
         variance = Num.bdiv(variance, actualTimeWindowInSecWithPrecision - Const.BONE);
-
+        
         return (mean, variance);
     }
 
@@ -304,7 +304,7 @@ library GeometricBrownianMotionOracle {
         // result variables
         uint256[] memory prices = new uint256[](hpParameters.lookbackInRound);
         uint256[] memory timestamps = new uint256[](hpParameters.lookbackInRound);
-        uint256 idx = hpParameters.lookbackInRound + 1; // will mean 'empty arrays' in the following
+        uint256 idx = 1;
 
         {
 
@@ -315,7 +315,6 @@ library GeometricBrownianMotionOracle {
                 return (prices, timestamps, 0, true);
             }
 
-            idx = 1;
             uint80 count = 1;
 
             // buffer variables

@@ -24,7 +24,7 @@ library TGeometricBrownianMotionOracle {
     function getParametersEstimation(
         address oracleIn, uint80 roundIdIn, int256 priceIn, uint256 timestampIn,
         address oracleOut, uint80 roundIdOut, int256 priceOut, uint256 timestampOut,
-        uint256 priceStatisticsLookbackInRound, uint256 priceStatisticsLookbackInSec,
+        uint8 priceStatisticsLookbackInRound, uint256 priceStatisticsLookbackInSec,
         uint256 timestamp
     ) public view returns (Struct.GBMEstimation memory results) {
 

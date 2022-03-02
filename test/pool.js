@@ -533,7 +533,7 @@ contract('Pool', async (accounts) => {
         it('Token transfers', async () => {
             await truffleAssert.reverts(
                 pool.transferFrom(user2, admin, toWei('10')),
-                'ERR_POOL_TOKEN_BAD_CALLER',
+                '',
             );
 
             await pool.transferFrom(admin, user2, toWei('1'));

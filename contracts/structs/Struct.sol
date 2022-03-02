@@ -19,12 +19,7 @@ import "../interfaces/IAggregatorV3.sol";
 
 contract Struct {
 
-    struct Test {
-        uint256 roundId;
-    }
-
     struct TokenGlobal {
-        address token;
         TokenRecord info;
         LatestRound latestRound;
     }
@@ -37,7 +32,7 @@ contract Struct {
     }
 
     struct HistoricalPricesParameters {
-        uint256 lookbackInRound;
+        uint8 lookbackInRound;
         uint256 lookbackInSec;
         uint256 timestamp;
     }

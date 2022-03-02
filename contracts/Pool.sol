@@ -26,8 +26,8 @@ contract Pool is PoolToken {
 
     struct Record {
         bool bound;   // is token bound to pool
-        uint256 index;   // private
-        uint256 denorm;  // denormalized weight
+        uint8 index;   // private
+        uint80 denorm;  // denormalized weight
         uint256 balance;
     }
 
@@ -75,20 +75,27 @@ contract Pool is PoolToken {
         _;
     }
 
-    bool private _mutex;
-
-    address private _factory;    // Factory address to push token exitFee to
-    address private _controller; // has CONTROL role
-    bool private _publicSwap; // true if PUBLIC can call SWAP functions
-
-    // `setSwapFee` and `finalize` require CONTROL
-    // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
-    uint256 private _swapFee;
-    bool private _finalized;
-
     address[] private _tokens;
     mapping(address=>Record) private _records;
-    uint256 private _totalWeight;
+
+    bool private _mutex;
+    // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
+    bool private _publicSwap; // true if PUBLIC can call SWAP functions
+    uint80 private _totalWeight;
+    address private _controller; // has CONTROL role
+    
+    bool private _finalized;
+    address immutable private _factory;    // Factory address to push token exitFee to
+    uint8 private priceStatisticsLookbackInRound;
+    uint64 private dynamicCoverageFeesZ;
+
+    // `setSwapFee` and `finalize` require CONTROL
+    uint256 private _swapFee;
+        
+    mapping(address=>Price) private _prices;
+
+    uint256 private dynamicCoverageFeesHorizon;
+    uint256 private priceStatisticsLookbackInSec;
 
     constructor() {
         _controller = msg.sender;
@@ -96,6 +103,10 @@ contract Pool is PoolToken {
         _swapFee = Const.MIN_FEE;
         _publicSwap = false;
         _finalized = false;
+        priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
+        priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
+        dynamicCoverageFeesZ = Const.BASE_Z;
+        dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
     }
 
     function isPublicSwap()
@@ -232,7 +243,7 @@ contract Pool is PoolToken {
     }
 
     function finalize()
-    public
+    external
     _logs_
     _lock_
     {
@@ -258,7 +269,7 @@ contract Pool is PoolToken {
     }
 
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
-    public
+    external
     _logs_
     _lock_
     {
@@ -365,15 +376,7 @@ contract Pool is PoolToken {
         uint256 value
     ) anonymous;
 
-    mapping(address=>Price) private _prices;
-
-    uint256 dynamicCoverageFeesZ = Const.BASE_Z;
-    uint256 dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
-
-    uint256 priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
-    uint256 priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
-
-    function setDynamicCoverageFeesZ(uint256 _dynamicCoverageFeesZ)
+    function setDynamicCoverageFeesZ(uint64 _dynamicCoverageFeesZ)
     external
     _logs_
     _lock_
@@ -397,7 +400,7 @@ contract Pool is PoolToken {
         dynamicCoverageFeesHorizon = _dynamicCoverageFeesHorizon;
     }
 
-    function setPriceStatisticsLookbackInRound(uint256 _priceStatisticsLookbackInRound)
+    function setPriceStatisticsLookbackInRound(uint8 _priceStatisticsLookbackInRound)
     external
     _logs_
     _lock_
@@ -424,7 +427,7 @@ contract Pool is PoolToken {
     function getCoverageParameters()
     external view
     _viewlock_
-    returns (uint256, uint256, uint256, uint256)
+    returns (uint64, uint256, uint8, uint256)
     {
         return (
             dynamicCoverageFeesZ,
@@ -525,10 +528,8 @@ contract Pool is PoolToken {
     * @param denorm The token's weight
     * @param _priceFeedAddress The token's Chainlink price feed
     */
-    function bindMMM(address token, uint256 balance, uint256 denorm, address _priceFeedAddress)
+    function bindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
     external
-    _logs_
-        // _lock_  Bind does not lock because it jumps to `rebind`, which does
     {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(!_records[token].bound, "ERR_IS_BOUND");
@@ -539,38 +540,42 @@ contract Pool is PoolToken {
         _records[token] = Record(
             {
                 bound: true,
-                index: _tokens.length,
+                index: uint8(_tokens.length),
                 denorm: 0,    // balance and denorm will be validated
                 balance: 0   // and set by `rebind`
             }
         );
         _tokens.push(token);
-        rebindMMM(token, balance, denorm, _priceFeedAddress);
+        _rebindMMM(token, balance, denorm, _priceFeedAddress);
     }
 
     /**
-    * @notice Replace an already pool's token
+    * @notice Replace a binded token's balance, weight and price feed's address
     * @param token The token's address
     * @param balance The token's balance
     * @param denorm The token's weight
     * @param _priceFeedAddress The token's Chainlink price feed
     */
-    function rebindMMM(address token, uint256 balance, uint256 denorm, address _priceFeedAddress)
-    public
-    _logs_
-    _lock_
+    function rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
+    external
     {
-
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(_records[token].bound, "ERR_NOT_BOUND");
         require(!_finalized, "ERR_IS_FINALIZED");
+        _rebindMMM(token, balance, denorm, _priceFeedAddress);
+    }
 
+    function _rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
+    internal 
+    _logs_
+    _lock_
+    {
         require(denorm >= Const.MIN_WEIGHT, "ERR_MIN_WEIGHT");
         require(denorm <= Const.MAX_WEIGHT, "ERR_MAX_WEIGHT");
         require(balance >= Const.MIN_BALANCE, "ERR_MIN_BALANCE");
 
         // Adjust the denorm and totalWeight
-        uint256 oldWeight = _records[token].denorm;
+        uint80 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
             _totalWeight = _totalWeight + (denorm - oldWeight);
             require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
@@ -603,6 +608,7 @@ contract Pool is PoolToken {
         emit LOG_PRICE(token, address(_prices[token].oracle), _prices[token].initialPrice);
     }
 
+
     /**
     * @notice Remove a new token from the pool
     * @param token The token's address
@@ -624,20 +630,13 @@ contract Pool is PoolToken {
 
         // Swap the token-to-unbind with the last token,
         // then delete the last token
-        uint256 index = _records[token].index;
+        uint8 index = _records[token].index;
         uint256 last = _tokens.length - 1;
         _tokens[index] = _tokens[last];
         _records[_tokens[index]].index = index;
         _tokens.pop();
-        _records[token] = Record(
-            {
-                bound: false,
-                index: 0,
-                denorm: 0,
-                balance: 0
-            }
-        );
-        _prices[token] = Price({oracle: IAggregatorV3(address(0)), initialPrice: 0});
+        delete _records[token];
+        delete _prices[token];
 
         _pushUnderlying(token, msg.sender, tokenBalance - tokenExitFee);
         _pushUnderlying(token, _factory, tokenExitFee);
@@ -648,8 +647,7 @@ contract Pool is PoolToken {
     internal view _viewlock_
     returns (uint256 spotPrice)
     {
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(_records[tokenIn].bound && _records[tokenOut].bound, "ERR_NOT_BOUND");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -718,8 +716,7 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
 
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(_records[tokenIn].bound && _records[tokenOut].bound, "ERR_NOT_BOUND");
         require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
@@ -769,7 +766,7 @@ contract Pool is PoolToken {
         uint256 tokenAmountIn,
         address tokenOut
     )
-    public view
+    external view
     returns (uint256 tokenAmountOut)
     {
 
@@ -796,8 +793,7 @@ contract Pool is PoolToken {
     returns (Struct.SwapResult memory)
     {
 
-        require(tokenAmountIn <= Num.bmul(_records[tokenGlobalIn.token].balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
-        require(tokenAmountIn <= _records[tokenGlobalIn.token].balance, "ERR_INSUFFICIENT_RESERVE");
+        require(tokenAmountIn <= Num.bmul(tokenGlobalIn.info.balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
 
         Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, _swapFee);
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
@@ -875,7 +871,6 @@ contract Pool is PoolToken {
         Struct.LatestRound memory latestRound = Struct.LatestRound(address(price.oracle), latestRoundId, latestPrice, latestTimestamp);
         return (
             tokenGlobal = Struct.TokenGlobal(
-                token,
                 info,
                 latestRound
             )

@@ -48,9 +48,7 @@ library Num {
         returns (uint256)
     {
         uint256 c0 = a * b;
-        require(a == 0 || c0 / a == b, "ERR_MUL_OVERFLOW");
         uint256 c1 = c0 + (Const.BONE / 2);
-        require(c1 >= c0, "ERR_MUL_OVERFLOW");
         uint256 c2 = c1 / Const.BONE;
         return c2;
     }
@@ -59,11 +57,8 @@ library Num {
         public pure
         returns (uint256)
     {
-        require(b != 0, "ERR_DIV_ZERO");
         uint256 c0 = a * Const.BONE;
-        require(a == 0 || c0 / a == Const.BONE, "ERR_DIV_INTERNAL"); // bmul overflow
         uint256 c1 = c0 + (b / 2);
-        require(c1 >= c0, "ERR_DIV_INTERNAL"); //  badd require
         uint256 c2 = c1 / b;
         return c2;
     }

@@ -180,8 +180,6 @@ library Math {
     public pure
     returns (int256 x)
     {
-        require(gbmParameters.horizon >= 0, "NEGATIVE_HORIZON");
-        require(gbmEstimation.variance >= 0, "NEGATIVE_VARIANCE");
         if (gbmEstimation.mean == 0 && gbmEstimation.variance == 0) {
             return 0;
         }
@@ -197,7 +195,7 @@ library Math {
                 gbmParameters.z,
                 LogExpMath.pow(
                     Num.bmul(gbmEstimation.variance, 2 * gbmParameters.horizon),
-                    5 * Const.BONE / 10
+                    Const.BONE / 2
                 )
             );
         }
@@ -465,15 +463,19 @@ library Math {
     {
         {
             uint256 weightSum = tokenWeightIn + tokenWeightOut;
-            uint256 wOutOverSum = Num.bdiv(tokenWeightOut, weightSum);
+            // relativePrice * weightIn/weightOut
+            uint256 foo = Num.bmul(relativePrice, Num.bdiv(tokenWeightIn, tokenWeightOut));
+            // relativePrice * balanceOut * (weightIn/weightOut)
+            foo = Num.bmul(foo, tokenBalanceOut);
+            
             amountInAtPrice = Num.bmul(
                 LogExpMath.pow(
-                    Num.bmul(relativePrice, Num.bdiv(tokenWeightIn, tokenWeightOut)),
-                    wOutOverSum
+                    foo,
+                    Num.bdiv(tokenWeightOut, weightSum)
                 ),
-                Num.bmul(
-                    LogExpMath.pow(tokenBalanceIn, Num.bdiv(tokenWeightIn, weightSum)),
-                    LogExpMath.pow(tokenBalanceOut, wOutOverSum)
+                LogExpMath.pow(
+                    tokenBalanceIn,
+                    Num.bdiv(tokenWeightIn, weightSum)
                 )
             );
         }

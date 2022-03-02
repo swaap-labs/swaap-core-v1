@@ -16,7 +16,7 @@ contract('TMath', async () => {
         });
 
         it('bdiv throws on div by 0', async () => {
-            await truffleAssert.reverts(tmath.calc_bdiv(1, 0), 'ERR_DIV_ZERO');
+            await truffleAssert.reverts(tmath.calc_bdiv(1, 0), 'revert');
         });
 
         it('bpow throws on base outside range', async () => {
