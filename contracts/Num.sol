@@ -87,8 +87,8 @@ library Num {
         internal pure
         returns (uint256)
     {
-        require(base >= Const.MIN_BPOW_BASE, "ERR_BPOW_BASE_TOO_LOW");
-        require(base <= Const.MAX_BPOW_BASE, "ERR_BPOW_BASE_TOO_HIGH");
+        require(base >= Const.MIN_BPOW_BASE, "39");
+        require(base <= Const.MAX_BPOW_BASE, "40");
 
         uint256 whole  = bfloor(exp);
         uint256 remain = exp - whole;

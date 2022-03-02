@@ -58,21 +58,29 @@ contract Pool is PoolToken {
         bytes           data
     ) anonymous;
 
-    modifier _logs_() {
+    // putting modifier logic in functions enables contract size optimization
+    function _emitLog() private {
         emit LOG_CALL(msg.sig, msg.sender, msg.data);
+    }
+
+    modifier _logs_() {
+        _emitLog();
         _;
     }
 
-    modifier _lock_() {
-        require(!_mutex, "ERR_REENTRY");
+    function _lock() private {
+        require(!_mutex, "0");
         _mutex = true;
-        _;
+    }
+
+    function _unlock() private {
         _mutex = false;
     }
 
-    modifier _viewlock_() {
-        require(!_mutex, "ERR_REENTRY");
+    modifier _lock_() {
+        _lock();
         _;
+        _unlock();
     }
 
     address[] private _tokens;
@@ -138,7 +146,7 @@ contract Pool is PoolToken {
     }
 
     function getCurrentTokens()
-    external view _viewlock_
+    external view
     returns (address[] memory tokens)
     {
         return _tokens;
@@ -146,26 +154,22 @@ contract Pool is PoolToken {
 
     function getFinalTokens()
     external view
-    _viewlock_
     returns (address[] memory tokens)
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
+        require(_finalized, "1");
         return _tokens;
     }
 
     function getDenormalizedWeight(address token)
     external view
-    _viewlock_
     returns (uint256)
     {
-
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _records[token].denorm;
     }
 
     function getTotalDenormalizedWeight()
     external view
-    _viewlock_
     returns (uint256)
     {
         return _totalWeight;
@@ -173,28 +177,25 @@ contract Pool is PoolToken {
 
     function getNormalizedWeight(address token)
     external view
-    _viewlock_
     returns (uint256)
     {
 
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         uint256 denorm = _records[token].denorm;
         return Num.bdiv(denorm, _totalWeight);
     }
 
     function getBalance(address token)
     external view
-    _viewlock_
     returns (uint256)
     {
 
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _records[token].balance;
     }
 
     function getSwapFee()
     external view
-    _viewlock_
     returns (uint256)
     {
         return _swapFee;
@@ -202,7 +203,6 @@ contract Pool is PoolToken {
 
     function getController()
     external view
-    _viewlock_
     returns (address)
     {
         return _controller;
@@ -213,12 +213,12 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(swapFee >= Const.MIN_FEE, "ERR_MIN_FEE");
-        require(swapFee <= Const.MAX_FEE, "ERR_MAX_FEE");
-        require(swapFee >= 0, "ERR_FEE_SUP_0");
-        require(swapFee <= Const.BONE, "ERR_FEE_INF_1");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(swapFee >= Const.MIN_FEE, "14");
+        require(swapFee <= Const.MAX_FEE, "15");
+        require(swapFee >= 0, "16");
+        require(swapFee <= Const.BONE, "17");
         _swapFee = swapFee;
     }
 
@@ -227,8 +227,8 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(manager != address(0), "ERR_NULL_CONTROLLER");
+        require(msg.sender == _controller, "3");
+        require(manager != address(0), "13");
         _controller = manager;
     }
 
@@ -237,8 +237,8 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
         _publicSwap = public_;
     }
 
@@ -250,9 +250,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_tokens.length >= Const.MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_tokens.length >= Const.MIN_BOUND_TOKENS, "18");
 
         _finalized = true;
         _publicSwap = true;
@@ -267,7 +267,7 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         _records[token].balance = IERC20(token).balanceOf(address(this));
     }
 
@@ -282,18 +282,18 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
+        require(_finalized, "1");
 
         uint256 poolTotal = totalSupply();
         uint256 ratio = Num.bdiv(poolAmountOut, poolTotal);
-        require(ratio != 0, "ERR_MATH_APPROX");
+        require(ratio != 0, "5");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
-            require(tokenAmountIn != 0, "ERR_MATH_APPROX");
-            require(tokenAmountIn <= maxAmountsIn[i], "ERR_LIMIT_IN");
+            require(tokenAmountIn != 0, "5");
+            require(tokenAmountIn <= maxAmountsIn[i], "8");
             _records[t].balance = _records[t].balance + tokenAmountIn;
             emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
@@ -313,13 +313,13 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
+        require(_finalized, "1");
 
         uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
         uint256 ratio = Num.bdiv(pAiAfterExitFee, poolTotal);
-        require(ratio != 0, "ERR_MATH_APPROX");
+        require(ratio != 0, "5");
 
         _pullPoolShare(msg.sender, poolAmountIn);
         _pushPoolShare(_factory, exitFee);
@@ -329,8 +329,8 @@ contract Pool is PoolToken {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountOut = Num.bmul(ratio, bal);
-            require(tokenAmountOut != 0, "ERR_MATH_APPROX");
-            require(tokenAmountOut >= minAmountsOut[i], "ERR_LIMIT_OUT");
+            require(tokenAmountOut != 0, "5");
+            require(tokenAmountOut >= minAmountsOut[i], "9");
             _records[t].balance = _records[t].balance - tokenAmountOut;
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
@@ -338,16 +338,16 @@ contract Pool is PoolToken {
 
     }
 
-    function joinPoolGivenTokenInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
+    function joinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
         external
         _logs_
         _lock_
         returns (uint poolAmountOut)
 
     {        
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
-        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
+        require(_finalized, "1");
+        require(_records[tokenIn].bound, "2");
+        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
 
         Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
 
@@ -383,7 +383,7 @@ contract Pool is PoolToken {
             );
         }
 
-        require(poolAmountOut >= minPoolAmountOut, "ERR_LIMIT_OUT");
+        require(poolAmountOut >= minPoolAmountOut, "9");
 
         _records[tokenIn].balance += tokenAmountIn;
 
@@ -402,8 +402,8 @@ contract Pool is PoolToken {
         _lock_
         returns (uint tokenAmountIn)
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
+        require(_finalized, "1");
+        require(_records[tokenIn].bound, "2");
 
         Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
 
@@ -439,10 +439,10 @@ contract Pool is PoolToken {
                         );
         }
 
-        require(tokenAmountIn != 0, "ERR_MATH_APPROX");
-        require(tokenAmountIn <= maxAmountIn, "ERR_LIMIT_IN");
+        require(tokenAmountIn != 0, "5");
+        require(tokenAmountIn <= maxAmountIn, "8");
         
-        require(tokenAmountIn <=  Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
+        require(tokenAmountIn <=  Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
 
         _records[tokenIn].balance += tokenAmountIn;
 
@@ -455,14 +455,14 @@ contract Pool is PoolToken {
         return tokenAmountIn;
     }
 
-    function exitswapPoolAmountIn(address tokenOut, uint poolAmountIn, uint minAmountOut)
+    function exitswapPoolAmountInMMM(address tokenOut, uint poolAmountIn, uint minAmountOut)
         external
         _logs_
         _lock_
         returns (uint tokenAmountOut)
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(_finalized, "1");
+        require(_records[tokenOut].bound, "2");
 
         Struct.TokenGlobal memory tokenInfoOut = getTokenLatestInfo(tokenOut);
 
@@ -498,9 +498,9 @@ contract Pool is PoolToken {
                         );
         }
 
-        require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
+        require(tokenAmountOut >= minAmountOut, "9");
         
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_OUT_RATIO");
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
 
         _records[tokenOut].balance -= tokenAmountOut;
 
@@ -516,15 +516,15 @@ contract Pool is PoolToken {
         return tokenAmountOut;
     }
 
-    function exitswapExternAmountOut(address tokenOut, uint tokenAmountOut, uint maxPoolAmountIn)
+    function exitswapExternAmountOutMMM(address tokenOut, uint tokenAmountOut, uint maxPoolAmountIn)
         external
         _logs_
         _lock_
         returns (uint poolAmountIn)
     {
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_OUT_RATIO");
+        require(_finalized, "1");
+        require(_records[tokenOut].bound, "2");
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
 
         Struct.TokenGlobal memory tokenInfoOut = getTokenLatestInfo(tokenOut);
 
@@ -561,8 +561,8 @@ contract Pool is PoolToken {
         }
 
 
-        require(poolAmountIn != 0, "ERR_MATH_APPROX");
-        require(poolAmountIn <= maxPoolAmountIn, "ERR_LIMIT_IN");
+        require(poolAmountIn != 0, "5");
+        require(poolAmountIn <= maxPoolAmountIn, "8");
 
         _records[tokenOut].balance -= tokenAmountOut;
 
@@ -586,14 +586,14 @@ contract Pool is PoolToken {
     internal
     {
         bool xfer = IERC20(erc20).transferFrom(from, address(this), amount);
-        require(xfer, "ERR_ERC20_FALSE");
+        require(xfer, "19");
     }
 
     function _pushUnderlying(address erc20, address to, uint256 amount)
     internal
     {
         bool xfer = IERC20(erc20).transfer(to, amount);
-        require(xfer, "ERR_ERC20_FALSE");
+        require(xfer, "19");
     }
 
     function _pullPoolShare(address from, uint256 amount)
@@ -636,10 +636,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_dynamicCoverageFeesZ >= 0, "ERR_MIN_Z");
-        require(_dynamicCoverageFeesZ <= Const.MAX_Z, "ERR_MAX_Z");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_dynamicCoverageFeesZ >= 0, "20");
+        require(_dynamicCoverageFeesZ <= Const.MAX_Z, "21");
         dynamicCoverageFeesZ = _dynamicCoverageFeesZ;
     }
 
@@ -648,10 +648,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "ERR_MIN_HORIZON");
-        require(_dynamicCoverageFeesHorizon <= Const.MAX_HORIZON, "ERR_MAX_HORIZON");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "22");
+        require(_dynamicCoverageFeesHorizon <= Const.MAX_HORIZON, "23");
         dynamicCoverageFeesHorizon = _dynamicCoverageFeesHorizon;
     }
 
@@ -660,10 +660,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "ERR_MIN_LB_PERIODS");
-        require(_priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "ERR_MAX_LB_PERIODS");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "24");
+        require(_priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "25");
         priceStatisticsLookbackInRound = _priceStatisticsLookbackInRound;
     }
 
@@ -672,16 +672,15 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "ERR_MIN_LB_SECS");
-        require(_priceStatisticsLookbackInSec <= Const.MAX_LOOKBACK_IN_SEC, "ERR_MAX_LB_SECS");
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "26");
+        require(_priceStatisticsLookbackInSec <= Const.MAX_LOOKBACK_IN_SEC, "27");
         priceStatisticsLookbackInSec = _priceStatisticsLookbackInSec;
     }
 
     function getCoverageParameters()
     external view
-    _viewlock_
     returns (uint64, uint256, uint8, uint256)
     {
         return (
@@ -694,40 +693,36 @@ contract Pool is PoolToken {
 
     function getTokenPriceDecimals(address token)
     external view
-    _viewlock_
     returns (uint8)
     {
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _getTokenPriceDecimals(_prices[token].oracle);
     }
 
     function getTokenOraclePrice(address token)
     external view
-    _viewlock_
     returns (uint256)
     {
 
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _getTokenCurrentPrice(_prices[token].oracle);
     }
 
     function getTokenOracleInitialPrice(address token)
     external view
-    _viewlock_
     returns (uint256)
     {
 
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _prices[token].initialPrice;
     }
 
     function getTokenPriceOracle(address token)
     external view
-    _viewlock_
     returns (address)
     {
 
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return address(_prices[token].oracle);
     }
 
@@ -735,7 +730,7 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-        require(_records[token].bound, "ERR_NOT_BOUND");
+        require(_records[token].bound, "2");
         return _getAdjustedTokenWeight(token);
     }
 
@@ -750,14 +745,12 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-
-        require(_records[token].bound, "ERR_NOT_BOUND");
-        return _getNormalizedWeightMMM(token);
+        require(_records[token].bound, "2");
+        return Num.bdiv(_getAdjustedTokenWeight(token), _getTotalDenormalizedWeightMMM());
     }
 
     function _getTotalDenormalizedWeightMMM()
     internal view
-    _viewlock_
     returns (uint256)
     {
         uint256 _totalWeightMMM;
@@ -765,15 +758,6 @@ contract Pool is PoolToken {
             _totalWeightMMM += _getAdjustedTokenWeight(_tokens[i]);
         }
         return _totalWeightMMM;
-    }
-
-    function _getNormalizedWeightMMM(address token)
-    internal view
-    _viewlock_
-    returns (uint256)
-    {
-
-        return Num.bdiv(_getAdjustedTokenWeight(token), _getTotalDenormalizedWeightMMM());
     }
 
     /**
@@ -786,11 +770,11 @@ contract Pool is PoolToken {
     function bindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
     external
     {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(!_records[token].bound, "ERR_IS_BOUND");
-        require(!_finalized, "ERR_IS_FINALIZED");
+        require(msg.sender == _controller, "3");
+        require(!_records[token].bound, "28");
+        require(!_finalized, "4");
 
-        require(_tokens.length < Const.MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+        require(_tokens.length < Const.MAX_BOUND_TOKENS, "29");
 
         _records[token] = Record(
             {
@@ -814,9 +798,9 @@ contract Pool is PoolToken {
     function rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
     external
     {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_records[token].bound, "ERR_NOT_BOUND");
-        require(!_finalized, "ERR_IS_FINALIZED");
+        require(msg.sender == _controller, "3");
+        require(_records[token].bound, "2");
+        require(!_finalized, "4");
         _rebindMMM(token, balance, denorm, _priceFeedAddress);
     }
 
@@ -825,15 +809,15 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(denorm >= Const.MIN_WEIGHT, "ERR_MIN_WEIGHT");
-        require(denorm <= Const.MAX_WEIGHT, "ERR_MAX_WEIGHT");
-        require(balance >= Const.MIN_BALANCE, "ERR_MIN_BALANCE");
+        require(denorm >= Const.MIN_WEIGHT, "30");
+        require(denorm <= Const.MAX_WEIGHT, "31");
+        require(balance >= Const.MIN_BALANCE, "32");
 
         // Adjust the denorm and totalWeight
         uint80 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
             _totalWeight = _totalWeight + (denorm - oldWeight);
-            require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
+            require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "33");
         } else if (denorm < oldWeight) {
             _totalWeight = (_totalWeight - oldWeight) + denorm;
         }
@@ -874,9 +858,9 @@ contract Pool is PoolToken {
     _lock_
     {
 
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_records[token].bound, "ERR_NOT_BOUND");
-        require(!_finalized, "ERR_IS_FINALIZED");
+        require(msg.sender == _controller, "3");
+        require(_records[token].bound, "2");
+        require(!_finalized, "4");
 
         uint256 tokenBalance = _records[token].balance;
         uint256 tokenExitFee = Num.bmul(tokenBalance, Const.EXIT_FEE);
@@ -899,10 +883,10 @@ contract Pool is PoolToken {
     }
 
     function _getSpotPriceMMMWithTimestamp(address tokenIn, address tokenOut, uint256 swapFee, uint256 timestamp)
-    internal view _viewlock_
+    internal view
     returns (uint256 spotPrice)
     {
-        require(_records[tokenIn].bound && _records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -971,10 +955,10 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
 
-        require(_records[tokenIn].bound && _records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
+        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
+        require(_publicSwap, "10");
 
-        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
+        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -986,7 +970,7 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
-        require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(spotPriceBefore <= maxPrice, "11");
 
         Struct.SwapResult memory swapResult = _getAmountOutGivenInMMMWithTimestamp(
             tokenGlobalIn,
@@ -994,7 +978,7 @@ contract Pool is PoolToken {
             tokenAmountIn,
             timestamp
         );
-        require(swapResult.amount >= minAmountOut, "ERR_LIMIT_OUT");
+        require(swapResult.amount >= minAmountOut, "9");
 
         _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + tokenAmountIn;
         _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - swapResult.amount;
@@ -1006,9 +990,9 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
-        require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
-        require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "ERR_MATH_APPROX");
+        require(spotPriceAfter >= spotPriceBefore, "5");
+        require(spotPriceAfter <= maxPrice, "12");
+        require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
 
@@ -1107,11 +1091,11 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
     {
 
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
+        require(_records[tokenIn].bound, "2");
+        require(_records[tokenOut].bound, "2");
+        require(_publicSwap, "10");
 
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "ERR_MAX_OUT_RATIO");
+        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -1125,7 +1109,7 @@ contract Pool is PoolToken {
             _swapFee
         );
         
-        require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(spotPriceBefore <= maxPrice, "11");
 
         Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
             tokenGlobalIn,
@@ -1134,7 +1118,7 @@ contract Pool is PoolToken {
             timestamp
         );
 
-        require(swapResult.amount <= maxAmountIn, "ERR_LIMIT_IN");
+        require(swapResult.amount <= maxAmountIn, "8");
 
         _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + swapResult.amount;
         _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - tokenAmountOut;
@@ -1146,9 +1130,9 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
-        require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
-        require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "ERR_MATH_APPROX");
+        require(spotPriceAfter >= spotPriceBefore, "5");
+        require(spotPriceAfter <= maxPrice, "12");
+        require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
 

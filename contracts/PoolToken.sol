@@ -40,7 +40,7 @@ contract TokenBase {
     }
 
     function _move(address src, address dst, uint256 amt) internal {
-        require(dst != address(0), "ERR_NULL_ADDRESS");
+        require(dst != address(0), "35");
         _balance[src] = _balance[src] - amt;
         _balance[dst] = _balance[dst] + amt;
         emit Transfer(src, dst, amt);
@@ -72,6 +72,7 @@ contract PoolToken is TokenBase, IERC20 {
     function decimals() external pure override returns(uint8) {
         return _decimals;
     }
+
 
     function allowance(address src, address dst) external view override returns (uint256) {
         return _allowance[src][dst];

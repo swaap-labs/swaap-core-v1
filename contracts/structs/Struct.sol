@@ -16,7 +16,6 @@ pragma solidity =0.8.12;
 
 import "../interfaces/IAggregatorV3.sol";
 
-
 contract Struct {
 
     struct TokenGlobal {

@@ -107,7 +107,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fails binding more than 8 tokens', async () => {
-            await truffleAssert.reverts(pool.bindMMM(ZZZ, toWei('50'), toWei('2'), zzzOracleAddress), 'ERR_MAX_TOKENS');
+            await truffleAssert.reverts(pool.bindMMM(ZZZ, toWei('50'), toWei('2'), zzzOracleAddress), '29');
         });
 
         it('Rebind token at a smaller balance', async () => {
@@ -126,7 +126,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fails gulp on unbound token', async () => {
-            await truffleAssert.reverts(pool.gulp(ZZZ), 'ERR_NOT_BOUND');
+            await truffleAssert.reverts(pool.gulp(ZZZ), '2');
         });
 
         it('Pool can gulp tokens', async () => {
@@ -147,7 +147,7 @@ contract('Pool', async (accounts) => {
                     toWei('0'),
                     toWei('0.9'),
                 ),
-                'ERR_BAD_LIMIT_PRICE',
+                '11',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
@@ -157,7 +157,7 @@ contract('Pool', async (accounts) => {
                     toWei('2'),
                     toWei('3.5'),
                 ),
-                'ERR_LIMIT_OUT',
+                '9',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
@@ -167,7 +167,7 @@ contract('Pool', async (accounts) => {
                     toWei('0'),
                     toWei('3.00001'),
                 ),
-                'ERR_LIMIT_PRICE',
+                '12',
             );
         });
 
@@ -180,7 +180,7 @@ contract('Pool', async (accounts) => {
                     toWei('40'),
                     toWei('5'),
                 ),
-                'ERR_MAX_OUT_RATIO',
+                '7',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
@@ -190,7 +190,7 @@ contract('Pool', async (accounts) => {
                     toWei('1'),
                     toWei('1'),
                 ),
-                'ERR_BAD_LIMIT_PRICE',
+                '11',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
@@ -200,7 +200,7 @@ contract('Pool', async (accounts) => {
                     toWei('1'),
                     toWei('5'),
                 ),
-                'ERR_LIMIT_IN',
+                '8',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
@@ -210,7 +210,7 @@ contract('Pool', async (accounts) => {
                     toWei('1'),
                     toWei('3.00001'),
                 ),
-                'ERR_LIMIT_PRICE',
+                '12',
             );
         });
     });

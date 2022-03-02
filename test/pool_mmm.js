@@ -304,7 +304,7 @@ contract('Pool', async (accounts) => {
         it('Fail swapExactAmountInMMM unbound or over min max ratios', async () => {
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('1678'), DAI, toWei('5266293'), toWei('4000'), { from: user2 }),
-                'ERR_MAX_IN_RATIO',
+                '6',
             );
         });
 

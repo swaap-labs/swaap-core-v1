@@ -67,7 +67,7 @@ contract Factory {
     function setSwaapLabs(address b)
         external
     {
-        require(msg.sender == _swaaplabs, "ERR_NOT_SWAAPLABS");
+        require(msg.sender == _swaaplabs, "34");
         emit LOG_SWAAPLABS(msg.sender, b);
         _swaaplabs = b;
     }
@@ -75,10 +75,10 @@ contract Factory {
     function collect(Pool pool)
         external
     {
-        require(msg.sender == _swaaplabs, "ERR_NOT_SWAAPLABS");
+        require(msg.sender == _swaaplabs, "34");
         uint256 collected = IERC20(pool).balanceOf(address(this));
         bool xfer = pool.transfer(_swaaplabs, collected);
-        require(xfer, "ERR_ERC20_FAILED");
+        require(xfer, "19");
     }
 
 }

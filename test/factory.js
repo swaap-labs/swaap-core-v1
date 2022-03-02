@@ -66,7 +66,7 @@ contract('Factory', async (accounts) => {
         });
 
         it('fails nonAdmin calls collect', async () => {
-            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), 'ERR_NOT_SWAAPLABS');
+            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), '34');
         });
 
         it('admin collects fees', async () => {
@@ -88,7 +88,7 @@ contract('Factory', async (accounts) => {
         });
 
         it('nonadmin cant set swaaplabs address', async () => {
-            await truffleAssert.reverts(factory.setSwaapLabs(nonAdmin, { from: nonAdmin }), 'ERR_NOT_SWAAPLABS');
+            await truffleAssert.reverts(factory.setSwaapLabs(nonAdmin, { from: nonAdmin }), '34');
         });
 
         it('admin changes swaaplabs address', async () => {
