@@ -415,8 +415,15 @@ library GeometricBrownianMotionOracle {
     * @return The round timestamp
     */
     function getRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
-        (, int256 _price, , uint256 _timestamp, ) = priceFeed.getRoundData(_roundId);
-        return (_price, _timestamp);
+        try priceFeed.getRoundData(_roundId) returns (
+            uint80 ,
+            int256 _price,
+            uint256 ,
+            uint256 _timestamp,
+            uint80
+        ) {
+            return (_price, _timestamp);
+        } catch {}
+        return (0, 0);
     }
-
 }
