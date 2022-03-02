@@ -2,7 +2,7 @@
 
 import "../../Num.sol";
 
-pragma solidity =0.8.0;
+pragma solidity =0.8.12;
 
 //  This test is similar to TPoolJoin but with an exit fee
 contract TPoolJoinExit {
