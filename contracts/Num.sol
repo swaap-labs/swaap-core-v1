@@ -19,21 +19,21 @@ import "./Const.sol";
 library Num {
 
     function btoi(uint256 a)
-        public pure
+        internal pure
         returns (uint256)
     {
         return a / Const.BONE;
     }
 
     function bfloor(uint256 a)
-        public pure
+        internal pure
         returns (uint256)
     {
         return btoi(a) * Const.BONE;
     }
 
     function bsubSign(uint256 a, uint256 b)
-        public pure
+        internal pure
         returns (uint256, bool)
     {
         if (a >= b) {
@@ -44,7 +44,7 @@ library Num {
     }
 
     function bmul(uint256 a, uint256 b)
-        public pure
+        internal pure
         returns (uint256)
     {
         uint256 c0 = a * b;
@@ -54,7 +54,7 @@ library Num {
     }
 
     function bdiv(uint256 a, uint256 b)
-        public pure
+        internal pure
         returns (uint256)
     {
         uint256 c0 = a * Const.BONE;
@@ -65,7 +65,7 @@ library Num {
 
     // DSMath.wpow
     function bpowi(uint256 a, uint256 n)
-        public pure
+        internal pure
         returns (uint256)
     {
         uint256 z = n % 2 != 0 ? a : Const.BONE;
@@ -84,7 +84,7 @@ library Num {
     // Use `bpowi` for `b^e` and `bpowK` for k iterations
     // of approximation of b^0.w
     function bpow(uint256 base, uint256 exp)
-        public pure
+        internal pure
         returns (uint256)
     {
         require(base >= Const.MIN_BPOW_BASE, "ERR_BPOW_BASE_TOO_LOW");
@@ -104,7 +104,7 @@ library Num {
     }
 
     function bpowApprox(uint256 base, uint256 exp, uint256 precision)
-        public pure
+        internal pure
         returns (uint256)
     {
         // term 0:
@@ -145,7 +145,7 @@ library Num {
     * @param b The int256 representation of a floating point number with BONE precision
     * @return b The division of 2 int256 with BONE precision
     */
-    function bdivInt256(int256 a, int256 b) public pure returns (int256) {
+    function bdivInt256(int256 a, int256 b) internal pure returns (int256) {
         if (a < 0) {
             if (b < 0) {
                 return int256(bdiv(uint256(-a), uint256(-b))); // both negative
