@@ -169,11 +169,11 @@ library GeometricBrownianMotionOracle {
     function getStatistics(int256[] memory periodsReturn, uint256 actualTimeWindowInSec)
     internal pure returns (int256, uint256) {
 
-        uint256 n = periodsReturn.length;
-        if (actualTimeWindowInSec == 0) {
+        if (actualTimeWindowInSec < 2) {
             return (0, 0);
         }
 
+        uint256 n = periodsReturn.length;
         uint256 actualTimeWindowInSecWithPrecision = Const.BONE * actualTimeWindowInSec;
 
         // mean
