@@ -823,7 +823,7 @@ contract Pool is PoolToken {
     /**
     * @notice Compute the token historical performance since pool's inception
     * @param initialPrice The token's initial price
-    * @param initialPrice The token's latest price
+    * @param latestPrice The token's latest price
     * @return tokenGlobal The token historical performance since pool's inception
     */
     function _getTokenPerformance(uint256 initialPrice, uint256 latestPrice)
@@ -840,8 +840,8 @@ contract Pool is PoolToken {
         return Num.bmul(
             _records[token].denorm,
             _getTokenPerformance(
-                _getTokenCurrentPrice(_prices[token].oracle),
-                _prices[token].initialPrice
+                _prices[token].initialPrice,
+                _getTokenCurrentPrice(_prices[token].oracle)
             )
         );
     }
@@ -867,8 +867,8 @@ contract Pool is PoolToken {
             Num.bmul(
                 record.denorm,
                 _getTokenPerformance(
-                    _toUInt256Unsafe(latestPrice), // we consider the token price to be > 0
-                    price.initialPrice
+                    price.initialPrice,
+                    _toUInt256Unsafe(latestPrice) // we consider the token price to be > 0
                 )
             )
         );
