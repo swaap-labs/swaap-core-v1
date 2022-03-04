@@ -242,6 +242,9 @@ contract Pool is PoolToken {
         _publicSwap = public_;
     }
 
+    /**
+    * @notice Enables publicswap and finalizes the pool's tokens, price feeds, initial shares, balances and weights 
+    */
     function finalize()
     external
     _logs_
@@ -268,6 +271,12 @@ contract Pool is PoolToken {
         _records[token].balance = IERC20(token).balanceOf(address(this));
     }
 
+    /**
+    * @notice Add liquidity to a pool
+    * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
+    * @param poolAmountOut Amount of pool shares a LP wishes to receive
+    * @param maxAmountsIn Maximum accepted token amount in
+    */
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
     external
     _logs_
@@ -293,6 +302,12 @@ contract Pool is PoolToken {
         _pushPoolShare(msg.sender, poolAmountOut);
     }
 
+    /**
+    * @notice Remove liquidity from a pool
+    * @dev The order of minAmount of each token must be the same as the _tokens' addresses stored in the pool
+    * @param poolAmountIn Amount of pool shares a LP wishes to liquidate for tokens
+    * @param minAmountsOut Minimum accepted token amount out
+    */
     function exitPool(uint256 poolAmountIn, uint256[] calldata minAmountsOut)
     external
     _logs_

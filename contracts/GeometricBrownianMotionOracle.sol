@@ -208,7 +208,6 @@ library GeometricBrownianMotionOracle {
     * @dev Few considerations:
     * - data point with same timestamp as previous point are tagged with a 'skip=true'
     * - when we reach the last point of a token, we consider it's value constant going forward with the other token
-    * - we exit when both tokens
     * As a result the variance of those returns will be underestimated.
     * @param startIndexIn The tokenIn historical data's last valid index
     * @param startIndexOut The tokenOut historical data's last valid index
