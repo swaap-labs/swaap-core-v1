@@ -356,7 +356,7 @@ contract Pool is PoolToken {
         
         // Extracting tokens Out info
         uint count = 0;
-        for (uint i = 0; i < (nTokens - 1); i++) {
+        for (uint i = 0; i < nTokens; i++) {
             if (_tokens[i] == tokenIn){
                 continue;
             }
@@ -412,7 +412,7 @@ contract Pool is PoolToken {
         
         // Extracting tokens Out info
         uint count = 0;
-        for (uint i = 0; i < (nTokens - 1); i++) {
+        for (uint i = 0; i < nTokens; i++) {
             if (_tokens[i] == tokenIn){
                 continue;
             }
@@ -471,7 +471,7 @@ contract Pool is PoolToken {
         
         // Extracting the remaining unswaped tokens' info
         uint count = 0;
-        for (uint i = 0; i < (nTokens - 1); i++) {
+        for (uint i = 0; i < nTokens; i++) {
             if (_tokens[i] == tokenOut){
                 continue;
             }
@@ -533,7 +533,7 @@ contract Pool is PoolToken {
         
         // Extracting the remaining unswaped tokens' info
         uint count = 0;
-        for (uint i = 0; i < (nTokens - 1); i++) {
+        for (uint i = 0; i < nTokens; i++) {
             if (_tokens[i] == tokenOut){
                 continue;
             }

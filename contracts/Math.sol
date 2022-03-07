@@ -170,7 +170,8 @@ library Math {
     {
 
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+        uint totalAdjustedWeight = getTotalWeightMMM(
+            true,
             tokenIn,
             tokensOut,
             gbmParameters,
@@ -240,7 +241,8 @@ library Math {
     {
 
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+        uint totalAdjustedWeight = getTotalWeightMMM(
+            true,
             tokenIn,
             tokensOut,
             gbmParameters,
@@ -313,7 +315,8 @@ library Math {
         returns (uint tokenAmountOut)
     {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
-        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+        uint totalAdjustedWeight = getTotalWeightMMM(
+            false,
             tokenOut,
             remainingTokens,
             gbmParameters,
@@ -388,7 +391,8 @@ library Math {
         returns (uint tokenAmountOut)
     {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
-        uint totalAdjustedWeight = getTotalWeightGivenShortageMMM(
+        uint totalAdjustedWeight = getTotalWeightMMM(
+            false,
             tokenOut,
             remainingTokens,
             gbmParameters,
@@ -455,7 +459,7 @@ library Math {
                     hpParameters
                 );
 
-                (uint256 weight, ) = getMMMWeight(tokenOut.weight, gbmEstimation, gbmParameters);
+                (uint256 weight, ) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
                 return (
                     spotPriceMMM = calcSpotPrice(
                         tokenIn.balance,
@@ -523,17 +527,21 @@ library Math {
     }
 
     /**
-    * @notice Apply to the tokenWeightOut a 'spread' factor
+    * @notice Apply to the tokenWeight a 'spread' factor
     * @dev The spread factor is defined as the maximum between:
     a) the expected relative tokenOut increase in tokenIn terms
     b) 1
-    * @param tokenWeightOut The tokenOut's weight
+    * The function multiplies the tokenWeight by the spread factor if
+    * the token is in shortage, or divides it by the spread factor if it is in abundance
+    * @param shortage true when the token is in shortage, false if in abundance
+    * @param tokenWeight The token's weight
     * @param gbmEstimation The GBM's 2 first moments estimation
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @return the modified tokenWeightOut and its corresponding spread
     */
     function getMMMWeight(
-        uint256 tokenWeightOut,
+        bool shortage,
+        uint256 tokenWeight,
         Struct.GBMEstimation memory gbmEstimation,
         Struct.GBMParameters memory gbmParameters
     )
@@ -541,23 +549,29 @@ library Math {
     returns (uint256, uint256)
     {
         if (gbmParameters.horizon == 0) {
-            return (tokenWeightOut, 0);
+            return (tokenWeight, 0);
         }
         int256 logSpreadFactor = getLogSpreadFactor(gbmEstimation, gbmParameters);
         if (logSpreadFactor <= 0) {
-            return (tokenWeightOut, 0);
+            return (tokenWeight, 0);
         }
         uint256 spreadFactor = uint256(LogExpMath.exp(logSpreadFactor));
         // if spread < 1 --> rounding error --> set to 1
-        if (spreadFactor < Const.BONE) {
-            spreadFactor = Const.BONE;
+        if (spreadFactor <= Const.BONE) {
+            return (tokenWeight, 0);
         }
+
         uint256 spread = spreadFactor - Const.BONE;
-        return (Num.bmul(tokenWeightOut, spreadFactor), spread);
+        
+        if (shortage) {
+            return (Num.bmul(tokenWeight, spreadFactor), spread);
+        } else {
+            return (Num.bdiv(tokenWeight, spreadFactor), spread);
+        }
     }
     
     /**
-    * @notice Computes the total denormalized weight assuming that all the tokens out are in shortage 
+    * @notice Computes the total denormalized weight assuming that all the tokensOut are in shortage or in abundance 
     * @dev The initial weights of the tokens are the ones adjusted by their price performance only
     * @param tokenIn The tokenIn's global information (token records + latest round info)
     * @param tokensOut All the tokenOuts' global information (token records + latest rounds info)
@@ -565,7 +579,8 @@ library Math {
     * @param hpParameters The parameters for historical prices retrieval
     * @return totalAdjustedWeight The total adjusted weight where tokens out are only in shortage
     */
-    function getTotalWeightGivenShortageMMM(
+    function getTotalWeightMMM(
+        bool shortage,
         Struct.TokenGlobal memory tokenIn,
         Struct.TokenGlobal[] memory tokensOut,
         Struct.GBMParameters memory gbmParameters,
@@ -613,7 +628,7 @@ library Math {
                     hpParameters
             );
             
-            (uint256 adjustedWeightOut, ) = getMMMWeight(tokensOut[i].info.weight, gbmEstimation, gbmParameters);
+            (uint256 adjustedWeightOut, ) = getMMMWeight(shortage, tokensOut[i].info.weight, gbmEstimation, gbmParameters);
             totalAdjustedWeight += adjustedWeightOut;
         }
 
@@ -727,7 +742,7 @@ library Math {
         }
 
         // tokenOut.weight increased by GBM forecast / spread factor
-        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(tokenOut.weight, gbmEstimation, gbmParameters);
+        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
 
         if (tokenIn.balance >= balanceInAtEquilibrium) {
             // shortage of tokenOut --> apply spread
@@ -928,7 +943,7 @@ library Math {
         }
 
         // tokenOut.weight increased by GBM forecast / spread factor
-        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(tokenOut.weight, gbmEstimation, gbmParameters);
+        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
 
         if (tokenOut.balance <= balanceOutAtEquilibrium) {
             // shortage of tokenOut --> apply spread
