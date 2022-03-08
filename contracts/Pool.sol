@@ -253,7 +253,7 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "1");
+        require(!_finalized, "4");
         require(msg.sender == _controller, "3");
         require(_tokens.length >= Const.MIN_BOUND_TOKENS, "18");
 

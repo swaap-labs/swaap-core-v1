@@ -69,7 +69,7 @@ contract TToken {
     }
 
     function _move(address src, address dst, uint amt) internal {
-        require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
+        require(_balance[src] >= amt, "ERR_INSUFFICIENT_SP");
         _balance[src] = sub(_balance[src], amt);
         _balance[dst] = add(_balance[dst], amt);
         emit Transfer(src, dst, amt);
@@ -113,7 +113,7 @@ contract TToken {
     }
 
     function burn(uint amt) public returns (bool) {
-        require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_BAL");
+        require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_SP");
         _balance[address(this)] = sub(_balance[address(this)], amt);
         _totalSupply = sub(_totalSupply, amt);
         emit Transfer(address(this), address(0), amt);

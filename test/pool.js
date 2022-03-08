@@ -113,7 +113,7 @@ contract('Pool', async (accounts) => {
         it('Fails binding tokens that are not approved', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(MKR, toWei('10'), toWei('2.5'), MKROracleAddress),
-                'revert',
+                'ERR_POOL_TOKEN_BAD_CALLER',
             );
         });
 
@@ -127,7 +127,7 @@ contract('Pool', async (accounts) => {
         it('Fails binding weights and balances outside MIX MAX', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('51'), toWei('1'), WETHOracleAddress),
-                'revert',
+                'ERR_INSUFFICIENT_SP',
             );
             await truffleAssert.reverts(
                 pool.bindMMM(MKR, toWei('0.0000000000001'), toWei('1'), MKROracleAddress),
@@ -352,25 +352,25 @@ contract('Pool', async (accounts) => {
         });
 
         it('Cant setPublicSwap, setSwapFee when finalized', async () => {
-            await truffleAssert.reverts(pool.setPublicSwap(false), '1');
-            await truffleAssert.reverts(pool.setSwapFee(toWei('0.01')), '1');
+            await truffleAssert.reverts(pool.setPublicSwap(false), '4');
+            await truffleAssert.reverts(pool.setSwapFee(toWei('0.01')), '4');
         });
 
         it('Fails binding new token after finalized', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(XXX, toWei('10'), toWei('5'), XXXOracleAddress),
-                '1',
+                '4',
             );
             await truffleAssert.reverts(
                 pool.rebindMMM(DAI, toWei('10'), toWei('5'), DAIOracleAddress),
-                '1',
+                '4',
             );
         });
 
         it('Fails unbinding after finalized', async () => {
             await truffleAssert.reverts(
                 pool.unbindMMM(WETH),
-                '1',
+                '4',
             );
         });
 
@@ -410,7 +410,7 @@ contract('Pool', async (accounts) => {
         */
 
         it('Fails admin unbinding token after finalized and others joined', async () => {
-            await truffleAssert.reverts(pool.unbindMMM(DAI), '1');
+            await truffleAssert.reverts(pool.unbindMMM(DAI), '4');
         });
 
         it('getSpotPriceSansFeeMMM and getSpotPrice', async () => {
