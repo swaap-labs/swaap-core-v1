@@ -2,6 +2,7 @@ const TMath = artifacts.require('TMath');
 const Num = artifacts.require("Num");
 const Math = artifacts.require("Math");
 const TMathMMM = artifacts.require("TMathMMM");
+const TChainlinkUtils = artifacts.require("TChainlinkUtils");
 const TGeometricBrownianMotionOracle = artifacts.require("TGeometricBrownianMotionOracle");
 const GeometricBrownianMotionOracle = artifacts.require("GeometricBrownianMotionOracle");
 const TWETHOracle = artifacts.require("TWETHOracle");
@@ -28,7 +29,6 @@ module.exports = async function (deployer, network, accounts) {
 		deployer.deploy(TGeometricBrownianMotionOracle);
 		deployer.link(Math, TMathMMM);
 		deployer.deploy(TMathMMM);
-//		deployer.deploy(TWETHOracle);
-//		deployer.deploy(TDAIOracle);
+		deployer.deploy(TChainlinkUtils);
 	}
 };

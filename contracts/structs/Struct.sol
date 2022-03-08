@@ -50,6 +50,7 @@ contract Struct {
     struct GBMEstimation {
         int256 mean;
         uint256 variance;
+        bool success;
     }
 
     struct TokenRecord {
@@ -60,6 +61,7 @@ contract Struct {
     struct SwapParameters {
         uint256 amount;
         uint256 fee;
+        uint256 fallbackSpread;
     }
 
     struct GBMParameters {

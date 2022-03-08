@@ -49,6 +49,9 @@ library GeometricBrownianMotionOracle {
         (uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn) = getHistoricalPrices(
             latestRoundIn, hpParameters
         );
+        if (!noMoreDataPointIn && startIndexIn < hpParameters.lookbackInRound) {
+            return Struct.GBMEstimation(0, 0, false);
+        }
         
         uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
         if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
@@ -59,13 +62,16 @@ library GeometricBrownianMotionOracle {
         (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
             latestRoundOut, hpParameters
         );
+        if (!noMoreDataPointOut && startIndexOut < hpParameters.lookbackInRound) {
+            return Struct.GBMEstimation(0, 0, false);
+        }
 
         return _getParametersEstimation(
-                    noMoreDataPointIn && noMoreDataPointOut,
-                    Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn),
-                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
-                    hpParameters
-                );
+            noMoreDataPointIn && noMoreDataPointOut,
+            Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn),
+            Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
+            hpParameters
+        );
     }
 
     /**
@@ -86,7 +92,7 @@ library GeometricBrownianMotionOracle {
 
         // no price return can be calculated with only 1 data point
         if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
-            return gbmEstimation = Struct.GBMEstimation(0, 0);
+            return gbmEstimation = Struct.GBMEstimation(0, 0, true);
         }
 
         uint256 actualTimeWindowInSec;
@@ -101,7 +107,7 @@ library GeometricBrownianMotionOracle {
         
         // no price return can be calculated with only 1 data point
         if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
-            return gbmEstimation = Struct.GBMEstimation(0, 0);
+            return gbmEstimation = Struct.GBMEstimation(0, 0, true);
         }
 
 
@@ -114,7 +120,7 @@ library GeometricBrownianMotionOracle {
             actualTimeWindowInSec
         );
 
-        return gbmEstimation = Struct.GBMEstimation(mean, variance);
+        return gbmEstimation = Struct.GBMEstimation(mean, variance, true);
 
     }
 

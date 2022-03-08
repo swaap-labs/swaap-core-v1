@@ -364,7 +364,7 @@ contract Pool is PoolToken {
         require(_finalized, "1");
         require(_records[tokenIn].bound, "2");
         require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
-
+        
         Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
 
         uint nTokens = _tokens.length;
@@ -381,7 +381,11 @@ contract Pool is PoolToken {
         }
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, _swapFee);
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+                tokenAmountIn,
+                _swapFee,
+                Const.FALLBACK_SPREAD
+            );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
@@ -438,7 +442,11 @@ contract Pool is PoolToken {
         }
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(poolAmountOut, _swapFee);
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+                poolAmountOut,
+                _swapFee,
+                Const.FALLBACK_SPREAD
+            );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
@@ -498,7 +506,11 @@ contract Pool is PoolToken {
         }
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(poolAmountIn, _swapFee);
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+                poolAmountIn,
+                _swapFee,
+                Const.FALLBACK_SPREAD
+            );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
@@ -561,7 +573,11 @@ contract Pool is PoolToken {
         }
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountOut, _swapFee);
+            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+                tokenAmountOut,
+                _swapFee,
+                Const.FALLBACK_SPREAD
+            );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
@@ -917,9 +933,8 @@ contract Pool is PoolToken {
         );
 
         return Math.calcSpotPriceMMM(
-            tokenGlobalIn.info, tokenGlobalIn.latestRound,
-            tokenGlobalOut.info, tokenGlobalOut.latestRound,
-            getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            tokenGlobalIn, tokenGlobalOut,
+            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
             swapFee, gbmParameters,
             hpParameters
         );
@@ -1009,9 +1024,17 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
+
         require(spotPriceAfter >= spotPriceBefore, "5");
         require(spotPriceAfter <= maxPrice, "12");
         require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
+        require(
+            Num.bdiv(
+                spotPriceAfter,
+                ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
+            ) <= Const.MAX_PRICE_UNPEG_RATIO + _swapFee,
+            "44"
+        );
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
 
@@ -1055,7 +1078,11 @@ contract Pool is PoolToken {
 
         require(tokenAmountIn <= Num.bmul(tokenGlobalIn.info.balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
 
-        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, _swapFee);
+        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+            tokenAmountIn,
+            _swapFee,
+            Const.FALLBACK_SPREAD
+        );
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,
@@ -1064,11 +1091,9 @@ contract Pool is PoolToken {
         );
 
         return Math.calcOutGivenInMMM(
-            tokenGlobalIn.info,
-            tokenGlobalIn.latestRound,
-            tokenGlobalOut.info,
-            tokenGlobalOut.latestRound,
-            getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            tokenGlobalIn,
+            tokenGlobalOut,
+            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
             swapParameters,
             gbmParameters,
             hpParameters
@@ -1119,7 +1144,7 @@ contract Pool is PoolToken {
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-    
+
         // TODO: Re-check the necessity to calculate spotPriceBefore (and the conditions used in it later)
         uint256 spotPriceBefore = Math.calcSpotPrice(
             tokenGlobalIn.info.balance,
@@ -1128,7 +1153,7 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
-        
+
         require(spotPriceBefore <= maxPrice, "11");
 
         Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
@@ -1153,6 +1178,13 @@ contract Pool is PoolToken {
         require(spotPriceAfter >= spotPriceBefore, "5");
         require(spotPriceAfter <= maxPrice, "12");
         require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
+        require(
+            Num.bdiv(
+                spotPriceAfter,
+                ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
+            ) <= Const.MAX_PRICE_UNPEG_RATIO + _swapFee,
+            "44"
+        );
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
 
@@ -1193,7 +1225,11 @@ contract Pool is PoolToken {
     internal view
     returns (Struct.SwapResult memory)
     {
-        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountOut, _swapFee);
+        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+            tokenAmountOut,
+            _swapFee,
+            Const.FALLBACK_SPREAD
+        );
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,
@@ -1202,11 +1238,9 @@ contract Pool is PoolToken {
         );
 
         return Math.calcInGivenOutMMM(
-            tokenGlobalIn.info,
-            tokenGlobalIn.latestRound,
-            tokenGlobalOut.info,
-            tokenGlobalOut.latestRound,
-            getTokenRelativePrice(tokenGlobalOut.latestRound, tokenGlobalIn.latestRound),
+            tokenGlobalIn,
+            tokenGlobalOut,
+            ChainlinkUtils.getTokenRelativePrice(tokenGlobalOut.latestRound, tokenGlobalIn.latestRound),
             swapParameters,
             gbmParameters,
             hpParameters
@@ -1262,7 +1296,7 @@ contract Pool is PoolToken {
                 record.denorm,
                 _getTokenPerformance(
                     price.initialPrice,
-                    _toUInt256Unsafe(latestPrice) // we consider the token price to be > 0
+                    Num.abs(latestPrice) // we consider the token price to be > 0
                 )
             )
         );
@@ -1283,49 +1317,12 @@ contract Pool is PoolToken {
     */
     function _getTokenCurrentPrice(IAggregatorV3 priceFeed) internal view returns (uint256) {
         (, int256 price, , ,) = priceFeed.latestRoundData();
-        return _toUInt256Unsafe(price);  // we consider the token price to be > 0
+        return Num.abs(price);  // we consider the token price to be > 0
     }
 
     function _getTokenPriceDecimals(IAggregatorV3 priceFeed) internal view returns (uint8) {
         return priceFeed.decimals();
     }
 
-    function _toUInt256Unsafe(int256 value) internal pure returns (uint256) {
-        if (value <= 0) {
-            return uint256(0);
-        }
-        return uint256(value);
-    }
-
-    /**
-    * @notice Computes the price of token 2 in terms token 1
-    * @param latestRound_1 The latest oracle data for token 1
-    * @param latestRound_2 The latest oracle data for token 2
-    * @return The price of token 2 in terms of token 1
-    */
-    function getTokenRelativePrice(
-        Struct.LatestRound memory latestRound_1, Struct.LatestRound memory latestRound_2
-    )
-    internal
-    view
-    returns (uint256) {
-        uint8 decimal_1 = IAggregatorV3(latestRound_1.oracle).decimals();
-        uint8 decimal_2 = IAggregatorV3(latestRound_2.oracle).decimals();
-        // we consider tokens price to be > 0
-        uint256 rawDiv = Num.bdiv(_toUInt256Unsafe(latestRound_2.price), _toUInt256Unsafe(latestRound_1.price));
-        if (decimal_1 == decimal_2) {
-            return rawDiv;
-        } else if (decimal_1 > decimal_2) {
-            return Num.bmul(
-                rawDiv,
-                10**(decimal_1 - decimal_2)*Const.BONE
-            );
-        } else {
-            return Num.bdiv(
-                rawDiv,
-                10**(decimal_2 - decimal_1)*Const.BONE
-            );
-        }
-    }
 
 }

@@ -18,7 +18,9 @@ import "./Num.sol";
 import "./Const.sol";
 import "./LogExpMath.sol";
 import "./GeometricBrownianMotionOracle.sol";
+import "./ChainlinkUtils.sol";
 import "./structs/Struct.sol";
+import "./interfaces/IAggregatorV3.sol";
 
 /**
 * @title Library in charge of the Swaap pricing computations
@@ -159,8 +161,8 @@ library Math {
 
     function calcPoolOutGivenSingleInMMM(
         uint poolSupply,
-        Struct.TokenGlobal memory tokenIn,
-        Struct.TokenGlobal[] memory tokensOut,
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal[] memory tokensGlobalOut,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
@@ -172,15 +174,15 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
-            tokenIn,
-            tokensOut,
+            tokenGlobalIn,
+            tokensGlobalOut,
             gbmParameters,
             hpParameters
         );
 
         poolAmountOut = calcPoolOutGivenSingleIn(
-        tokenIn.info.balance,
-        tokenIn.info.weight,
+        tokenGlobalIn.info.balance,
+        tokenGlobalIn.info.weight,
         poolSupply,
         totalAdjustedWeight,
         swapParameters.amount,
@@ -230,8 +232,8 @@ library Math {
 
     function calcSingleInGivenPoolOutMMM(
         uint poolSupply,
-        Struct.TokenGlobal memory tokenIn,
-        Struct.TokenGlobal[] memory tokensOut,
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal[] memory tokensGlobalOut,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
@@ -243,15 +245,15 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
-            tokenIn,
-            tokensOut,
+            tokenGlobalIn,
+            tokensGlobalOut,
             gbmParameters,
             hpParameters
         );
 
         tokenAmountIn = calcSingleInGivenPoolOut(
-            tokenIn.info.balance,
-            tokenIn.info.weight,
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
             poolSupply,
             totalAdjustedWeight,
             swapParameters.amount,
@@ -305,7 +307,7 @@ library Math {
 
     function calcSingleOutGivenPoolInMMM(
         uint poolSupply,
-        Struct.TokenGlobal memory tokenOut,
+        Struct.TokenGlobal memory tokenGlobalOut,
         Struct.TokenGlobal[] memory remainingTokens,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
@@ -317,15 +319,15 @@ library Math {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             false,
-            tokenOut,
+            tokenGlobalOut,
             remainingTokens,
             gbmParameters,
             hpParameters
         );
 
         tokenAmountOut = calcSingleOutGivenPoolIn(
-            tokenOut.info.balance,
-            tokenOut.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
             poolSupply,
             totalAdjustedWeight,
             swapParameters.amount,
@@ -381,7 +383,7 @@ library Math {
 
     function calcPoolInGivenSingleOutMMM(
         uint poolSupply,
-        Struct.TokenGlobal memory tokenOut,
+        Struct.TokenGlobal memory tokenGlobalOut,
         Struct.TokenGlobal[] memory remainingTokens,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
@@ -393,15 +395,15 @@ library Math {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             false,
-            tokenOut,
+            tokenGlobalOut,
             remainingTokens,
             gbmParameters,
             hpParameters
         );
 
         tokenAmountOut = calcPoolInGivenSingleOut(
-            tokenOut.info.balance,
-            tokenOut.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
             poolSupply,
             totalAdjustedWeight,
             swapParameters.amount,
@@ -420,20 +422,16 @@ library Math {
     * the tokenOut_tokenIn price process, that directly translates into an increase in the spot price,
     * which is defined as such: price = (balance_in * weight_out) / (balance_in * weight_out)
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param latestRoundIn The oracle-related information regarding tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param latestRoundOut The oracle-related information regarding tokenOut
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return spotPriceMMM The spot price of tokenOut in tokenIn terms
     */
     function calcSpotPriceMMM(
-        Struct.TokenRecord memory tokenIn,
-        Struct.LatestRound memory latestRoundIn,
-        Struct.TokenRecord memory tokenOut,
-        Struct.LatestRound memory latestRoundOut,
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         uint256 swapFee,
         Struct.GBMParameters memory gbmParameters,
@@ -445,26 +443,26 @@ library Math {
         {
 
             // if tokenOut is in shortage --> apply spread
-            if (tokenIn.balance >= getTokenBalanceAtEquilibrium(
-                tokenIn.balance,
-                tokenIn.weight,
-                tokenOut.balance,
-                tokenOut.weight,
+            if (tokenGlobalIn.info.balance >= getTokenBalanceAtEquilibrium(
+                tokenGlobalIn.info.balance,
+                tokenGlobalIn.info.weight,
+                tokenGlobalOut.info.balance,
+                tokenGlobalOut.info.weight,
                 relativePrice
             )) {
 
                 Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
-                    latestRoundIn,
-                    latestRoundOut,
+                    tokenGlobalIn.latestRound,
+                    tokenGlobalOut.latestRound,
                     hpParameters
                 );
 
-                (uint256 weight, ) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
+                (uint256 weight, ) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
                 return (
                     spotPriceMMM = calcSpotPrice(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
+                        tokenGlobalIn.info.balance,
+                        tokenGlobalIn.info.weight,
+                        tokenGlobalOut.info.balance,
                         weight,
                         swapFee
                     )
@@ -475,10 +473,10 @@ library Math {
         // if tokenOut is in abundance --> no spread
         return (
             spotPriceMMM = calcSpotPrice(
-                tokenIn.balance,
-                tokenIn.weight,
-                tokenOut.balance,
-                tokenOut.weight,
+                tokenGlobalIn.info.balance,
+                tokenGlobalIn.info.weight,
+                tokenGlobalOut.info.balance,
+                tokenGlobalOut.info.weight,
                 swapFee
             )
         );
@@ -493,32 +491,34 @@ library Math {
     * GBM: https://en.wikipedia.org/wiki/Geometric_Brownian_motion
     * log normal: https://en.wikipedia.org/wiki/Log-normal_distribution
     * erfc: https://en.wikipedia.org/wiki/Complementary_error_function
-    * @param gbmEstimation The GBM's 2 first moments estimation
-    * @param gbmParameters The GBM forecast parameters (Z, horizon)
+    * @param mean The GBM's mean
+    * @param variance The GBM's variance
+    * @param horizon The GBM forecast horizon parameter
+    * @param z The GBM forecast z parameter
     * @return x The log spread factor
     */
     function getLogSpreadFactor(
-        Struct.GBMEstimation memory gbmEstimation,
-        Struct.GBMParameters memory gbmParameters
+        int256 mean, uint256 variance,
+        uint256 horizon, uint256 z
     )
     public pure
     returns (int256 x)
     {
-        if (gbmEstimation.mean == 0 && gbmEstimation.variance == 0) {
+        if (mean == 0 && variance == 0) {
             return 0;
         }
-        int256 driftTerm = gbmEstimation.mean - (int256(gbmEstimation.variance) / 2);
+        int256 driftTerm = mean - (int256(variance) / 2);
         if (driftTerm < 0) {
-            driftTerm = -int256(Num.bmul(uint256(-driftTerm), gbmParameters.horizon));
+            driftTerm = -int256(Num.bmul(uint256(-driftTerm), horizon));
         } else {
-            driftTerm = int256(Num.bmul(uint256(driftTerm), gbmParameters.horizon));
+            driftTerm = int256(Num.bmul(uint256(driftTerm), horizon));
         }
         uint256 diffusionTerm;
-        if (gbmEstimation.variance > 0) {
+        if (variance > 0) {
             diffusionTerm = Num.bmul(
-                gbmParameters.z,
+                z,
                 LogExpMath.pow(
-                    Num.bmul(gbmEstimation.variance, 2 * gbmParameters.horizon),
+                    Num.bmul(variance, 2 * horizon),
                     Const.BONE / 2
                 )
             );
@@ -551,7 +551,10 @@ library Math {
         if (gbmParameters.horizon == 0) {
             return (tokenWeight, 0);
         }
-        int256 logSpreadFactor = getLogSpreadFactor(gbmEstimation, gbmParameters);
+        int256 logSpreadFactor = getLogSpreadFactor(
+            gbmEstimation.mean, gbmEstimation.variance,
+            gbmParameters.horizon, gbmParameters.z
+        );
         if (logSpreadFactor <= 0) {
             return (tokenWeight, 0);
         }
@@ -573,16 +576,16 @@ library Math {
     /**
     * @notice Computes the total denormalized weight assuming that all the tokensOut are in shortage or in abundance 
     * @dev The initial weights of the tokens are the ones adjusted by their price performance only
-    * @param tokenIn The tokenIn's global information (token records + latest round info)
-    * @param tokensOut All the tokenOuts' global information (token records + latest rounds info)
+    * @param tokenGlobalIn The tokenIn's global information (token records + latest round info)
+    * @param tokensGlobalOut All the tokenOuts' global information (token records + latest rounds info)
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return totalAdjustedWeight The total adjusted weight where tokens out are only in shortage
     */
     function getTotalWeightMMM(
         bool shortage,
-        Struct.TokenGlobal memory tokenIn,
-        Struct.TokenGlobal[] memory tokensOut,
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal[] memory tokensGlobalOut,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     ) 
@@ -601,7 +604,7 @@ library Math {
             (pricesIn,
              timestampsIn,
              startIndexIn,
-             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenIn.latestRound, hpParameters);
+             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenGlobalIn.latestRound, hpParameters);
 
             hpDataIn = Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn);
 
@@ -613,13 +616,13 @@ library Math {
         }
 
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        totalAdjustedWeight = tokenIn.info.weight;
-        for(uint i = 0; i < tokensOut.length; i++) {
+        totalAdjustedWeight = tokenGlobalIn.info.weight;
+        for(uint i = 0; i < tokensGlobalOut.length; i++) {
 
             (uint256[] memory pricesOut,
             uint256[] memory timestampsOut,
             uint256 startIndexOut,
-            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensOut[i].latestRound, hpParameters);
+            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensGlobalOut[i].latestRound, hpParameters);
         
             Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
                     noMoreDataPointIn && noMoreDataPointOut,
@@ -628,7 +631,7 @@ library Math {
                     hpParameters
             );
             
-            (uint256 adjustedWeightOut, ) = getMMMWeight(shortage, tokensOut[i].info.weight, gbmEstimation, gbmParameters);
+            (uint256 adjustedWeightOut, ) = getMMMWeight(shortage, tokensGlobalOut[i].info.weight, gbmEstimation, gbmParameters);
             totalAdjustedWeight += adjustedWeightOut;
         }
 
@@ -639,10 +642,8 @@ library Math {
     * @notice Computes the net value of a given tokenIn amount in tokenOut terms
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param latestRoundIn The oracle-related information regarding tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param latestRoundOut The oracle-related information regarding tokenOut
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
     * @param swapParameters Amount of token in and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
@@ -650,10 +651,8 @@ library Math {
     * @return The swap execution conditions
     */
     function calcOutGivenInMMM(
-        Struct.TokenRecord memory tokenIn,
-        Struct.LatestRound memory latestRoundIn,
-        Struct.TokenRecord memory tokenOut,
-        Struct.LatestRound memory latestRoundOut,
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
@@ -665,196 +664,183 @@ library Math {
 
         // determines the balance of tokenIn at equilibrium (cf definitions)
         uint256 balanceInAtEquilibrium = getTokenBalanceAtEquilibrium(
-            tokenIn.balance,
-            tokenIn.weight,
-            tokenOut.balance,
-            tokenOut.weight,
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
             relativePrice
         );
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
-        if (tokenIn.balance < balanceInAtEquilibrium && swapParameters.amount < balanceInAtEquilibrium - tokenIn.balance) {
-            return (
-                Struct.SwapResult(
-                    calcOutGivenIn(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        tokenOut.weight,
+        {
+            if (tokenGlobalIn.info.balance < balanceInAtEquilibrium && swapParameters.amount < balanceInAtEquilibrium - tokenGlobalIn.info.balance) {
+                return Struct.SwapResult(
+                    _calcOutGivenInMMMAbundance(
+                        tokenGlobalIn, tokenGlobalOut,
+                        relativePrice,
                         swapParameters.amount,
                         swapParameters.fee
                     ),
                     0
-                )
-            );
+                );
+            }
         }
 
         {
             Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
-                latestRoundIn, latestRoundOut,
+                tokenGlobalIn.latestRound, tokenGlobalOut.latestRound,
                 hpParameters
             );
 
-            return _calcOutGivenInMMM(
-                tokenIn, tokenOut,
-                swapParameters, gbmParameters, gbmEstimation,
-                balanceInAtEquilibrium
-            );
+            if (!gbmEstimation.success) {
+                // no historical signal --> fallback spread
+                return (
+                    Struct.SwapResult(
+                        calcOutGivenIn(
+                            tokenGlobalIn.info.balance,
+                            tokenGlobalIn.info.weight,
+                            tokenGlobalOut.info.balance,
+                            Num.bmul(tokenGlobalOut.info.weight, Const.BONE + swapParameters.fallbackSpread),
+                            swapParameters.amount,
+                            swapParameters.fee
+                        ),
+                        swapParameters.fallbackSpread
+                    )
+                );
+            }
+
+            (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
+            if (tokenGlobalIn.info.balance >= balanceInAtEquilibrium) {
+                return (
+                    Struct.SwapResult(
+                        calcOutGivenIn(
+                            tokenGlobalIn.info.balance,
+                            tokenGlobalIn.info.weight,
+                            tokenGlobalOut.info.balance,
+                            adjustedTokenOutWeight,
+                            swapParameters.amount,
+                            swapParameters.fee
+                        ),
+                        spread
+                    )
+                );
+            }
+            else {
+                return (
+                    Struct.SwapResult(
+                        _calcOutGivenInMMMMixed(
+                            tokenGlobalIn,
+                            tokenGlobalOut,
+                            relativePrice,
+                            swapParameters,
+                            adjustedTokenOutWeight,
+                            balanceInAtEquilibrium
+                        ),
+                        spread // TODO: broadcast necessary data to compute accurate fee revenue
+                    )
+                );
+            }
         }
 
     }
 
     /**
-    * @notice Implements calcOutGivenInMMM in a subspace
+    * @notice Implements calcOutGivenInMMM in the case of abundance ok tokenOut
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param swapParameters The parameters of the swap
-    * @param gbmParameters The GBM forecast parameters (Z, horizon)
-    * @param gbmEstimation The GBM's 2 first moments estimation
-    * @param balanceInAtEquilibrium The amount of tokenIn at equilibrium
-    * @return The swap execution conditions
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
+    * @param relativePrice The price of tokenOut in tokenIn terms
+    * @param tokenAmountIn The amount of tokenIn that will be swaped
+    * @param baseFee The base fee
+    * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
     */
-    function _calcOutGivenInMMM(
-        Struct.TokenRecord memory tokenIn, Struct.TokenRecord memory tokenOut,
-        Struct.SwapParameters memory swapParameters,
-        Struct.GBMParameters memory gbmParameters,
-        Struct.GBMEstimation memory gbmEstimation,
-        uint256 balanceInAtEquilibrium
-    ) public pure returns (Struct.SwapResult memory) {
-
-        if (gbmEstimation.mean == 0 && gbmEstimation.variance == 0) {
-            // no historical signal --> no spread
-            return (
-                Struct.SwapResult(
-                    calcOutGivenIn(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        tokenOut.weight,
-                        swapParameters.amount,
-                        swapParameters.fee
-                    ),
-                    0
-                )
-            );
-        }
-
-        // tokenOut.weight increased by GBM forecast / spread factor
-        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
-
-        if (tokenIn.balance >= balanceInAtEquilibrium) {
-            // shortage of tokenOut --> apply spread
-            return (
-                Struct.SwapResult(
-                    calcOutGivenIn(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        adjustedTokenOutWeight,
-                        swapParameters.amount,
-                        swapParameters.fee
-                    ),
-                    spread
-                )
-            );
-        }
-
-        // spread may be applied, depending on quantities
+    function _calcOutGivenInMMMAbundance(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
+        uint256 relativePrice,
+        uint256 tokenAmountIn,
+        uint256 baseFee
+    ) public view returns (uint256) {
+        uint256 adaptiveFees = getAdaptiveFees(
+            tokenGlobalIn,
+            tokenGlobalOut,
+            relativePrice,
+            tokenAmountIn,
+            baseFee
+        );
         return (
-            Struct.SwapResult(
-                _calcOutGivenInMMMAbundance(
-                    tokenIn, tokenOut,
-                    swapParameters,
-                    adjustedTokenOutWeight,
-                    balanceInAtEquilibrium - tokenIn.balance
-                ),
-                spread // TODO: broadcast necessary data to compute accurate fee revenue
+            calcOutGivenIn(
+                tokenGlobalIn.info.balance,
+                tokenGlobalIn.info.weight,
+                tokenGlobalOut.info.balance,
+                tokenGlobalOut.info.weight,
+                tokenAmountIn,
+                adaptiveFees
             )
         );
     }
 
     /**
-    * @notice Implements 'calcOutGivenInMMM' in the case of abundance of tokenOut
-    * @dev Two cases to consider:
-    * 1) amount of tokenIn won't drive the pool from abundance of tokenOut to shortage ==> 1 pricing (no spread)
-    * 2) amount of tokenIn will drive the pool from abundance of tokenOut to shortage ==> 2 pricing, one for each phase
-    * @param tokenIn The pool record on tokenIn
-    * @param tokenOut The pool record on tokenOut
+    * @notice Implements 'calcOutGivenInMMM' in the case of mixed regime of tokenOut (abundance then shortage)
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param swapParameters The parameters of the swap
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
-    * @param tokenInSellAmountForEquilibrium TokenIn needed to reach equilibrium
+    * @param balanceInAtEquilibrium TokenIn balance at equilibrium
     * @return tokenAmountOut The swap execution conditions
     */
-    function _calcOutGivenInMMMAbundance(
-        Struct.TokenRecord memory tokenIn,
-        Struct.TokenRecord memory tokenOut,
+    function _calcOutGivenInMMMMixed(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
+        uint256 relativePrice,
         Struct.SwapParameters memory swapParameters,
         uint256 adjustedTokenWeightOut,
-        uint256 tokenInSellAmountForEquilibrium
+        uint256 balanceInAtEquilibrium
     )
-    internal pure
+    internal view
     returns (uint256 tokenAmountOut)
     {
-        // should not enter if called from calcOutGivenInMMM, as this latter returns before
-        // calling this function if the following condition is met
-        if (swapParameters.amount <= tokenInSellAmountForEquilibrium) {
-            // toward equilibrium --> no spread
-            return (
-                tokenAmountOut = calcOutGivenIn(
-                    tokenIn.balance,
-                    tokenIn.weight,
-                    tokenOut.balance,
-                    tokenOut.weight,
-                    swapParameters.amount,
-                    swapParameters.fee
-                )
-            );
-        }
 
-        // 'abundance of tokenOut' phase --> no spread
-        uint256 tokenAmountOutPart1 = calcOutGivenIn(
-            tokenIn.balance,
-            tokenIn.weight,
-            tokenOut.balance,
-            tokenOut.weight,
+        uint256 tokenInSellAmountForEquilibrium = balanceInAtEquilibrium - tokenGlobalIn.info.balance;
+
+        uint256 tokenAmountOutPart1 = _calcOutGivenInMMMAbundance(
+            tokenGlobalIn,
+            tokenGlobalOut,
+            relativePrice,
             tokenInSellAmountForEquilibrium,
             swapParameters.fee
         );
 
         // 'shortage of tokenOut phase' --> apply spread
-        uint256 tokenAmountOutPart2 = calcOutGivenIn(
-            tokenIn.balance + tokenInSellAmountForEquilibrium,
-            tokenIn.weight,
-            tokenOut.balance - tokenAmountOutPart1,
-            adjustedTokenWeightOut,
-            swapParameters.amount - tokenInSellAmountForEquilibrium, // tokenAmountIn > tokenInSellAmountForEquilibrium
-            swapParameters.fee
+        return (
+            tokenAmountOut = tokenAmountOutPart1 + calcOutGivenIn(
+                tokenGlobalIn.info.balance + tokenInSellAmountForEquilibrium,
+                tokenGlobalIn.info.weight,
+                tokenGlobalOut.info.balance - tokenAmountOutPart1,
+                adjustedTokenWeightOut,
+                swapParameters.amount - tokenInSellAmountForEquilibrium, // tokenAmountIn > tokenInSellAmountForEquilibrium
+                swapParameters.fee
+            )
         );
 
-        return (tokenAmountOut = tokenAmountOutPart1 + tokenAmountOutPart2);
     }
 
     /**
     * @notice Computes the amount of tokenIn needed in order to receive a given amount of tokenOut
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param latestRoundIn The oracle-related information regarding tokenIn
-    * @param tokenOut The pool record on tokenOut
-    * @param latestRoundOut The oracle-related information regarding tokenOut
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
     * @param swapParameters Amount of token out and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return The swap execution conditions
     */
-    function calcInGivenOutMMM(     
-        Struct.TokenRecord memory tokenIn,
-        Struct.LatestRound memory latestRoundIn,
-        Struct.TokenRecord memory tokenOut,
-        Struct.LatestRound memory latestRoundOut,
+    function calcInGivenOutMMM(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
@@ -866,22 +852,22 @@ library Math {
 
         // determines the balance of tokenOut at equilibrium (cf definitions)
         uint256 balanceOutAtEquilibrium = getTokenBalanceAtEquilibrium(
-            tokenOut.balance,
-            tokenOut.weight,
-            tokenIn.balance,
-            tokenIn.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
             relativePrice
         );
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
-        if (tokenOut.balance > balanceOutAtEquilibrium && swapParameters.amount < tokenOut.balance - balanceOutAtEquilibrium) {
+        if (tokenGlobalOut.info.balance > balanceOutAtEquilibrium && swapParameters.amount < tokenGlobalOut.info.balance - balanceOutAtEquilibrium) {
             return (
                 Struct.SwapResult(
                     calcInGivenOut(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        tokenOut.weight,
+                        tokenGlobalIn.info.balance,
+                        tokenGlobalIn.info.weight,
+                        tokenGlobalOut.info.balance,
+                        tokenGlobalOut.info.weight,
                         swapParameters.amount,
                         swapParameters.fee
                     ),
@@ -892,12 +878,12 @@ library Math {
 
         {
             Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
-                latestRoundIn, latestRoundOut,
+                tokenGlobalIn.latestRound, tokenGlobalOut.latestRound,
                 hpParameters
             );
 
             return _calcInGivenOutMMM(
-                tokenIn, tokenOut,
+                tokenGlobalIn, tokenGlobalOut,
                 swapParameters, gbmParameters, gbmEstimation,
                 balanceOutAtEquilibrium
             );
@@ -909,8 +895,8 @@ library Math {
     * @notice Implements calcInGivenOutMMM in a subspace
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenIn The pool record on tokenIn
-    * @param tokenOut The pool record on tokenOut
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param swapParameters The parameters of the swap
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param gbmEstimation The GBM's 2 first moments estimation
@@ -918,7 +904,7 @@ library Math {
     * @return The swap execution conditions
     */
     function _calcInGivenOutMMM(
-        Struct.TokenRecord memory tokenIn, Struct.TokenRecord memory tokenOut,
+        Struct.TokenGlobal memory tokenGlobalIn, Struct.TokenGlobal memory tokenGlobalOut,
         Struct.SwapParameters memory swapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.GBMEstimation memory gbmEstimation,
@@ -930,10 +916,10 @@ library Math {
             return (
                 Struct.SwapResult(
                     calcInGivenOut(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
-                        tokenOut.weight,
+                        tokenGlobalIn.info.balance,
+                        tokenGlobalIn.info.weight,
+                        tokenGlobalOut.info.balance,
+                        tokenGlobalOut.info.weight,
                         swapParameters.amount,
                         swapParameters.fee
                     ),
@@ -942,17 +928,17 @@ library Math {
             );
         }
 
-        // tokenOut.weight increased by GBM forecast / spread factor
-        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenOut.weight, gbmEstimation, gbmParameters);
+        // tokenGlobalOut.info.weight increased by GBM forecast / spread factor
+        (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
 
-        if (tokenOut.balance <= balanceOutAtEquilibrium) {
+        if (tokenGlobalOut.info.balance <= balanceOutAtEquilibrium) {
             // shortage of tokenOut --> apply spread
             return (
                 Struct.SwapResult(
                     calcInGivenOut(
-                        tokenIn.balance,
-                        tokenIn.weight,
-                        tokenOut.balance,
+                        tokenGlobalIn.info.balance,
+                        tokenGlobalIn.info.weight,
+                        tokenGlobalOut.info.balance,
                         adjustedTokenOutWeight,
                         swapParameters.amount,
                         swapParameters.fee
@@ -965,11 +951,11 @@ library Math {
         // spread may be applied, depending on quantities
         return (
             Struct.SwapResult(
-                _calcInGivenOutMMMAbundance(
-                    tokenIn, tokenOut,
+                _calcInGivenOutMMMShortage(
+                    tokenGlobalIn, tokenGlobalOut,
                     swapParameters,
                     adjustedTokenOutWeight,
-                    tokenOut.balance - balanceOutAtEquilibrium
+                    tokenGlobalOut.info.balance - balanceOutAtEquilibrium
                 ),
                 spread // TODO: broadcast necessary data to compute accurate fee revenue
             )
@@ -981,16 +967,16 @@ library Math {
     * @dev Two cases to consider:
     * 1) amount of tokenIn won't drive the pool from abundance of tokenOut to shortage ==> 1 pricing (no spread)
     * 2) amount of tokenIn will drive the pool from abundance of tokenOut to shortage ==> 2 pricing, one for each phase
-    * @param tokenIn The pool record on tokenIn
-    * @param tokenOut The pool record on tokenOut
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
     * @param swapParameters The parameters of the swap
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
     * @param tokenOutBuyAmountForEquilibrium TokenOut needed to reach equilibrium
     * @return tokenAmountIn TokenIn Amount needed for the swap 
     */
-    function _calcInGivenOutMMMAbundance(
-        Struct.TokenRecord memory tokenIn,
-        Struct.TokenRecord memory tokenOut,
+    function _calcInGivenOutMMMShortage(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
         Struct.SwapParameters memory swapParameters,
         uint256 adjustedTokenWeightOut,
         uint256 tokenOutBuyAmountForEquilibrium
@@ -1004,10 +990,10 @@ library Math {
             // toward equilibrium --> no spread
             return (
                 tokenAmountIn = calcInGivenOut(
-                    tokenIn.balance,
-                    tokenIn.weight,
-                    tokenOut.balance,
-                    tokenOut.weight,
+                    tokenGlobalIn.info.balance,
+                    tokenGlobalIn.info.weight,
+                    tokenGlobalOut.info.balance,
+                    tokenGlobalOut.info.weight,
                     swapParameters.amount,
                     swapParameters.fee
                 )
@@ -1016,19 +1002,19 @@ library Math {
 
         // 'abundance of tokenOut' phase --> no spread
         uint256 tokenAmountInPart1 = calcInGivenOut(
-            tokenIn.balance,
-            tokenIn.weight,
-            tokenOut.balance,
-            tokenOut.weight,
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
             tokenOutBuyAmountForEquilibrium,
             swapParameters.fee
         );
 
         // 'shortage of tokenOut phase' --> apply spread
         uint256 tokenAmountInPart2 = calcInGivenOut(
-            tokenIn.balance + tokenAmountInPart1,
-            tokenIn.weight,
-            tokenOut.balance - tokenOutBuyAmountForEquilibrium,
+            tokenGlobalIn.info.balance + tokenAmountInPart1,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance - tokenOutBuyAmountForEquilibrium,
             adjustedTokenWeightOut,
             swapParameters.amount - tokenOutBuyAmountForEquilibrium, // tokenAmountOut > tokenOutBuyAmountForEquilibrium
             swapParameters.fee
@@ -1080,6 +1066,93 @@ library Math {
             );
         }
         return balance1AtEquilibrium;
+
+    }
+
+    // TODO: add spec
+    function calcAdaptiveFeeGivenInAndOut(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountIn,
+        uint256 targetBalanceOut
+    )
+    public pure
+    returns (uint256)
+    {
+        uint weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
+        uint y = Num.bdiv(tokenBalanceOut, targetBalanceOut);
+        uint foo = Num.bmul(tokenBalanceIn, Num.bpow(y, weightRatio));
+
+        uint256 afterSwapTokenInBalance = tokenBalanceIn + tokenAmountIn;
+
+        // equivalent to max(0, (foo - afterSwapTokenInBalance / -tokenAmountIn)
+        if (foo > afterSwapTokenInBalance) {
+            return 0;
+        }
+        return (
+            Num.bdiv(
+                afterSwapTokenInBalance - foo,
+                tokenAmountIn
+            )
+        );
+    }
+
+    // TODO: add spec
+    function getOutTargetGivenIn(
+        uint256 tokenBalanceIn, uint256 tokenBalanceOut,
+        uint256 relativePrice, uint256 tokenAmountIn
+    ) internal pure returns (uint256 tokenAmountOut) {
+        uint256 currentPriceInOutTerms = Num.bdiv(Const.BONE, relativePrice);
+        uint256 poolValueInOutTerms = tokenBalanceOut + Num.bmul(tokenBalanceIn, currentPriceInOutTerms);
+        return (
+            tokenAmountOut = (poolValueInOutTerms - Num.bmul(tokenBalanceIn + tokenAmountIn, currentPriceInOutTerms))
+        );
+    }
+
+    /**
+    * @notice Computes the fee amount that will ensure we maintain the pool's value, according to oracle prices.
+    * @dev We apply this fee regime only if Out-In price increased in the same block as now.
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param tokenGlobalOut The pool global information on tokenOut
+    * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
+    * @param tokenAmountIn The swap desired amount for tokenIn
+    * @param baseFee The base fee amount
+    * @return alpha The potentially augmented fee amount
+    */
+    function getAdaptiveFees(
+        Struct.TokenGlobal memory tokenGlobalIn,
+        Struct.TokenGlobal memory tokenGlobalOut,
+        uint256 relativePrice,
+        uint256 tokenAmountIn,
+        uint256 baseFee
+    ) internal view returns (uint256 alpha) {
+
+        // we only consider same block as last price update
+        if ((block.timestamp != tokenGlobalIn.latestRound.timestamp && block.timestamp != tokenGlobalOut.latestRound.timestamp)) {
+            // no additional fees
+            return alpha = baseFee;
+        }
+        uint256 previousPrice = ChainlinkUtils.getPreviousPrice(
+            tokenGlobalIn.latestRound, tokenGlobalOut.latestRound
+        );
+        if (previousPrice > relativePrice) {
+            // no additional fees
+            return alpha = baseFee;
+        }
+
+        return (
+            // additional fees indexed on price increase and imbalance
+            alpha = baseFee + calcAdaptiveFeeGivenInAndOut(
+                tokenGlobalIn.info.balance,
+                tokenGlobalIn.info.weight,
+                tokenGlobalOut.info.balance,
+                tokenGlobalOut.info.weight,
+                tokenAmountIn,
+                getOutTargetGivenIn(tokenGlobalIn.info.balance, tokenGlobalOut.info.balance, relativePrice, tokenAmountIn)
+            )
+        );
 
     }
 

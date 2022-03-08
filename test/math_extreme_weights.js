@@ -110,8 +110,8 @@ contract('Pool', async (accounts) => {
         await weth.approve(POOL, MAX);
         await dai.approve(POOL, MAX);
 
-		wethOracle = await TConstantOracle.new(300000000000, now);
-        daiOracle = await TConstantOracle.new(100000000, now);
+		wethOracle = await TConstantOracle.new(toWei("1000"), now);
+        daiOracle = await TConstantOracle.new(toWei("49000"), now);
 
         await pool.bindMMM(WETH, toWei(wethBalance), toWei(wethDenorm), wethOracle.address);
         await pool.bindMMM(DAI, toWei(daiBalance), toWei(daiDenorm), daiOracle.address);
@@ -124,7 +124,7 @@ contract('Pool', async (accounts) => {
     describe('Extreme weights', () => {
         it('swapExactAmountIn', async () => {
             const tokenIn = WETH;
-            const tokenInAmount = toWei('500');
+            const tokenInAmount = toWei('0.005');
             const tokenOut = DAI;
             const minAmountOut = toWei('0');
             const maxPrice = MAX;
@@ -134,7 +134,7 @@ contract('Pool', async (accounts) => {
             );
 
             // Checking outputs
-            let expected = Decimal('8.23390841016124456');
+            let expected = Decimal('0.00010193851551321131');
             let actual = Decimal(fromWei(output.tokenAmountOut));
             let relDif = calcRelativeDiff(expected, actual);
 
@@ -147,7 +147,7 @@ contract('Pool', async (accounts) => {
 
             assert.isAtMost(relDif.toNumber(), errorDelta);
 
-            expected = Decimal('74.1844011380065814');
+            expected = Decimal('49.04929929430706');
             actual = Decimal(fromWei(output.spotPriceAfter));
             relDif = calcRelativeDiff(expected, actual);
 
@@ -159,13 +159,14 @@ contract('Pool', async (accounts) => {
             }
 
             assert.isAtMost(relDif.toNumber(), errorDelta);
+
         });
 
         it('swapExactAmountOutMMM', async () => {
             const tokenIn = WETH;
             const maxAmountIn = MAX;
             const tokenOut = DAI;
-            const tokenAmountOut = toWei('333.333333333333333333');
+            const tokenAmountOut = toWei('0.33333333333333');
             const maxPrice = MAX;
 
             const output = await pool.swapExactAmountOutMMM.call(
@@ -173,7 +174,7 @@ contract('Pool', async (accounts) => {
             );
 
             // Checking outputs
-            let expected = Decimal('425506505648.348073');
+            let expected = Decimal('16.486705800677345');
             let actual = Decimal(fromWei(output.tokenAmountIn));
             let relDif = calcRelativeDiff(expected, actual);
 
@@ -186,7 +187,7 @@ contract('Pool', async (accounts) => {
 
             assert.isAtMost(relDif.toNumber(), errorDelta);
 
-            expected = Decimal('31306034272.9265099');
+            expected = Decimal('49.87433106754624');
             actual = Decimal(fromWei(output.spotPriceAfter));
             relDif = calcRelativeDiff(expected, actual);
 

@@ -1,7 +1,11 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
 const { calcRelativeDiff } = require('../lib/calc_comparisons');
-const { getLogSpreadFactor, getMMMWeight, getTokenBalanceAtEquilibrium, calcOutGivenInMMM } = require('../lib/mmm');
+const {
+		getLogSpreadFactor, getMMMWeight,
+		getTokenBalanceAtEquilibrium, calcOutGivenInMMM,
+		calcAdaptiveFeeGivenInAndOut, getOutTargetGivenIn
+	} = require('../lib/mmm');
 
 const TMathMMM = artifacts.require('TMathMMM');
 
@@ -227,6 +231,116 @@ contract('MMM Math', async (accounts) => {
 		assert.isAtMost(relDifAmountOutMMM.toNumber(), errorDelta);
 	}
 
+	async function assertGetOutTargetGivenIn() {
+
+		const balanceIn = 9.995003746877732
+		const weightIn = 0.5002498750624688
+		const amountIn = 0.004996253122268257
+
+		const balanceOut = 10.004998750624614
+		const weightOut = 0.49975012493753124
+
+		const relativePrice = balanceIn / balanceOut * weightOut / weightOut
+
+		// Expected targetOut
+		const expectedTargetOut = getOutTargetGivenIn(
+			balanceIn, balanceOut, relativePrice, amountIn
+		);
+
+		// Actual targetOut
+		const targetOut = await math.getOutTargetGivenIn(
+			toWei(balanceIn.toString()),
+			toWei(balanceOut.toString()),
+			toWei(relativePrice.toString()),
+			toWei(amountIn.toString())
+		);
+
+		// Checking targetOut
+		const actualTargetOut = Decimal(fromWei(targetOut));
+		const relDif = calcRelativeDiff(expectedTargetOut, actualTargetOut);
+		if (verbose) {
+			console.log('TargetOut');
+			console.log(`expected: ${expectedTargetOut}`);
+			console.log(`actual: ${actualTargetOut}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
+	async function assertCalcAdaptiveFeeGivenInAndOut() {
+
+		const balanceIn = 9.995003746877732
+		const weightIn = 0.5002498750624688
+		const amountIn = 0.004996253122268257
+
+		const balanceOut = 10.004998750624614
+		const weightOut = 0.49975012493753124
+		const amountOut = 0.005001249375387928
+
+		// Expected adaptiveFees
+		const expectedAdaptiveFees = calcAdaptiveFeeGivenInAndOut(
+			balanceIn, weightIn, balanceOut, weightOut, amountIn, balanceOut - amountOut
+		);
+
+		// Actual adaptiveFees
+		const adaptiveFees = await math.calcAdaptiveFeeGivenInAndOut(
+			toWei(balanceIn.toString()),
+			toWei(weightIn.toString()),
+			toWei(balanceOut.toString()),
+			toWei(weightOut.toString()),
+			toWei(amountIn.toString()),
+			toWei((balanceOut - amountOut).toString())
+		);
+
+		// Checking adaptiveFees
+		const actualAdaptiveFees = Decimal(fromWei(adaptiveFees));
+		const relDif = calcRelativeDiff(expectedAdaptiveFees, actualAdaptiveFees);
+		if (verbose) {
+			console.log('AdaptiveFees');
+			console.log(`expected: ${expectedAdaptiveFees}`);
+			console.log(`actual: ${actualAdaptiveFees}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
+	async function assertGetPreviousPrice() {
+
+		const priceIn = 100
+		const tsIn = 1
+		const decimalsIn = 8
+
+		const priceOut = 100
+		const tsOut = 1
+		const decimalsOut = 10
+
+		// Expected adaptiveFees
+		const expectedAdaptiveFees = calcAdaptiveFeeGivenInAndOut(
+			balanceIn, weightIn, balanceOut, weightOut, amountIn, balanceOut - amountOut
+		);
+
+		// Actual adaptiveFees
+		const adaptiveFees = await math.calcAdaptiveFeeGivenInAndOut(
+			toWei(balanceIn.toString()),
+			toWei(weightIn.toString()),
+			toWei(balanceOut.toString()),
+			toWei(weightOut.toString()),
+			toWei(amountIn.toString()),
+			toWei((balanceOut - amountOut).toString())
+		);
+
+		// Checking adaptiveFees
+		const actualAdaptiveFees = Decimal(fromWei(adaptiveFees));
+		const relDif = calcRelativeDiff(expectedAdaptiveFees, actualAdaptiveFees);
+		if (verbose) {
+			console.log('AdaptiveFees');
+			console.log(`expected: ${expectedAdaptiveFees}`);
+			console.log(`actual: ${actualAdaptiveFees}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
     describe('Protocol math', () => {
 
         [-0.00001, 0.00001].forEach(async _mean => {
@@ -277,46 +391,60 @@ contract('MMM Math', async (accounts) => {
 			})
 		});
 
-        [80, 100].forEach(async _tokenBalanceIn => {
-		[20, 10].forEach(async _tokenWeightIn => {
-		[100].forEach(async _tokenBalanceOut => {
-		[20].forEach(async _tokenWeightOut => {
-        [10].forEach(async _tokenAmountIn => {
-        [0.025/100].forEach(async _swapFee => {
-        [-0.000001, 0.000001].forEach(async _mean => {
-		[0.000001].forEach(async _variance => {
-		[1.29].forEach(async _z => {
-		[0, 7200].forEach(async _horizon => {
-		[2.2].forEach(async _relativePrice => {
-			it(
-				`CalcOutGivenInMMM ${_tokenBalanceIn} ${_tokenWeightIn} ${_tokenBalanceOut} ${_tokenWeightOut} ${_tokenAmountIn} ${_swapFee} ${_mean} ${_variance} ${_z} ${_horizon} ${_relativePrice}`,
-				async () => {
-					await assertCalcOutGivenInMMM(
-						_tokenBalanceIn,
-						_tokenWeightIn,
-						_tokenBalanceOut,
-						_tokenWeightOut,
-						_tokenAmountIn,
-						_swapFee,
-						_mean,
-						_variance,
-						_z,
-						_horizon,
-						_relativePrice
-					)
-				}
-			)
-		})
-		})
-		})
-		})
-		})
-		})
-		})
-		})
-		})
-		})
-		})
+//        [80, 100].forEach(async _tokenBalanceIn => {
+//		[20, 10].forEach(async _tokenWeightIn => {
+//		[100].forEach(async _tokenBalanceOut => {
+//		[20].forEach(async _tokenWeightOut => {
+//        [10].forEach(async _tokenAmountIn => {
+//        [0.025/100].forEach(async _swapFee => {
+//        [-0.000001, 0.000001].forEach(async _mean => {
+//		[0.000001].forEach(async _variance => {
+//		[1.29].forEach(async _z => {
+//		[0, 7200].forEach(async _horizon => {
+//		[2.2].forEach(async _relativePrice => {
+//			it(
+//				`CalcOutGivenInMMM ${_tokenBalanceIn} ${_tokenWeightIn} ${_tokenBalanceOut} ${_tokenWeightOut} ${_tokenAmountIn} ${_swapFee} ${_mean} ${_variance} ${_z} ${_horizon} ${_relativePrice}`,
+//				async () => {
+//					await assertCalcOutGivenInMMM(
+//						_tokenBalanceIn,
+//						_tokenWeightIn,
+//						_tokenBalanceOut,
+//						_tokenWeightOut,
+//						_tokenAmountIn,
+//						_swapFee,
+//						_mean,
+//						_variance,
+//						_z,
+//						_horizon,
+//						_relativePrice
+//					)
+//				}
+//			)
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+//		})
+
+		it(
+			`getOutTargetGivenIn`,
+			async () => {
+				await assertGetOutTargetGivenIn()
+			}
+		)
+
+		it(
+			`calcAdaptiveFeeGivenInAndOut`,
+			async () => {
+				await assertCalcAdaptiveFeeGivenInAndOut()
+			}
+		)
 
     });
 });

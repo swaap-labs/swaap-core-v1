@@ -309,8 +309,8 @@ contract('Pool', async (accounts) => {
         });
 
         it('swapExactAmountInMMM WETH -> DAI', async () => {
-            // 100 WETH -> DAI
-            const amount = 100
+            // 1 WETH -> DAI
+            const amount = 1
 
             const wethBalance = await pool.getBalance(WETH);
             const daiBalance = await pool.getBalance(DAI);
@@ -388,8 +388,8 @@ contract('Pool', async (accounts) => {
         });
 
 		it('swapExactAmountInMMM WBTC -> WETH', async () => {
-            // 10 WBTC -> WETH
-            const amount = 10
+            // 0.1 WBTC -> WETH
+            const amount = 0.1
 
             const wbtcBalance = await pool.getBalance(WBTC);
             const wethBalance = await pool.getBalance(WETH);
@@ -522,8 +522,8 @@ contract('Pool', async (accounts) => {
 		})
 
 		it('swapExactAmountOutMMM WBTC -> WETH', async () => {
-            // 10 WBTC -> WETH
-            const amount = 10
+            // 0.1 WBTC -> WETH
+            const amount = 0.1
 
             const wbtcBalance = await pool.getBalance(WBTC);
             const wethBalance = await pool.getBalance(WETH);
@@ -547,7 +547,7 @@ contract('Pool', async (accounts) => {
 			if (verbose) {
 				const gas = await pool.swapExactAmountOutMMM.estimateGas(
 					WBTC,
-					toWei('1000000000000000000000000000'),
+					toWei('1000000000000000000000000000'), // large maxAmountIn
 					WETH,
 					toWei(expectedAmount.toString()),
 					toWei('10000'),
@@ -558,7 +558,7 @@ contract('Pool', async (accounts) => {
 
             const txr = await pool.swapExactAmountOutMMM(
                 WBTC,
-                toWei('1000000000000000000000000000'),
+                toWei('1000000000000000000000000000'), // large maxAmountIn
                 WETH,
                 toWei(expectedAmount.toString()),
                 toWei('10000'),

@@ -25,9 +25,7 @@ library TMathMMM {
     )
     public pure
     returns (int256 x) {
-        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(mean, variance);
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
-        return Math.getLogSpreadFactor(gbmEstimation, gbmParameters);
+        return Math.getLogSpreadFactor(mean, variance, horizon, z);
     }
 
     function getMMMWeight(
@@ -37,7 +35,7 @@ library TMathMMM {
     )    public pure
     returns (uint256 weight, uint256 spread)
     {
-        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(mean, variance);
+        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(mean, variance, true);
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
         return Math.getMMMWeight(true, tokenWeightOut, gbmEstimation, gbmParameters);
     }
@@ -61,38 +59,74 @@ library TMathMMM {
         );
     }
 
-    function calcOutGivenInMMM(
-        uint256 tokenInBalance,
-        uint256 tokenInWeight,
-        uint256 tokenOutBalance,
-        uint256 tokenOutWeight,
-        uint256 tokenInAmount,
-        uint256 swapFee,
-        int256 mean,
-        uint256 variance,
-        uint256 z,
-        uint256 horizon,
-        uint256 quantityInAtEquilibrium
+//    function calcOutGivenInMMM(
+//        Struct.TokenGlobal memory tokenGlobalIn,
+//        Struct.TokenGlobal memory tokenGlobalOut,
+//        uint256 relativePrice,
+//        Struct.SwapParameters memory swapParameters,
+//        Struct.GBMParameters memory gbmParameters,
+//        Struct.HistoricalPricesParameters memory hpParameters
+//    )
+//    public pure
+//    returns (uint256 spotPriceMMM, uint256 spread)
+//    {
+//        Struct.TokenRecord memory tokenIn = Struct.TokenRecord(
+//            tokenInBalance,
+//            tokenInWeight
+//        );
+//        Struct.LatestRound memory tokenIn = Struct.TokenRecord(
+//            address oracle,
+//            uint80 roundId,
+//            int256 price,
+//            uint256 timestamp,
+//        );
+//        Struct.TokenRecord memory tokenOut = Struct.TokenRecord(
+//            tokenOutBalance,
+//            tokenOutWeight
+//        );
+//        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, swapFee);
+//        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
+//        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(
+//            mean, variance
+//        );
+//        Struct.SwapResult memory result = Math.calcOutGivenInMMM(
+//            tokenGlobalIn,
+//            tokenGlobalOut,
+//            relativePrice,
+//            swapParameters,
+//            gbmParameters,
+//            hpParameters
+////            tokenGlobalIn, tokenGlobalOut, relativePrice, swapParameters, gbmParameters, gbmEstimation
+//        );
+//
+//        return (result.amount, result.spread);
+//    }
+
+    function calcAdaptiveFeeGivenInAndOut(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountIn,
+        uint256 tokenAmountOut
     )
     public pure
-    returns (uint256 spotPriceMMM, uint256 spread)
+    returns (uint256)
     {
-        Struct.TokenRecord memory tokenIn = Struct.TokenRecord(
-            tokenInBalance,
-            tokenInWeight
+        return Math.calcAdaptiveFeeGivenInAndOut(
+            tokenBalanceIn, tokenWeightIn,
+            tokenBalanceOut, tokenWeightOut,
+            tokenAmountIn, tokenAmountOut
         );
-        Struct.TokenRecord memory tokenOut = Struct.TokenRecord(
-            tokenOutBalance,
-            tokenOutWeight
-        );
-        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenInAmount, swapFee);
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
-        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(
-            mean, variance
-        );
-        Struct.SwapResult memory result = Math._calcOutGivenInMMM(
-            tokenIn, tokenOut, swapParameters, gbmParameters, gbmEstimation, quantityInAtEquilibrium
-        );
-        return (result.amount, result.spread);
     }
+
+    function getOutTargetGivenIn(
+        uint256 tokenBalanceIn, uint256 tokenBalanceOut, uint256 relativePrice, uint256 tokenAmountIn
+    )
+    public pure
+    returns (uint256)
+    {
+        return Math.getOutTargetGivenIn(tokenBalanceIn, tokenBalanceOut, relativePrice, tokenAmountIn);
+    }
+
 }

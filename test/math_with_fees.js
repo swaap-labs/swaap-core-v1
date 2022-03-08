@@ -40,7 +40,7 @@ contract('Pool', async (accounts) => {
     let currentWethBalance = Decimal(wethBalance);
     let previousWethBalance = currentWethBalance;
 
-    const daiBalance = '12';
+    const daiBalance = '12000';
     const daiDenorm = '10';
 
     let currentDaiBalance = Decimal(daiBalance);
@@ -126,7 +126,7 @@ contract('Pool', async (accounts) => {
     describe('With fees', () => {
         it('swapExactAmountIn', async () => {
             const tokenIn = WETH;
-            const tokenAmountIn = '2';
+            const tokenAmountIn = '0.002';
             const tokenOut = DAI;
             const minAmountOut = '0';
             const maxPrice = MAX;
@@ -162,7 +162,7 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
 
             expected = calcSpotPrice(
-                currentWethBalance.plus(Decimal(2)),
+                currentWethBalance.plus(Decimal(0.002)),
                 wethNorm,
                 currentDaiBalance.sub(actual),
                 daiNorm,
@@ -187,7 +187,7 @@ contract('Pool', async (accounts) => {
             const tokenIn = DAI;
             const maxAmountIn = MAX;
             const tokenOut = WETH;
-            const tokenAmountOut = '1';
+            const tokenAmountOut = '0.001';
             const maxPrice = MAX;
 
             const output = await pool.swapExactAmountOutMMM.call(
@@ -224,7 +224,7 @@ contract('Pool', async (accounts) => {
             expected = calcSpotPrice(
                 currentDaiBalance.plus(actual),
                 daiNorm,
-                currentWethBalance.sub(Decimal(1)),
+                currentWethBalance.sub(Decimal(0.001)),
                 wethNorm,
                 swapFee,
             );
