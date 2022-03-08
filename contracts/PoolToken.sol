@@ -14,14 +14,11 @@
 
 pragma solidity =0.8.12;
 
-import "./interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Highly opinionated token implementation
 
-
-contract TokenBase {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+contract PoolToken is IERC20 {
 
     mapping(address => uint256)                   internal _balance;
     mapping(address => mapping(address=>uint256)) internal _allowance;
@@ -53,23 +50,20 @@ contract TokenBase {
     function _pull(address from, uint256 amt) internal {
         _move(from, address(this), amt);
     }
-}
-
-contract PoolToken is TokenBase, IERC20 {
 
     string constant private _name     = "Swaap Pool Token";
     string constant private _symbol   = "SPT";
     uint8  constant private _decimals = 18;
 
-    function name() external pure override returns (string memory) {
+    function name() external pure returns (string memory) {
         return _name;
     }
 
-    function symbol() external pure override returns (string memory) {
+    function symbol() external pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() external pure override returns(uint8) {
+    function decimals() external pure returns(uint8) {
         return _decimals;
     }
 

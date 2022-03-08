@@ -21,8 +21,11 @@ import "./Math.sol";
 import "./Num.sol";
 import "./structs/Struct.sol";
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Pool is PoolToken {
+
+    using SafeERC20 for IERC20; 
 
     struct Record {
         bool bound;   // is token bound to pool
@@ -250,7 +253,7 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
+        require(!_finalized, "1");
         require(msg.sender == _controller, "3");
         require(_tokens.length >= Const.MIN_BOUND_TOKENS, "18");
 
@@ -585,15 +588,13 @@ contract Pool is PoolToken {
     function _pullUnderlying(address erc20, address from, uint256 amount)
     internal
     {
-        bool xfer = IERC20(erc20).transferFrom(from, address(this), amount);
-        require(xfer, "19");
+        IERC20(erc20).safeTransferFrom(from, address(this), amount);
     }
 
     function _pushUnderlying(address erc20, address to, uint256 amount)
     internal
     {
-        bool xfer = IERC20(erc20).transfer(to, amount);
-        require(xfer, "19");
+        IERC20(erc20).safeTransfer(to, amount);
     }
 
     function _pullPoolShare(address from, uint256 amount)
