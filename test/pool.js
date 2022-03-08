@@ -347,7 +347,7 @@ contract('Pool', async (accounts) => {
         it('Fails finalizing pool after finalized', async () => {
             await truffleAssert.reverts(
                 pool.finalize(),
-                '1',
+                '4',
             );
         });
 
