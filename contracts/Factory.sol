@@ -43,6 +43,7 @@ contract Factory {
     external
     returns (Pool)
     {
+        require(!_paused, "36");
         Pool pool = new Pool();
         _isPool[address(pool)] = true;
         emit LOG_NEW_POOL(msg.sender, address(pool));
@@ -50,11 +51,13 @@ contract Factory {
         return pool;
     }
 
-
     address private _swaaplabs;
+    bool private _paused;
+    uint64 immutable private _setPauseWindow;
 
     constructor() {
         _swaaplabs = msg.sender;
+        _setPauseWindow = uint64(block.timestamp) + Const.PAUSE_WINDOW;
     }
 
     function getSwaapLabs()
@@ -79,6 +82,16 @@ contract Factory {
         uint256 collected = IERC20(pool).balanceOf(address(this));
         bool xfer = pool.transfer(_swaaplabs, collected);
         require(xfer, "19");
+    }
+
+    function setPause(bool paused) external {
+        require(msg.sender == _swaaplabs, "34");
+        require(block.timestamp < _setPauseWindow, "45");
+        _paused = paused;
+    }
+
+    function whenNotPaused() external view {
+        require(!_paused, "36");
     }
 
 }

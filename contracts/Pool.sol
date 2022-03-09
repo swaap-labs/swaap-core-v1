@@ -23,6 +23,8 @@ import "./structs/Struct.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interfaces/IPausedFactory.sol";
+
 contract Pool is PoolToken {
 
     using SafeERC20 for IERC20; 
@@ -84,6 +86,15 @@ contract Pool is PoolToken {
         _lock();
         _;
         _unlock();
+    }
+
+    function _whenNotPaused() private view {
+        IPausedFactory(_factory).whenNotPaused();
+    }
+
+    modifier _whenNotPaused_() {
+        _whenNotPaused();
+        _;
     }
 
     address[] private _tokens;
@@ -284,6 +295,7 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _whenNotPaused_
     {
         require(_finalized, "1");
 
@@ -345,6 +357,7 @@ contract Pool is PoolToken {
         external
         _logs_
         _lock_
+        _whenNotPaused_
         returns (uint poolAmountOut)
 
     {        
@@ -403,6 +416,7 @@ contract Pool is PoolToken {
         external
         _logs_
         _lock_
+        _whenNotPaused_
         returns (uint tokenAmountIn)
     {
         require(_finalized, "1");
@@ -462,6 +476,7 @@ contract Pool is PoolToken {
         external
         _logs_
         _lock_
+        _whenNotPaused_
         returns (uint tokenAmountOut)
     {
         require(_finalized, "1");
@@ -523,6 +538,7 @@ contract Pool is PoolToken {
         external
         _logs_
         _lock_
+        _whenNotPaused_
         returns (uint poolAmountIn)
     {
         require(_finalized, "1");
@@ -809,6 +825,7 @@ contract Pool is PoolToken {
     internal 
     _logs_
     _lock_
+    _whenNotPaused_
     {
         require(denorm >= Const.MIN_WEIGHT, "30");
         require(denorm <= Const.MAX_WEIGHT, "31");
@@ -953,6 +970,7 @@ contract Pool is PoolToken {
     internal
     _logs_
     _lock_
+    _whenNotPaused_
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
 
@@ -1001,26 +1019,6 @@ contract Pool is PoolToken {
         _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
 
         return (tokenAmountOut = swapResult.amount, spotPriceAfter);
-    }
-
-    function swapExactAmountOutMMM(
-        address tokenIn,
-        uint256 maxAmountIn,
-        address tokenOut,
-        uint256 tokenAmountOut,
-        uint256 maxPrice
-    )
-    external
-    returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
-    {
-        return _swapExactAmountOutMMMWithTimestamp(
-            tokenIn,
-            maxAmountIn,
-            tokenOut,
-            tokenAmountOut,
-            maxPrice,
-            block.timestamp
-        );
     }
 
     function getAmountOutGivenInMMM(
@@ -1078,6 +1076,26 @@ contract Pool is PoolToken {
 
     }
 
+    function swapExactAmountOutMMM(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    )
+    external
+    returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
+    {
+        return _swapExactAmountOutMMMWithTimestamp(
+            tokenIn,
+            maxAmountIn,
+            tokenOut,
+            tokenAmountOut,
+            maxPrice,
+            block.timestamp
+        );
+    }
+
     function _swapExactAmountOutMMMWithTimestamp(
         address tokenIn,
         uint256 maxAmountIn,
@@ -1089,6 +1107,7 @@ contract Pool is PoolToken {
     internal
     _logs_
     _lock_
+    _whenNotPaused_
     returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
     {
 

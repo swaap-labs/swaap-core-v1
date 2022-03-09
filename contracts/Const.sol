@@ -55,4 +55,6 @@ library Const {
     uint256 public constant MAX_LOOKBACK_IN_SEC    = 86400;
 
 
+    uint64 public constant PAUSE_WINDOW = 86400 * 60;
+
 }

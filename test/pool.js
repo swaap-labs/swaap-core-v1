@@ -393,7 +393,26 @@ contract('Pool', async (accounts) => {
             await xxx.approve(POOL, MAX, { from: user2 });
         });
 
+        it('Fail swaps when Factory is paused', async () => {
+            await factory.setPause(true, {from: admin});
+            await truffleAssert.reverts(
+                pool.swapExactAmountInMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), { from: user2 }),
+                '36'
+            );
+            await truffleAssert.reverts(
+                pool.swapExactAmountOutMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), { from: user2 }),
+                 '36'
+            );               
+        });
+
+        it('Fail User1 join/joinswap when Factory is paused', async () => {
+            await truffleAssert.reverts(pool.joinPool(toWei('5'), [MAX, MAX, MAX], { from: user1 }), '36');
+            await truffleAssert.reverts(pool.joinswapPoolAmountOutMMM.call(WETH, toWei('0.01'), MAX), '36');
+            await truffleAssert.reverts(pool.joinswapExternAmountInMMM.call(WETH, toWei('0.1'), toWei('0')), '36');
+        });
+
         it('User1 joins pool', async () => {
+            await factory.setPause(false, {from: admin});
             await pool.joinPool(toWei('5'), [MAX, MAX, MAX], { from: user1 });
             const daiBalance = await pool.getBalance(DAI);
             assert.equal(10500, fromWei(daiBalance));
