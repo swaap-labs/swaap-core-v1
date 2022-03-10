@@ -102,10 +102,16 @@ library ChainlinkUtils {
         (int256 priceIn, uint256 tsIn) = ChainlinkUtils.getRoundData(
             oracleIn, latestRoundIn.roundId - 1
         );
+        if (priceIn == 0) {
+            return 0;
+        }
         IAggregatorV3 oracleOut = IAggregatorV3(latestRoundOut.oracle);
         (int256 priceOut, uint256 tsOut)  = ChainlinkUtils.getRoundData(
             oracleOut, latestRoundOut.roundId - 1
         );
+        if (priceOut == 0) {
+            return 0;
+        }
         return _getPreviousPrice(
             priceIn, tsIn, oracleIn.decimals(), latestRoundIn.price,
             priceOut, tsOut, oracleOut.decimals(), latestRoundOut.price

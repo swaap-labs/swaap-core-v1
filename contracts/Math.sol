@@ -679,7 +679,8 @@ library Math {
                         tokenGlobalIn, tokenGlobalOut,
                         relativePrice,
                         swapParameters.amount,
-                        swapParameters.fee
+                        swapParameters.fee,
+                        swapParameters.fallbackSpread
                     ),
                     0
                 );
@@ -762,7 +763,8 @@ library Math {
         Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         uint256 tokenAmountIn,
-        uint256 baseFee
+        uint256 baseFee,
+        uint256 fallbackSpread
     ) public view returns (uint256) {
         uint256 adaptiveFees = getAdaptiveFees(
             tokenGlobalIn,
@@ -770,7 +772,8 @@ library Math {
             tokenGlobalOut,
             Num.bdiv(tokenAmountIn, relativePrice),
             relativePrice,
-            baseFee
+            baseFee,
+            fallbackSpread
         );
         return (
             calcOutGivenIn(
@@ -813,7 +816,8 @@ library Math {
             tokenGlobalOut,
             relativePrice,
             tokenInSellAmountForEquilibrium,
-            swapParameters.fee
+            swapParameters.fee,
+            swapParameters.fallbackSpread
         );
 
         // 'shortage of tokenOut phase' --> apply spread
@@ -871,7 +875,8 @@ library Math {
                         tokenGlobalIn, tokenGlobalOut,
                         relativePrice,
                         swapParameters.amount,
-                        swapParameters.fee
+                        swapParameters.fee,
+                        swapParameters.fallbackSpread
                     ),
                     0
                 )
@@ -955,15 +960,17 @@ library Math {
         Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         uint256 tokenAmountOut,
-        uint256 baseFee
+        uint256 baseFee,
+        uint256 fallbackSpread
     ) public view returns (uint256) {
         uint256 adaptiveFees = getAdaptiveFees(
             tokenGlobalIn,
-            Num.bdiv(tokenAmountOut, relativePrice),
+            Num.bmul(tokenAmountOut, relativePrice),
             tokenGlobalOut,
             tokenAmountOut,
-            Num.bdiv(Const.BONE, relativePrice),
-            baseFee
+            relativePrice,
+            baseFee,
+            fallbackSpread
         );
         return (
             calcInGivenOut(
@@ -1009,7 +1016,8 @@ library Math {
             tokenGlobalOut,
             relativePrice,
             tokenOutBuyAmountForEquilibrium,
-            swapParameters.fee
+            swapParameters.fee,
+            swapParameters.fallbackSpread
         );
 
         // 'shortage of tokenOut phase' --> apply spread
@@ -1110,6 +1118,19 @@ library Math {
         );
     }
 
+
+    // TODO: add spec
+    function getOutTargetGivenIn(
+        uint256 tokenBalanceIn, uint256 tokenBalanceOut,
+        uint256 relativePrice, uint256 tokenAmountIn
+    ) internal pure returns (uint256 tokenAmountOut) {
+        uint256 currentInPriceInOutTerms = Num.bdiv(Const.BONE, relativePrice);
+        uint256 poolValueInOutTerms = tokenBalanceOut + Num.bmul(tokenBalanceIn, currentInPriceInOutTerms);
+        return (
+            tokenAmountOut = (poolValueInOutTerms - Num.bmul(tokenBalanceIn + tokenAmountIn, currentInPriceInOutTerms))
+        );
+    }
+
     /**
     * @notice Computes the fee amount that will ensure we maintain the pool's value, according to oracle prices.
     * @dev We apply this fee regime only if Out-In price increased in the same block as now.
@@ -1127,7 +1148,8 @@ library Math {
         Struct.TokenGlobal memory tokenGlobalOut,
         uint256 tokenAmountOut,
         uint256 relativePrice,
-        uint256 baseFee
+        uint256 baseFee,
+        uint256 fallbackSpread
     ) internal view returns (uint256 alpha) {
 
         // we only consider same block as last price update
@@ -1138,7 +1160,10 @@ library Math {
         uint256 previousPrice = ChainlinkUtils.getPreviousPrice(
             tokenGlobalIn.latestRound, tokenGlobalOut.latestRound
         );
-        if (previousPrice > relativePrice) {
+        if (previousPrice == 0) {
+            // we were not able to retrieve the previous price
+            return alpha = fallbackSpread;
+        } else if (previousPrice > relativePrice) {
             // no additional fees
             return alpha = baseFee;
         }
