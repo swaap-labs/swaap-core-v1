@@ -104,29 +104,28 @@ library TMathMMM {
 
     function calcAdaptiveFeeGivenInAndOut(
         uint256 tokenBalanceIn,
+        uint256 tokenAmountIn,
         uint256 tokenWeightIn,
         uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
-        uint256 tokenAmountIn,
-        uint256 tokenAmountOut
+        uint256 tokenAmountOut,
+        uint256 tokenWeightOut
     )
     public pure
     returns (uint256)
     {
         return Math.calcAdaptiveFeeGivenInAndOut(
-            tokenBalanceIn, tokenWeightIn,
-            tokenBalanceOut, tokenWeightOut,
-            tokenAmountIn, tokenAmountOut
+            tokenBalanceIn,tokenAmountIn, tokenWeightIn,
+            tokenBalanceOut, tokenAmountOut, tokenWeightOut
         );
     }
 
     function getOutTargetGivenIn(
-        uint256 tokenBalanceIn, uint256 tokenBalanceOut, uint256 relativePrice, uint256 tokenAmountIn
+        uint256 tokenBalanceOut, uint256 relativePrice, uint256 tokenAmountIn
     )
     public pure
     returns (uint256)
     {
-        return Math.getOutTargetGivenIn(tokenBalanceIn, tokenBalanceOut, relativePrice, tokenAmountIn);
+        return tokenBalanceOut - Num.bdiv(tokenAmountIn, relativePrice);
     }
 
 }

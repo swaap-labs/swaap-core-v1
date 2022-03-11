@@ -159,7 +159,7 @@ contract('Pool', async (accounts) => {
                 ),
                 '9',
             );
-            await truffleAssert.reverts(
+            await truffleAsert.reverts(
                 pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
@@ -167,7 +167,7 @@ contract('Pool', async (accounts) => {
                     toWei('0'),
                     toWei('3.00001'),
                 ),
-                '12',
+                '12'
             );
         });
 

@@ -301,10 +301,11 @@ contract('Pool', async (accounts) => {
 
         });
 
-        it('Fail swapExactAmountInMMM unbound or over min max ratios', async () => {
+        it('Fail swapExactAmountInMMM unpegged', async () => {
+            // 320 represent about 10% of WETH balance
             await truffleAssert.reverts(
-                pool.swapExactAmountInMMM(WETH, toWei('1678'), DAI, toWei('5266293'), toWei('4000'), { from: user2 }),
-                '6',
+                pool.swapExactAmountInMMM(WETH, toWei('320'), DAI, toWei('0'), toWei('4000'), { from: user2 }),
+                '44'
             );
         });
 

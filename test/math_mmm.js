@@ -249,7 +249,6 @@ contract('MMM Math', async (accounts) => {
 
 		// Actual targetOut
 		const targetOut = await math.getOutTargetGivenIn(
-			toWei(balanceIn.toString()),
 			toWei(balanceOut.toString()),
 			toWei(relativePrice.toString()),
 			toWei(amountIn.toString())
@@ -285,11 +284,11 @@ contract('MMM Math', async (accounts) => {
 		// Actual adaptiveFees
 		const adaptiveFees = await math.calcAdaptiveFeeGivenInAndOut(
 			toWei(balanceIn.toString()),
+			toWei(amountIn.toString()),
 			toWei(weightIn.toString()),
 			toWei(balanceOut.toString()),
-			toWei(weightOut.toString()),
-			toWei(amountIn.toString()),
-			toWei((balanceOut - amountOut).toString())
+			toWei(amountOut.toString()),
+			toWei(weightOut.toString())
 		);
 
 		// Checking adaptiveFees
@@ -322,11 +321,11 @@ contract('MMM Math', async (accounts) => {
 		// Actual adaptiveFees
 		const adaptiveFees = await math.calcAdaptiveFeeGivenInAndOut(
 			toWei(balanceIn.toString()),
+			toWei(amountIn.toString()),
 			toWei(weightIn.toString()),
 			toWei(balanceOut.toString()),
-			toWei(weightOut.toString()),
-			toWei(amountIn.toString()),
-			toWei((balanceOut - amountOut).toString())
+			toWei(amountOut.toString()),
+			toWei(weightOut.toString())
 		);
 
 		// Checking adaptiveFees

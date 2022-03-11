@@ -992,8 +992,6 @@ contract Pool is PoolToken {
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
         require(_publicSwap, "10");
 
-        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
-
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
 
@@ -1004,6 +1002,7 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
+
         require(spotPriceBefore <= maxPrice, "11");
 
         Struct.SwapResult memory swapResult = _getAmountOutGivenInMMMWithTimestamp(
@@ -1076,8 +1075,6 @@ contract Pool is PoolToken {
     returns (Struct.SwapResult memory)
     {
 
-        require(tokenAmountIn <= Num.bmul(tokenGlobalIn.info.balance, Const.MAX_IN_RATIO), "ERR_MAX_IN_RATIO");
-
         Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
             tokenAmountIn,
             _swapFee,
@@ -1136,16 +1133,12 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
     {
 
-        require(_records[tokenIn].bound, "2");
-        require(_records[tokenOut].bound, "2");
+        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
         require(_publicSwap, "10");
-
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
 
-        // TODO: Re-check the necessity to calculate spotPriceBefore (and the conditions used in it later)
         uint256 spotPriceBefore = Math.calcSpotPrice(
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
@@ -1175,6 +1168,7 @@ contract Pool is PoolToken {
             tokenGlobalOut.info.weight,
             _swapFee
         );
+
         require(spotPriceAfter >= spotPriceBefore, "5");
         require(spotPriceAfter <= maxPrice, "12");
         require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
@@ -1225,6 +1219,7 @@ contract Pool is PoolToken {
     internal view
     returns (Struct.SwapResult memory)
     {
+        
         Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
             tokenAmountOut,
             _swapFee,
