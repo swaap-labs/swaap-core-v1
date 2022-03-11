@@ -424,7 +424,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice Represents the price of tokenOut in tokenIn terms, according to the oracles
+    * @param relativePrice Represents the price of tokenIn in tokenOut terms, according to the oracles
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return spotPriceMMM The spot price of tokenOut in tokenIn terms
@@ -752,7 +752,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice The price of tokenOut in tokenIn terms
+    * @param relativePrice The price of tokenIn in tokenOut terms
     * @param tokenAmountIn The amount of tokenIn that will be swaped
     * @param baseFee The base fee
     * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
@@ -985,7 +985,7 @@ library Math {
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
     * @param swapParameters The parameters of the swap
-    * @param relativePrice The price of TokenOut in TokenIn terms
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
     * @return tokenAmountIn TokenIn Amount needed for the swap 
     */
@@ -1071,7 +1071,16 @@ library Math {
 
     }
 
-    // TODO: add spec
+    /**
+    * @notice Computes an adapted fee related to an increase in price of tokenIn in terms of tokenOut
+    * @param tokenBalanceIn The balance of tokenIn initially
+    * @param tokenAmountIn The amount of tokenIn to be added
+    * @param tokenWeightIn The weight of tokenIn
+    * @param tokenBalanceOut The balance of tokenOut initially
+    * @param tokenAmountOut The amount of tokenOut to be removed from the pool
+    * @param tokenWeightOut The weight of tokenOut
+    * @return adaptiveFee The computed adaptive fee to be added to the base fees
+    */
     function calcAdaptiveFeeGivenInAndOut(
         uint256 tokenBalanceIn,
         uint256 tokenAmountIn,
