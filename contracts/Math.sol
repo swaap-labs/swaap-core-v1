@@ -20,7 +20,6 @@ import "./LogExpMath.sol";
 import "./GeometricBrownianMotionOracle.sol";
 import "./ChainlinkUtils.sol";
 import "./structs/Struct.sol";
-import "./interfaces/IAggregatorV3.sol";
 
 /**
 * @title Library in charge of the Swaap pricing computations
