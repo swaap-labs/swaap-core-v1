@@ -1079,7 +1079,8 @@ library Math {
     }
 
     /**
-    * @notice Computes an adapted fee related to an increase in price of tokenIn in terms of tokenOut
+    * @notice Computes the fee needed to maintain the pool's value constant
+    * @dev We use oracle to evaluate pool's value
     * @param tokenBalanceIn The balance of tokenIn initially
     * @param tokenAmountIn The amount of tokenIn to be added
     * @param tokenWeightIn The weight of tokenIn
