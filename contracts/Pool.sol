@@ -1235,7 +1235,7 @@ contract Pool is PoolToken {
         return Math.calcInGivenOutMMM(
             tokenGlobalIn,
             tokenGlobalOut,
-            ChainlinkUtils.getTokenRelativePrice(tokenGlobalOut.latestRound, tokenGlobalIn.latestRound),
+            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
             swapParameters,
             gbmParameters,
             hpParameters

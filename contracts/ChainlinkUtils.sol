@@ -89,32 +89,32 @@ library ChainlinkUtils {
     /**
     * @notice Computes the previous price of tokenIn in terms of tokenOut
     * @dev previous price correspond to price at lastRoundId - 1
-    * @param latestRoundIn The latest oracle data for tokenIn
-    * @param latestRoundOut The latest oracle data for tokenIn
+    * @param latestRound_1 The latest oracle data for tokenIn
+    * @param latestRound_2 The latest oracle data for tokenIn
     * @return The price of token 2 in terms of token 1
     */
     function getPreviousPrice(
-        Struct.LatestRound memory latestRoundIn,
-        Struct.LatestRound memory latestRoundOut
+        Struct.LatestRound memory latestRound_1,
+        Struct.LatestRound memory latestRound_2
     ) internal view returns (uint256) {
 
-        IAggregatorV3 oracleIn = IAggregatorV3(latestRoundIn.oracle);
+        IAggregatorV3 oracleIn = IAggregatorV3(latestRound_1.oracle);
         (int256 priceIn, uint256 tsIn) = ChainlinkUtils.getRoundData(
-            oracleIn, latestRoundIn.roundId - 1
+            oracleIn, latestRound_1.roundId - 1
         );
         if (priceIn == 0) {
             return 0;
         }
-        IAggregatorV3 oracleOut = IAggregatorV3(latestRoundOut.oracle);
+        IAggregatorV3 oracleOut = IAggregatorV3(latestRound_2.oracle);
         (int256 priceOut, uint256 tsOut)  = ChainlinkUtils.getRoundData(
-            oracleOut, latestRoundOut.roundId - 1
+            oracleOut, latestRound_2.roundId - 1
         );
         if (priceOut == 0) {
             return 0;
         }
         return _getPreviousPrice(
-            priceIn, tsIn, oracleIn.decimals(), latestRoundIn.price,
-            priceOut, tsOut, oracleOut.decimals(), latestRoundOut.price
+            priceIn, tsIn, oracleIn.decimals(), latestRound_1.price,
+            priceOut, tsOut, oracleOut.decimals(), latestRound_2.price
         );
 
     }

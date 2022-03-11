@@ -424,7 +424,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice Represents the price of tokenIn in tokenOut terms, according to the oracles
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return spotPriceMMM The spot price of tokenOut in tokenIn terms
@@ -643,7 +643,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice The price of tokenIn in tokenOut terms, according to the oracles
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param swapParameters Amount of token in and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
@@ -752,7 +752,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice The price of tokenIn in tokenOut terms
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param tokenAmountIn The amount of tokenIn that will be swaped
     * @param baseFee The base fee
     * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
@@ -791,7 +791,7 @@ library Math {
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
     * @param swapParameters The parameters of the swap
-    * @param relativePrice The price of TokenIn in TokenOut terms
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
     * @param balanceInAtEquilibrium TokenIn balance at equilibrium
     * @return tokenAmountOut The swap execution conditions
@@ -839,7 +839,7 @@ library Math {
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice The price of tokenOut in tokenIn terms, according to the oracles
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param swapParameters Amount of token out and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
@@ -863,7 +863,7 @@ library Math {
             tokenGlobalOut.info.weight,
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
-            relativePrice
+            Num.bdiv(Const.BONE, relativePrice)
         );
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
@@ -1043,7 +1043,7 @@ library Math {
     * @param tokenWeight1 The weight of token1
     * @param tokenBalance2 The balance of token2 initially
     * @param tokenWeight2 The weight of token2
-    * @param relativePrice The price of token1 in terms of token2
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @return balance1AtEquilibrium The balance of token1 in order to have a token1/token2 at equilibrium
     */
     function getTokenBalanceAtEquilibrium( 
@@ -1117,19 +1117,6 @@ library Math {
         );
     }
 
-
-    // TODO: add spec
-    function getOutTargetGivenIn(
-        uint256 tokenBalanceIn, uint256 tokenBalanceOut,
-        uint256 relativePrice, uint256 tokenAmountIn
-    ) internal pure returns (uint256 tokenAmountOut) {
-        uint256 currentInPriceInOutTerms = Num.bdiv(Const.BONE, relativePrice);
-        uint256 poolValueInOutTerms = tokenBalanceOut + Num.bmul(tokenBalanceIn, currentInPriceInOutTerms);
-        return (
-            tokenAmountOut = (poolValueInOutTerms - Num.bmul(tokenBalanceIn + tokenAmountIn, currentInPriceInOutTerms))
-        );
-    }
-
     /**
     * @notice Computes the fee amount that will ensure we maintain the pool's value, according to oracle prices.
     * @dev We apply this fee regime only if Out-In price increased in the same block as now.
@@ -1137,7 +1124,7 @@ library Math {
     * @param tokenAmountIn The swap desired amount for tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
     * @param tokenAmountOut The swap desired amount for tokenOut
-    * @param relativePrice Represents the price of tokenIn in tokenOut terms, according to the oracles
+    * @param relativePrice The price of tokenOut in tokenIn terms
     * @param baseFee The base fee amount
     * @return alpha The potentially augmented fee amount
     */
