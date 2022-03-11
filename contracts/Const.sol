@@ -54,7 +54,7 @@ library Const {
     uint256 public constant BASE_LOOKBACK_IN_SEC  = 3600;
     uint256 public constant MAX_LOOKBACK_IN_SEC   = 86400;
 
-    uint256 public constant MAX_PRICE_UNPEG_RATIO = BONE + 2 * BONE / 100; // TODO: set to BONE + 2 * BONE / 100 instead
+    uint256 public constant MAX_PRICE_UNPEG_RATIO = BONE + 2 * BONE / 100;
 
     uint64 public constant PAUSE_WINDOW           = 86400 * 60;
 
