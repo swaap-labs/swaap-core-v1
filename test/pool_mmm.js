@@ -2,7 +2,7 @@ const truffleAssert = require('truffle-assertions');
 const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
 const { getOracleDataHistory } = require('../lib/data');
 const { calcOutGivenInMMM, computeMMMSpread } = require('../lib/mmm');
-const { getParametersEstimation } = require('../lib/gbm_oracle');
+const { getParametersEstimation, getStartIndices } = require('../lib/gbm_oracle');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');
@@ -23,7 +23,7 @@ contract('Pool', async (accounts) => {
 
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
-    const errorDelta = 10 ** -8;
+    const errorDelta = 10 ** -6;
     const MAX = web3.utils.toTwosComplement(-1);
 
     const z = 1;

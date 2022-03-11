@@ -451,7 +451,7 @@ contract('Pool', async (accounts) => {
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), { from: user2 }),
-                '6',
+                '44',
             );
         });
 

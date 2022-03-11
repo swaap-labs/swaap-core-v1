@@ -177,10 +177,10 @@ contract('Pool', async (accounts) => {
                     AAA,
                     toWei('51'),
                     BBB,
-                    toWei('40'),
+                    toWei('10'),
                     toWei('5'),
                 ),
-                '7',
+                '12',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
