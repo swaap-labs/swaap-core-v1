@@ -6,8 +6,7 @@ const {
 	getParametersEstimation,
 	getPairReturns,
 	getStatistics,
-	getStartIndices,
-	getTimeWindow
+	getStartIndices
 } = require('../lib/gbm_oracle');
 
 const TGeometricBrownianMotionOracle = artifacts.require('TGeometricBrownianMotionOracle');
@@ -15,7 +14,8 @@ const TWETHOracle = artifacts.require('TWETHOracle');
 const TWBTCOracle = artifacts.require('TWBTCOracle');
 const TDAIOracle = artifacts.require('TDAIOracle');
 
-const errorDelta = 10 ** -7;
+const errorDelta = 10 ** -6;
+const negligibleValue = 10 ** -25;
 
 const verbose = process.env.VERBOSE;
 const useMainnetData = process.env.MAINNETDATA;
@@ -94,13 +94,19 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 			inCurrency, outCurrency
 		)
 
-		const [inStartIndex, outStartIndex, actualTimeWindowInSec] = getStartIndices(
+		const [inStartIndex, outStartIndex] = getStartIndices(
 			inTimestamps, outTimestamps,
 			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 		)
 
-		// Library output
+		// Expected output
+		const [expectedMean, expectedVariance] = getParametersEstimation(
+			inPrices, inTimestamps, inStartIndex,
+			outPrices, outTimestamps, outStartIndex,
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now,
+		);
 
+		// Library output
 		const result = await gbmOracle.getParametersEstimation.call(
 			testData[inCurrency]["oracle"], inRoundId, inPrices[0], inTimestamps[0],
 			testData[outCurrency]["oracle"], outRoundId, outPrices[0], outTimestamps[0],
@@ -109,12 +115,6 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		const mean = result[0];
 		const variance = result[1];
 
-		// Expected output
-		const [expectedMean, expectedVariance] = getParametersEstimation(
-			inPrices, inTimestamps, inStartIndex,
-			outPrices, outTimestamps, outStartIndex,
-			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, actualTimeWindowInSec
-		);
 
 		// Checking mean
 		let actualMean = Decimal(fromWei(mean));
@@ -136,7 +136,9 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 			console.log(`actual  : ${actualVariance}`);
 			console.log(`relDif  : ${relDifVariance}`);
 		}
-		assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+		if (actualVariance > negligibleValue) {
+			assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+		}
 
 		// debug only
 		if (verbose) {
@@ -242,22 +244,23 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 				const daiOraclePrices = testData["DAI"]["data"].map(v => parseFloat(v["price"]))
 				const daiOracleTimestamps = testData["DAI"]["data"].map(v => parseFloat(v["timestamp"]))
 
-				const [wethOracleStartIndex, daiOracleStartIndex, actualTimeWindowInSec] = getStartIndices(
-					wethOracleTimestamps, daiOracleTimestamps, 5, 1800, now
+				const [wethOracleStartIndex, daiOracleStartIndex] = getStartIndices(
+					wethOracleTimestamps, daiOracleTimestamps, 6, 7200, now
 				)
-
-				// Library output
-				let periodsReturn = await gbmOracle.getPairReturns.call(
-					wethOraclePrices, wethOracleTimestamps, wethOracleStartIndex,
-					daiOraclePrices, daiOracleTimestamps, daiOracleStartIndex
-				)
-				periodsReturn = periodsReturn.map(v => fromWei(v))
 
 				// Expected output
-				const expectedPeriodsReturn = getPairReturns(
+				const [expectedPeriodsReturn, expectedTimeDeltas] = getPairReturns(
 					wethOraclePrices, wethOracleTimestamps, wethOracleStartIndex,
 					daiOraclePrices, daiOracleTimestamps, daiOracleStartIndex,
 				);
+
+				// Library output
+				const result = await gbmOracle.getPairReturns.call(
+					wethOraclePrices, wethOracleTimestamps, wethOracleStartIndex,
+					daiOraclePrices, daiOracleTimestamps, daiOracleStartIndex
+				)
+				periodsReturn = result[0].map(v => fromWei(v))
+				timeDeltas = result[1].map(v => fromWei(v))
 
 				// Checking returns
 				let relDif = expectedPeriodsReturn.length > 0 ? periodsReturn.reduce((acc, r, idx) => {
@@ -271,6 +274,18 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 				}
 				assert.isAtMost(relDif, errorDelta);
 
+				// Checking timeDeltas
+				relDif = expectedTimeDeltas.length > 0 ? timeDeltas.reduce((acc, td, idx) => {
+					return acc + (td - expectedTimeDeltas[idx]) / (expectedTimeDeltas[idx] > 0 ? expectedTimeDeltas[idx] : 1)
+				}, 0) / periodsReturn.length : 0
+				if (verbose) {
+					console.log('getPairReturns');
+					console.log(`expected: ${expectedTimeDeltas}`);
+					console.log(`actual  : ${timeDeltas}`);
+					console.log(`relDif  : ${relDif}`);
+				}
+				assert.isAtMost(relDif, errorDelta);
+
 			});
 
 			it('getStatistics', async () => {
@@ -280,26 +295,34 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 				const daiOraclePrices = testData["DAI"]["data"].map(v => parseFloat(v["price"]))
 				const daiOracleTimestamps = testData["DAI"]["data"].map(v => parseFloat(v["timestamp"]))
 
-				const [wethOracleStartIndex, daiOracleStartIndex, actualTimeWindowInSec] = getStartIndices(
+				const [wethOracleStartIndex, daiOracleStartIndex] = getStartIndices(
 					wethOracleTimestamps, daiOracleTimestamps, 6, 7200, now
 				)
 
 				// Computing parameters
-				const expectedPeriodsReturn = getPairReturns(
+				const [expectedPeriodsReturn, expectedTimeDeltas] = getPairReturns(
 					wethOraclePrices, wethOracleTimestamps, wethOracleStartIndex,
 					daiOraclePrices, daiOracleTimestamps, daiOracleStartIndex,
 				);
 
 				// Library output
+				if (verbose) {
+					const gas = await gbmOracle.getStatistics.estimateGas(
+						expectedPeriodsReturn.map(v => toWei(v.toString().slice(0, 18))),
+						expectedTimeDeltas.map(v => toWei(v.toString().slice(0, 18)))
+					)
+					console.log("gas:", gas)
+				}
 				let result = await gbmOracle.getStatistics.call(
-					expectedPeriodsReturn.map(v => toWei(v.toString().slice(0, 18))), actualTimeWindowInSec
+					expectedPeriodsReturn.map(v => toWei(v.toString().slice(0, 18))),
+					expectedTimeDeltas.map(v => toWei(v.toString().slice(0, 18)))
 				)
 				const mean = result[0];
 				const variance = result[1];
 
 				// Expected output
 				const [expectedMean, expectedVariance] = getStatistics(
-					expectedPeriodsReturn, actualTimeWindowInSec
+					expectedPeriodsReturn, expectedTimeDeltas
 				);
 
 				// Checking mean
@@ -322,7 +345,9 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 					console.log(`actual  : ${actualVariance}`);
 					console.log(`relDif  : ${relDifVariance}`);
 				}
-				assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+				if (actualVariance > negligibleValue) {
+					assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+				}
 
 			});
 

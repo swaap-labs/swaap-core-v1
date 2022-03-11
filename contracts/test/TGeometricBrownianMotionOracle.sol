@@ -50,16 +50,16 @@ library TGeometricBrownianMotionOracle {
     function getPairReturns (
         uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn,
         uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut
-    ) public pure returns (int256[] memory) {
-        return GeometricBrownianMotionOracle.getPairReturns(
+    ) public pure returns (int256[] memory, uint256[] memory) {
+        return GeometricBrownianMotionOracle.getSeries(
             pricesIn, timestampsIn, startIndexIn,
             pricesOut, timestampsOut, startIndexOut
         );
     }
 
-    function getStatistics(int256[] memory periodsReturn, uint256 actualTimeWindowInSec)
+    function getStatistics(int256[] memory periodsReturn, uint256[] memory timeDeltas)
     public pure returns (int256, uint256) {
-        return GeometricBrownianMotionOracle.getStatistics(periodsReturn, actualTimeWindowInSec);
+        return GeometricBrownianMotionOracle.getStatistics(periodsReturn, timeDeltas);
     }
 
 }

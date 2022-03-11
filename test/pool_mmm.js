@@ -2,7 +2,7 @@ const truffleAssert = require('truffle-assertions');
 const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
 const { getOracleDataHistory } = require('../lib/data');
 const { calcOutGivenInMMM, computeMMMSpread } = require('../lib/mmm');
-const { getParametersEstimation, getStartIndices } = require('../lib/gbm_oracle');
+const { getParametersEstimation } = require('../lib/gbm_oracle');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');
@@ -141,38 +141,38 @@ contract('Pool', async (accounts) => {
     	const _now = lastBlock.timestamp
     	if (_now != now) {
     		now = _now
-			const [wethOracleStartIndexWETHDAI, daiOracleStartIndexWETHDAI, wWETHDAI] = getStartIndices(
+			const [wethOracleStartIndexWETHDAI, daiOracleStartIndexWETHDAI] = getStartIndices(
 				_wethOracleTimestamps, _daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWETHDAI, _expectedVarianceWETHDAI] = getParametersEstimation(
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWETHDAI,
 				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWETHDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWETHDAI
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWETHDAI = _expectedMeanWETHDAI;
 			expectedVarianceWETHDAI = _expectedVarianceWETHDAI;
 
-			const [wbtcOracleStartIndexWBTCDAI, daiOracleStartIndexWBTCDAI, wWBTCDAI] = getStartIndices(
+			const [wbtcOracleStartIndexWBTCDAI, daiOracleStartIndexWBTCDAI] = getStartIndices(
 				_wbtcOracleTimestamps, _daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCDAI, _expectedVarianceWBTCDAI] = getParametersEstimation(
 				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCDAI,
 				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWBTCDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWBTCDAI
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWBTCDAI = _expectedMeanWBTCDAI;
 			expectedVarianceWBTCDAI = _expectedVarianceWBTCDAI;
 
-			const [wbtcOracleStartIndexWBTCWETH, wethOracleStartIndexWBTCWETH, wWBTCWETH] = getStartIndices(
+			const [wbtcOracleStartIndexWBTCWETH, wethOracleStartIndexWBTCWETH] = getStartIndices(
 				_wbtcOracleTimestamps, _wethOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCWETH, _expectedVarianceWBTCWETH] = getParametersEstimation(
 				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCWETH,
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWBTCWETH,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, wWBTCWETH
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWBTCWETH = _expectedMeanWBTCWETH;
 			expectedVarianceWBTCWETH = _expectedVarianceWBTCWETH;

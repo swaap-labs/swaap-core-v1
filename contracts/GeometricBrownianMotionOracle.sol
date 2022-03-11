@@ -17,6 +17,7 @@ pragma solidity =0.8.12;
 import "./interfaces/IAggregatorV3.sol";
 import "./Num.sol";
 import "./Const.sol";
+import "./LogExpMath.sol";
 import "./structs/Struct.sol";
 
 
@@ -32,7 +33,6 @@ library GeometricBrownianMotionOracle {
 
     /**
     * @notice Gets asset-pair approximate historical returns mean and variance
-    * @dev Because of Chainlink sparse sampling, a lot of tradeoffs have been made.
     * @param latestRoundIn The round-to-start-from's data including its ID of tokenIn
     * @param latestRoundOut The round-to-start-from's data including its ID of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
@@ -76,7 +76,6 @@ library GeometricBrownianMotionOracle {
 
     /**
     * @notice Gets asset-pair historical data returns mean and variance
-    * @dev Because of Chainlink sparse sampling, a lot of tradeoffs have been made.
     * @param hpDataIn Historical prices data of tokenIn
     * @param hpDataOut Historical prices data of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
@@ -95,57 +94,45 @@ library GeometricBrownianMotionOracle {
             return gbmEstimation = Struct.GBMEstimation(0, 0, true);
         }
 
-        uint256 actualTimeWindowInSec;
-        
-        // retrieve the final time window and the last valid indexes of the historical prices
-        (actualTimeWindowInSec, hpDataIn.startIndex, hpDataOut.startIndex) = getActualTimeWindow(
-            hpParameters,
-            noMoreDataPoints,
-            hpDataIn.startIndex, hpDataOut.startIndex, 
-            hpDataIn.timestamps, hpDataOut.timestamps
-        );
-        
-        // no price return can be calculated with only 1 data point
-        if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
-            return gbmEstimation = Struct.GBMEstimation(0, 0, true);
+        if (noMoreDataPoints) {
+            uint256 ts = hpParameters.timestamp - hpParameters.lookbackInSec;
+            hpDataIn.timestamps[hpDataIn.startIndex] = ts;
+            hpDataOut.timestamps[hpDataOut.startIndex] = ts;
+        } else {
+            consolidateStartIndices(
+                hpDataIn,
+                hpDataOut
+            );
+            // no price return can be calculated with only 1 data point
+            if (hpDataIn.startIndex == 0 && hpDataOut.startIndex == 0) {
+                return gbmEstimation = Struct.GBMEstimation(0, 0, true);
+            }
         }
-
-
-        (int256 mean, uint256 variance) = getStatistics(
-            // compute returns
-            getPairReturns(
-                hpDataIn.prices, hpDataIn.timestamps, hpDataIn.startIndex,
-                hpDataOut.prices, hpDataOut.timestamps, hpDataOut.startIndex
-            ),
-            actualTimeWindowInSec
+        (int256[] memory values, uint256[] memory timestamps) = getSeries(
+            hpDataIn.prices, hpDataIn.timestamps, hpDataIn.startIndex,
+            hpDataOut.prices, hpDataOut.timestamps, hpDataOut.startIndex
         );
+        (int256 mean, uint256 variance) = getStatistics(values, timestamps);
 
         return gbmEstimation = Struct.GBMEstimation(mean, variance, true);
 
     }
 
     /**
-    * @notice Gets asset-pair historical percentage returns from timestamped data
-    * @dev Few considerations:
-    * - we compute the number of percentage returns first
-    * - when the first startIndex reaches 0 we consider the price of the corresponding token to be constant
-    * - we compute returns until both startIndexes reach 0
-    * Because of Chainlink sparse sampling, we are only able to compute an approximation of the true returns:
-    * - we consider the asset-pair price constant until a new price is fired
-    * - we compute percentage returns as such: (price_t+1 - price_t) / price_t
-    * - the time steps (t) are expressed in seconds
+    * @notice Gets asset-pair historical prices with timestamps
     * @param pricesIn The historical prices of tokenIn
     * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
     * @param startIndexIn The tokenIn historical data's last valid index
     * @param pricesOut The tokenIn historical data's last valid index
     * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
     * @param startIndexOut The tokenOut historical data's last valid index
-    * @return periodsReturn The asset-pair historical returns array
+    * @return values The asset-pair historical prices array
+    * @return timestamps The asset-pair historical timestamps array
     */
-    function getPairReturns(
+    function getSeries(
         uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn,
         uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut
-    ) internal pure returns (int256[] memory periodsReturn) {
+    ) internal pure returns (int256[] memory values, uint256[] memory timestamps) {
 
         // compute the number of returns
         uint256 count;
@@ -161,78 +148,70 @@ library GeometricBrownianMotionOracle {
                     count += 1;
                 }
             }
-            periodsReturn = new int256[](count);
+            values = new int256[](count);
+            timestamps = new uint256[](count);
         }
 
         // compute actual returns
         {
-            int256 currentPrice = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
-            count = 1;
+            count = 0;
             bool skip = true;
             while (startIndexIn > 0 || startIndexOut > 0) {
                 (skip, startIndexIn, startIndexOut) = getNextSample(
                     startIndexIn, startIndexOut, timestampsIn, timestampsOut
                 );
                 if (!skip) {
-                    int256 futurePrice = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
-                    periodsReturn[count - 1] = Num.bdivInt256(futurePrice - currentPrice, currentPrice);
-                    currentPrice = futurePrice;
+                    values[count] = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
+                    timestamps[count] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.BONE;
                     count += 1;
                 }
             }
         }
 
-        return (periodsReturn);
+        return (values, timestamps);
 
     }
 
     /**
     * @notice Gets asset-pair historical mean/variance from timestamped data
-    * @dev Because of Chainlink sparse sampling, we are only able to compute an approximation of the returns:
-    * - we consider the asset-pair price constant until a new price is fired
-    * - the returns consist in (price_t+1 - price_t) / price_t values
-    * - the time steps (t) are expressed in seconds
-    * As a result the variance of those returns will be underestimated.
-    * @param periodsReturn The historical percentage returns
-    * @param actualTimeWindowInSec The time windows in seconds
+    * @param values The historical values
+    * @param timestamps The corresponding time deltas, in seconds
     * @return The asset-pair historical returns mean
     * @return The asset-pair historical returns variance
     */
-    function getStatistics(int256[] memory periodsReturn, uint256 actualTimeWindowInSec)
+    function getStatistics(int256[] memory values, uint256[] memory timestamps)
     internal pure returns (int256, uint256) {
 
-        if (actualTimeWindowInSec < 2) {
+        uint256 n = values.length;
+        if (n < 2) {
             return (0, 0);
         }
+        n -= 1;
 
-        uint256 n = periodsReturn.length;
-        uint256 actualTimeWindowInSecWithPrecision = Const.BONE * actualTimeWindowInSec;
+        uint256 nWithPrecision = n * Const.BONE;
+        uint256 tWithPrecision = timestamps[n] - timestamps[0];
 
         // mean
-        int256 mean;
-        for (uint256 i; i < n; i++) {
-            mean += periodsReturn[i];
+        int256 mean = Num.bdivInt256(LogExpMath.ln(Num.bdivInt256(values[n], values[0])), int256(tWithPrecision));
+        uint256 meanSquare;
+        if (mean < 0) {
+            meanSquare = Num.bmul(uint256(-mean), uint256(-mean));
+        } else {
+            meanSquare = Num.bmul(uint256(mean), uint256(mean));
         }
-        mean = Num.bdivInt256(mean, int256(actualTimeWindowInSecWithPrecision));
-
         // variance
-        uint256 variance;
-        if (mean > 0) {
-            variance = Num.bmul(Num.bmul(actualTimeWindowInSecWithPrecision - n * Const.BONE, uint256(mean)), uint256(mean));
-        } else if (mean < 0) {
-            variance = Num.bmul(Num.bmul(actualTimeWindowInSecWithPrecision - n * Const.BONE, uint256(-mean)), uint256(-mean));
-        }
-        for (uint256 i; i < n; i++) {
-            int256 d = periodsReturn[i] - mean;
+        int256 variance = -int256(Num.bmul(meanSquare, Num.bdiv(tWithPrecision, nWithPrecision)));
+        for (uint256 i = 1; i <= n; i++) {
+            int256 d = LogExpMath.ln(Num.bdivInt256(values[i], values[i - 1]));
             if (d < 0) {
                 d = -d;
             }
             uint256 dAbs = uint256(d);
-            variance += Num.bmul(dAbs, dAbs);
+            variance += int256(Num.bdiv(Num.bmul(dAbs, dAbs), timestamps[i] - timestamps[i - 1]));
         }
-        variance = Num.bdiv(variance, actualTimeWindowInSecWithPrecision - Const.BONE);
-        
-        return (mean, variance);
+        variance = Num.bdivInt256(variance, int256(nWithPrecision));
+
+        return (mean, uint256(Num.abs(variance)));
     }
 
     /**
@@ -378,60 +357,28 @@ library GeometricBrownianMotionOracle {
     }
 
     /**
-    * @notice Gets the actual time window as well the last valid indexes of that time window
-    * @dev We need to find the common time window of the reported historical prices of the tokens:
-    * - if both tokens' reported timestamps exceed the lookback timelimit, the common window will be equal to the time limit
-    * - else the common time window will be equal to the smaller lookback time window of the pair
-    * @param hpParameters The parameters for historical prices retrieval
-    * @param noMoreDataPoints True if the reported historical prices reaches the lookback time limit
-    * @param startIndexIn The tokenIn historical data's last valid index
-    * @param startIndexOut The tokenOut historical data's last valid index
-    * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
-    * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
-    * @return The common time window used to calculate the price's spread of the tokenIn/Out pair
-    * @return The (corrected) tokenIn historical data's last valid index
-    * @return The (corrected) tokenOut historical data's last valid index
+    * @notice Consolidate the last valid indexes of tokenIn and tokenOut
+    * @param hpDataIn Historical prices data of tokenIn
+    * @param hpDataOut Historical prices data of tokenOut
     */
-    function getActualTimeWindow(
-        Struct.HistoricalPricesParameters memory hpParameters,
-        bool noMoreDataPoints,
-        uint256 startIndexIn,
-        uint256 startIndexOut,
-        uint256[] memory timestampsIn,
-        uint256[] memory timestampsOut
+    function consolidateStartIndices(
+        Struct.HistoricalPricesData memory hpDataIn,
+        Struct.HistoricalPricesData memory hpDataOut
     )
-    internal pure returns(uint256, uint256, uint256)    
+    internal pure
     {
-        
-        uint256 actualTimeWindowInSec;
-        
-        if (noMoreDataPoints) {
-            // considering the full lookback time window
-            actualTimeWindowInSec = hpParameters.lookbackInSec;
-        } else {
-            uint256 startTimestamp;
-            // trim prices/timestamps by adjusting startIndexes
-            if (timestampsIn[startIndexIn] > timestampsOut[startIndexOut]) {
-                startTimestamp = timestampsIn[startIndexIn];
-                while ((startIndexOut > 0) && (timestampsOut[startIndexOut - 1] <= startTimestamp)) {
-                    startIndexOut--;
-                }
-            } else if (timestampsIn[startIndexIn] < timestampsOut[startIndexOut]) {
-                startTimestamp = timestampsOut[startIndexOut];
-                while ((startIndexIn > 0) && (timestampsIn[startIndexIn - 1] <= startTimestamp)) {
-                    startIndexIn--;
-                }
-            } else {
-                // timestampsIn[startIndexIn] == timestampsOut[startIndexOut]
-                startTimestamp = timestampsIn[startIndexIn];
+
+        // trim prices/timestamps by adjusting startIndexes
+        if (hpDataIn.timestamps[hpDataIn.startIndex] > hpDataOut.timestamps[hpDataOut.startIndex]) {
+            while ((hpDataOut.startIndex > 0) && (hpDataOut.timestamps[hpDataOut.startIndex - 1] <= hpDataIn.timestamps[hpDataIn.startIndex])) {
+                hpDataOut.startIndex--;
             }
-
-            // endTimestamp >= startTimestamp
-            actualTimeWindowInSec = hpParameters.timestamp - startTimestamp;
-
+        } else if (hpDataIn.timestamps[hpDataIn.startIndex] < hpDataOut.timestamps[hpDataOut.startIndex]) {
+            while ((hpDataIn.startIndex > 0) && (hpDataIn.timestamps[hpDataIn.startIndex - 1] <= hpDataOut.timestamps[hpDataOut.startIndex])) {
+                hpDataIn.startIndex--;
+            }
         }
 
-        return (actualTimeWindowInSec, startIndexIn, startIndexOut);
     }
 
     /**

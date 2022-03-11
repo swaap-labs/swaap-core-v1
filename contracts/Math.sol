@@ -486,7 +486,7 @@ library Math {
     * @notice Computes the log spread factor
     * @dev We define it as the quantile of a GBM process (log-normal distribution)
     * which represents the traded pair process.
-    * given by the following: exponential((mean - variance/2) * horizon + z * sqrt(variance * 2 * horizon)
+    * given by the following: exponential(mu * horizon + z * sqrt(variance * 2 * horizon)
     * where z is the complementary error function (erfc)
     * GBM: https://en.wikipedia.org/wiki/Geometric_Brownian_motion
     * log normal: https://en.wikipedia.org/wiki/Log-normal_distribution
@@ -507,15 +507,14 @@ library Math {
         if (mean == 0 && variance == 0) {
             return 0;
         }
-        int256 driftTerm = mean - (int256(variance) / 2);
-        if (driftTerm < 0) {
-            driftTerm = -int256(Num.bmul(uint256(-driftTerm), horizon));
+        if (mean < 0) {
+            mean = -int256(Num.bmul(uint256(-mean), horizon));
         } else {
-            driftTerm = int256(Num.bmul(uint256(driftTerm), horizon));
+            mean = int256(Num.bmul(uint256(mean), horizon));
         }
-        uint256 diffusionTerm;
+        uint256 diffusion;
         if (variance > 0) {
-            diffusionTerm = Num.bmul(
+            diffusion = Num.bmul(
                 z,
                 LogExpMath.pow(
                     Num.bmul(variance, 2 * horizon),
@@ -523,7 +522,7 @@ library Math {
                 )
             );
         }
-        return (x = int256(diffusionTerm) + driftTerm);
+        return (x = int256(diffusion) + mean);
     }
 
     /**
