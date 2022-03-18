@@ -17,9 +17,11 @@ pragma solidity =0.8.12;
 // Builds new Pools, logging their addresses and providing `isPool(address) -> (bool)`
 
 import "./Pool.sol";
-
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Factory {
+
+    using SafeERC20 for IERC20; 
 
     event LOG_NEW_POOL(
         address indexed caller,
@@ -74,14 +76,13 @@ contract Factory {
         emit LOG_SWAAPLABS(msg.sender, b);
         _swaaplabs = b;
     }
-
-    function collect(Pool pool)
+   
+    function collect(address erc20)
         external
     {
         require(msg.sender == _swaaplabs, "34");
-        uint256 collected = IERC20(pool).balanceOf(address(this));
-        bool xfer = pool.transfer(_swaaplabs, collected);
-        require(xfer, "19");
+        uint256 collected = IERC20(erc20).balanceOf(address(this));
+        IERC20(erc20).safeTransfer(msg.sender, collected);
     }
 
     function setPause(bool paused) external {
