@@ -52,12 +52,12 @@ library GeometricBrownianMotionOracle {
         if (!noMoreDataPointIn && startIndexIn < hpParameters.lookbackInRound) {
             return Struct.GBMEstimation(0, 0, false);
         }
-        
+
         uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
         if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
             hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
         }
-    
+
         // retrieve historical prices of tokenOut
         (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
             latestRoundOut, hpParameters
@@ -200,7 +200,7 @@ library GeometricBrownianMotionOracle {
             meanSquare = Num.bmul(uint256(mean), uint256(mean));
         }
         // variance
-        int256 variance = -int256(Num.bmul(meanSquare, Num.bdiv(tWithPrecision, nWithPrecision)));
+        int256 variance = -int256(Num.bmul(meanSquare, tWithPrecision));
         for (uint256 i = 1; i <= n; i++) {
             int256 d = LogExpMath.ln(Num.bdivInt256(values[i], values[i - 1]));
             if (d < 0) {
@@ -352,7 +352,7 @@ library GeometricBrownianMotionOracle {
             }
 
         }
-        
+
         return (prices, timestamps, idx - 1, false);
     }
 
