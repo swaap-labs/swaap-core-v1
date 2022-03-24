@@ -935,7 +935,7 @@ contract Pool is PoolToken {
         return Math.calcSpotPriceMMM(
             tokenGlobalIn, tokenGlobalOut,
             ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
-            swapFee, gbmParameters,
+            swapFee, Const.FALLBACK_SPREAD, gbmParameters,
             hpParameters
         );
     }

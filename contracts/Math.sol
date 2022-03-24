@@ -173,6 +173,7 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
+            swapParameters.fallbackSpread,
             tokenGlobalIn,
             tokensGlobalOut,
             gbmParameters,
@@ -244,6 +245,7 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
+            swapParameters.fallbackSpread,
             tokenGlobalIn,
             tokensGlobalOut,
             gbmParameters,
@@ -318,6 +320,7 @@ library Math {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             false,
+            swapParameters.fallbackSpread,
             tokenGlobalOut,
             remainingTokens,
             gbmParameters,
@@ -394,6 +397,7 @@ library Math {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             false,
+            swapParameters.fallbackSpread,
             tokenGlobalOut,
             remainingTokens,
             gbmParameters,
@@ -424,6 +428,7 @@ library Math {
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
     * @param relativePrice The price of tokenOut in tokenIn terms
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
     * @return spotPriceMMM The spot price of tokenOut in tokenIn terms
@@ -433,6 +438,7 @@ library Math {
         Struct.TokenGlobal memory tokenGlobalOut,
         uint256 relativePrice,
         uint256 swapFee,
+        uint256 fallbackSpread,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
@@ -456,13 +462,13 @@ library Math {
                     hpParameters
                 );
 
-                (uint256 weight, ) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
+                (uint256 adjustedWeightOut, ) = getMMMWeight(true, fallbackSpread, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
                 return (
                     spotPriceMMM = calcSpotPrice(
                         tokenGlobalIn.info.balance,
                         tokenGlobalIn.info.weight,
                         tokenGlobalOut.info.balance,
-                        weight,
+                        adjustedWeightOut,
                         swapFee
                     )
                 );
@@ -532,6 +538,7 @@ library Math {
     * The function multiplies the tokenWeight by the spread factor if
     * the token is in shortage, or divides it by the spread factor if it is in abundance
     * @param shortage true when the token is in shortage, false if in abundance
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @param tokenWeight The token's weight
     * @param gbmEstimation The GBM's 2 first moments estimation
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
@@ -539,6 +546,7 @@ library Math {
     */
     function getMMMWeight(
         bool shortage,
+        uint256 fallbackSpread,
         uint256 tokenWeight,
         Struct.GBMEstimation memory gbmEstimation,
         Struct.GBMParameters memory gbmParameters
@@ -546,9 +554,19 @@ library Math {
     public pure
     returns (uint256, uint256)
     {
+
+        if (!gbmEstimation.success) {
+            if (shortage) {
+                return (Num.bmul(tokenWeight, Const.BONE + fallbackSpread), fallbackSpread);
+            } else {
+                return (Num.bdiv(tokenWeight, Const.BONE + fallbackSpread), fallbackSpread);
+            }
+        }
+        
         if (gbmParameters.horizon == 0) {
             return (tokenWeight, 0);
         }
+
         int256 logSpreadFactor = getLogSpreadFactor(
             gbmEstimation.mean, gbmEstimation.variance,
             gbmParameters.horizon, gbmParameters.z
@@ -574,6 +592,8 @@ library Math {
     /**
     * @notice Computes the total denormalized weight assuming that all the tokensOut are in shortage or in abundance 
     * @dev The initial weights of the tokens are the ones adjusted by their price performance only
+    * @param shortage True if tokenOut is in shortage
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @param tokenGlobalIn The tokenIn's global information (token records + latest round info)
     * @param tokensGlobalOut All the tokenOuts' global information (token records + latest rounds info)
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
@@ -582,6 +602,7 @@ library Math {
     */
     function getTotalWeightMMM(
         bool shortage,
+        uint256 fallbackSpread,
         Struct.TokenGlobal memory tokenGlobalIn,
         Struct.TokenGlobal[] memory tokensGlobalOut,
         Struct.GBMParameters memory gbmParameters,
@@ -629,8 +650,15 @@ library Math {
                     hpParameters
             );
             
-            (uint256 adjustedWeightOut, ) = getMMMWeight(shortage, tokensGlobalOut[i].info.weight, gbmEstimation, gbmParameters);
-            totalAdjustedWeight += adjustedWeightOut;
+            (tokensGlobalOut[i].info.weight, ) = getMMMWeight(
+                shortage,
+                fallbackSpread,
+                tokensGlobalOut[i].info.weight,
+                gbmEstimation,
+                gbmParameters
+            );
+
+            totalAdjustedWeight += tokensGlobalOut[i].info.weight;
         }
 
         return totalAdjustedWeight;
@@ -691,24 +719,13 @@ library Math {
                 hpParameters
             );
 
-            if (!gbmEstimation.success) {
-                // no historical signal --> fallback spread
-                return (
-                    Struct.SwapResult(
-                        calcOutGivenIn(
-                            tokenGlobalIn.info.balance,
-                            tokenGlobalIn.info.weight,
-                            tokenGlobalOut.info.balance,
-                            Num.bmul(tokenGlobalOut.info.weight, Const.BONE + swapParameters.fallbackSpread),
-                            swapParameters.amount,
-                            swapParameters.fee
-                        ),
-                        swapParameters.fallbackSpread
-                    )
-                );
-            }
+            (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(
+                true,
+                swapParameters.fallbackSpread,
+                tokenGlobalOut.info.weight,
+                gbmEstimation, gbmParameters
+            );
 
-            (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
             if (tokenGlobalIn.info.balance >= balanceInAtEquilibrium) {
                 // shortage to shortage
                 return (
@@ -746,7 +763,7 @@ library Math {
     }
 
     /**
-    * @notice Implements calcOutGivenInMMM in the case of abundance ok tokenOut
+    * @notice Implements calcOutGivenInMMM in the case of abundance of tokenOut
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
@@ -754,6 +771,7 @@ library Math {
     * @param relativePrice The price of tokenOut in tokenIn terms
     * @param tokenAmountIn The amount of tokenIn that will be swaped
     * @param baseFee The base fee
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
     */
     function _calcOutGivenInMMMAbundance(
@@ -887,24 +905,13 @@ library Math {
                 hpParameters
             );
 
-            if (!gbmEstimation.success) {
-                // no historical signal --> fallback spread
-                return (
-                    Struct.SwapResult(
-                        calcInGivenOut(
-                            tokenGlobalIn.info.balance,
-                            tokenGlobalIn.info.weight,
-                            tokenGlobalOut.info.balance,
-                            Num.bmul(tokenGlobalOut.info.weight, Const.BONE + swapParameters.fallbackSpread),
-                            swapParameters.amount,
-                            swapParameters.fee
-                        ),
-                        swapParameters.fallbackSpread
-                    )
-                );
-            }
+            (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(
+                true,
+                swapParameters.fallbackSpread,
+                tokenGlobalOut.info.weight,
+                gbmEstimation, gbmParameters
+            );
 
-            (uint256 adjustedTokenOutWeight, uint256 spread) = getMMMWeight(true, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
             if (tokenGlobalOut.info.balance <= balanceOutAtEquilibrium) {
                 // shortage to shortage
                 return (
@@ -943,7 +950,7 @@ library Math {
     }
 
     /**
-    * @notice Implements calcOutGivenInMMM in the case of abundance ok tokenOut
+    * @notice Implements calcOutGivenInMMM in the case of abundance of tokenOut
     * @dev A spread is applied as soon as entering a "shortage of tokenOut" phase
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
@@ -951,6 +958,7 @@ library Math {
     * @param relativePrice The price of tokenOut in tokenIn terms
     * @param tokenAmountOut The amount of tokenOut that will be received
     * @param baseFee The base fee
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
     */
     function _calcInGivenOutMMMAbundance(
@@ -1126,6 +1134,7 @@ library Math {
     * @param tokenAmountOut The swap desired amount for tokenOut
     * @param relativePrice The price of tokenOut in tokenIn terms
     * @param baseFee The base fee amount
+    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
     * @return alpha The potentially augmented fee amount
     */
     function getAdaptiveFees(

@@ -37,7 +37,7 @@ library TMathMMM {
     {
         Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(mean, variance, true);
         Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
-        return Math.getMMMWeight(true, tokenWeightOut, gbmEstimation, gbmParameters);
+        return Math.getMMMWeight(true, Const.FALLBACK_SPREAD, tokenWeightOut, gbmEstimation, gbmParameters);
     }
 
     function getTokenBalanceAtEquilibrium(
