@@ -159,29 +159,9 @@ contract('Pool', async (accounts) => {
                 ),
                 '9',
             );
-            await truffleAsert.reverts(
-                pool.swapExactAmountInMMM(
-                    AAA,
-                    toWei('1'),
-                    BBB,
-                    toWei('0'),
-                    toWei('3.00001'),
-                ),
-                '12'
-            );
         });
 
         it('Fails swapExactAmountOutMMM with limits', async () => {
-            await truffleAssert.reverts(
-                pool.swapExactAmountOutMMM(
-                    AAA,
-                    toWei('51'),
-                    BBB,
-                    toWei('10'),
-                    toWei('5'),
-                ),
-                '12',
-            );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
                     AAA,
@@ -201,16 +181,6 @@ contract('Pool', async (accounts) => {
                     toWei('5'),
                 ),
                 '8',
-            );
-            await truffleAssert.reverts(
-                pool.swapExactAmountOutMMM(
-                    AAA,
-                    toWei('5'),
-                    BBB,
-                    toWei('1'),
-                    toWei('3.00001'),
-                ),
-                '12',
             );
         });
     });

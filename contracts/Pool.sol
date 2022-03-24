@@ -1025,7 +1025,6 @@ contract Pool is PoolToken {
         );
 
         require(spotPriceAfter >= spotPriceBefore, "5");
-        require(spotPriceAfter <= maxPrice, "12");
         require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
         require(
             Num.bdiv(
@@ -1170,7 +1169,6 @@ contract Pool is PoolToken {
         );
 
         require(spotPriceAfter >= spotPriceBefore, "5");
-        require(spotPriceAfter <= maxPrice, "12");
         require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
         require(
             Num.bdiv(
