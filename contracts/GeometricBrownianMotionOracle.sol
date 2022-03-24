@@ -190,7 +190,6 @@ library GeometricBrownianMotionOracle {
         }
         n -= 1;
 
-        uint256 nWithPrecision = n * Const.BONE;
         uint256 tWithPrecision = timestamps[n] - timestamps[0];
 
         // mean
@@ -211,7 +210,7 @@ library GeometricBrownianMotionOracle {
             uint256 dAbs = uint256(d);
             variance += int256(Num.bdiv(Num.bmul(dAbs, dAbs), timestamps[i] - timestamps[i - 1]));
         }
-        variance = Num.bdivInt256(variance, int256(nWithPrecision));
+        variance = Num.bdivInt256(variance, int256(n * Const.BONE));
 
         return (mean, uint256(Num.abs(variance)));
     }
@@ -373,11 +372,11 @@ library GeometricBrownianMotionOracle {
         // trim prices/timestamps by adjusting startIndexes
         if (hpDataIn.timestamps[hpDataIn.startIndex] > hpDataOut.timestamps[hpDataOut.startIndex]) {
             while ((hpDataOut.startIndex > 0) && (hpDataOut.timestamps[hpDataOut.startIndex - 1] <= hpDataIn.timestamps[hpDataIn.startIndex])) {
-                hpDataOut.startIndex--;
+                --hpDataOut.startIndex;
             }
         } else if (hpDataIn.timestamps[hpDataIn.startIndex] < hpDataOut.timestamps[hpDataOut.startIndex]) {
             while ((hpDataIn.startIndex > 0) && (hpDataIn.timestamps[hpDataIn.startIndex - 1] <= hpDataOut.timestamps[hpDataOut.startIndex])) {
-                hpDataIn.startIndex--;
+                --hpDataIn.startIndex;
             }
         }
 
