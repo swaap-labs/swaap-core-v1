@@ -135,7 +135,7 @@ library GeometricBrownianMotionOracle {
     ) internal pure returns (int256[] memory values, uint256[] memory timestamps) {
 
         // compute the number of returns
-        uint256 count;
+        uint256 count = 1;
         {
             uint256 _startIndexIn = startIndexIn;
             uint256 _startIndexOut = startIndexOut;
@@ -150,11 +150,13 @@ library GeometricBrownianMotionOracle {
             }
             values = new int256[](count);
             timestamps = new uint256[](count);
+            values[0] = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
+            timestamps[0] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.BONE;
         }
 
         // compute actual returns
         {
-            count = 0;
+            count = 1;
             bool skip = true;
             while (startIndexIn > 0 || startIndexOut > 0) {
                 (skip, startIndexIn, startIndexOut) = getNextSample(
