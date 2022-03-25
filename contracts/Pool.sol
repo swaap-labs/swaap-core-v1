@@ -1272,6 +1272,7 @@ contract Pool is PoolToken {
     */
     function _getTokenCurrentPrice(IAggregatorV3 priceFeed) internal view returns (uint256) {
         (, int256 price, , ,) = priceFeed.latestRoundData();
+        require(price > 0, "16");
         return Num.abs(price);  // we consider the token price to be > 0
     }
 
