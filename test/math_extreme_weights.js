@@ -250,7 +250,7 @@ contract('Pool', async (accounts) => {
 
         it('joinswapExternAmountInMMM', async () => {
             // Call function
-            const tokenRatio = 1.1;
+            const tokenRatio = 1.01;
             // increase tbalance by 1.1 after swap fee
             const tokenAmountIn = (1 / (1 - swapFee * (1 - wethNorm))) * (currentWethBalance * (tokenRatio - 1));
             await pool.joinswapExternAmountInMMM(WETH, toWei(String(tokenAmountIn)), toWei('0'));
@@ -267,7 +267,7 @@ contract('Pool', async (accounts) => {
 
         it('joinswapPoolAmountOutMMM', async () => {
             // Call function
-            const poolRatio = 1.1;
+            const poolRatio = 1.01;
             const poolAmountOut = currentPoolBalance * (poolRatio - 1);
             await pool.joinswapPoolAmountOutMMM(DAI, toWei(String(poolAmountOut)), MAX);
             // Update balance states
@@ -286,27 +286,37 @@ contract('Pool', async (accounts) => {
             // Call function
             const tokenRatio = 1.1;
             const tokenAmountIn = (1 / (1 - swapFee * (1 - wethNorm))) * (currentWethBalance * (tokenRatio));
+            
+            try {
+                await pool.joinswapExternAmountInMMM(WETH, toWei(String(tokenAmountIn)), toWei('0'))
+            }
+            catch(e) {
+                assert.equal(e.reason, '40');
+            }
+            /*
             await truffleAssert.reverts(
                 pool.joinswapExternAmountInMMM(WETH, toWei(String(tokenAmountIn)), toWei('0')),
-                '6',
+                '40',
             );
+            */
         });
 
         it('joinswapPoolAmountOutMMM should revert', async () => {
             // Call function
             const poolRatio = 0.9;
             const poolAmountOut = currentPoolBalance * (poolRatio);
-            /*
-            try {await pool.joinswapPoolAmountOutMMM(DAI, toWei(String(poolAmountOut)), MAX)
+            
+            try {
+                await pool.joinswapPoolAmountOutMMM(DAI, toWei(String(poolAmountOut)), MAX)
             }
             catch(e) {
-                console.log(e);
+                assert.equal(e.reason, '44');
             }
-            */
+            /*
             await truffleAssert.reverts(
                 pool.joinswapPoolAmountOutMMM(DAI, toWei(String(poolAmountOut)), MAX),
-                '6',
-            );
+                '44',
+            );*/
         });
 
         /* tokenRatioBeforeSwapFee > 1 ==> tokenAmountOut is negative
@@ -327,24 +337,25 @@ contract('Pool', async (accounts) => {
             // Call function
             const poolRatioAfterExitFee = 0.9;
             const poolAmountIn = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
-            /*
-            try {await pool.exitswapPoolAmountInMMM(WETH, toWei(String(poolAmountIn)), toWei('0'))
+            
+            try {
 
+                await pool.exitswapPoolAmountInMMM(WETH, toWei(String(poolAmountIn)), toWei('0'))
             }
             catch(e) {
-                console.log(e);
+                assert.equal(e.reason, '44');
             }
-            */
+            /*
             await truffleAssert.reverts(
                 pool.exitswapPoolAmountInMMM(WETH, toWei(String(poolAmountIn)), toWei('0')),
-                '7',
+                '44',
             );
-            
+            */
         });
 
         it('exitswapExternAmountOutMMM', async () => {
-            // Call function
-            const poolRatioAfterExitFee = 0.9;
+            // Call functionc
+            const poolRatioAfterExitFee = 0.99;
             const tokenRatioBeforeSwapFee = poolRatioAfterExitFee ** (1 / daiNorm);
             const tokenAmountOut = currentDaiBalance * (1 - tokenRatioBeforeSwapFee) * (1 - swapFee * (1 - daiNorm));
             await pool.exitswapExternAmountOutMMM(DAI, toWei(String(tokenAmountOut)), MAX);
@@ -361,8 +372,8 @@ contract('Pool', async (accounts) => {
         
         it('poolAmountOut = joinswapExternAmountInMMM(joinswapPoolAmountOutMMM(poolAmountOut))', async () => {
             const poolAmountOut = 0.1;
-            const tokenAmountIn = await pool.joinswapPoolAmountOutMMM.call(WETH, toWei(String(poolAmountOut)), MAX);
-            const pAo = await pool.joinswapExternAmountInMMM.call(WETH, String(tokenAmountIn), toWei('0'));
+            const tokenAmountIn = await pool.joinswapPoolAmountOutMMM.call(DAI, toWei(String(poolAmountOut)), MAX);
+            const pAo = await pool.joinswapExternAmountInMMM.call(DAI, String(tokenAmountIn), toWei('0'));
 
             const expected = Decimal(poolAmountOut);
             const actual = Decimal(fromWei(pAo));
@@ -400,7 +411,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('poolAmountIn = exitswapExternAmountOutMMM(exitswapPoolAmountInMMM(poolAmountIn))', async () => {
-            const poolAmountIn = 0.1;
+            const poolAmountIn = 0.01;
             const tokenAmountOut = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(poolAmountIn)), toWei('0'));
             const calculatedpoolAmountIn = await pool.exitswapExternAmountOutMMM.call(WETH, String(tokenAmountOut), MAX);
 

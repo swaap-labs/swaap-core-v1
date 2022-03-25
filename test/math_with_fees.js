@@ -113,6 +113,7 @@ contract('Pool', async (accounts) => {
         await weth.approve(POOL, MAX);
         await dai.approve(POOL, MAX);
 
+        // 1 weth = 3000 dai
 		wethOracle = await TConstantOracle.new(300000000000, now);
 		daiOracle = await TConstantOracle.new(100000000, now);
 
@@ -126,7 +127,7 @@ contract('Pool', async (accounts) => {
     describe('With fees', () => {
         it('swapExactAmountIn', async () => {
             const tokenIn = WETH;
-            const tokenAmountIn = '0.002';
+            const tokenAmountIn = '0.02';
             const tokenOut = DAI;
             const minAmountOut = '0';
             const maxPrice = MAX;
@@ -162,7 +163,7 @@ contract('Pool', async (accounts) => {
             assert.isAtMost(relDif.toNumber(), errorDelta);
 
             expected = calcSpotPrice(
-                currentWethBalance.plus(Decimal(0.002)),
+                currentWethBalance.plus(Decimal(tokenAmountIn)),
                 wethNorm,
                 currentDaiBalance.sub(actual),
                 daiNorm,
@@ -187,7 +188,7 @@ contract('Pool', async (accounts) => {
             const tokenIn = DAI;
             const maxAmountIn = MAX;
             const tokenOut = WETH;
-            const tokenAmountOut = '0.001';
+            const tokenAmountOut = '0.02';
             const maxPrice = MAX;
 
             const output = await pool.swapExactAmountOutMMM.call(
@@ -224,7 +225,7 @@ contract('Pool', async (accounts) => {
             expected = calcSpotPrice(
                 currentDaiBalance.plus(actual),
                 daiNorm,
-                currentWethBalance.sub(Decimal(0.001)),
+                currentWethBalance.sub(Decimal(tokenAmountOut)),
                 wethNorm,
                 swapFee,
             );
@@ -290,8 +291,8 @@ contract('Pool', async (accounts) => {
 
         it('joinswapExternAmountInMMM', async () => {
             // Call function
-            const poolRatio = 1.1;
-            // increase tbalance by 1.1^2 after swap fee
+            const poolRatio = 1.005;
+            // increase tbalance by 1.005^2 after swap fee
             const tAi = (1 / (1 - swapFee * (1 - wethNorm))) * (currentWethBalance * (poolRatio ** (1 / wethNorm) - 1));
 
             const pAo = await pool.joinswapExternAmountInMMM.call(WETH, toWei(String(tAi)), toWei('0'));
@@ -323,7 +324,7 @@ contract('Pool', async (accounts) => {
 
         it('joinswapPoolAmountOutMMM', async () => {
             // Call function
-            const poolRatio = 1.1;
+            const poolRatio = 1.005;
             const pAo = currentPoolBalance * (poolRatio - 1);
 
             const tAi = await pool.joinswapPoolAmountOutMMM.call(DAI, toWei(String(pAo)), MAX); // 10% of current supply
@@ -357,7 +358,7 @@ contract('Pool', async (accounts) => {
 
         it('exitswapPoolAmountIn', async () => {
             // Call function
-            const poolRatioAfterExitFee = 0.9;
+            const poolRatioAfterExitFee = 0.995;
             const pAi = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
 
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
@@ -390,7 +391,7 @@ contract('Pool', async (accounts) => {
 
         it('exitswapExternAmountOut', async () => {
             // Call function
-            const poolRatioAfterExitFee = 0.9;
+            const poolRatioAfterExitFee = 0.995;
             const tokenRatioBeforeSwapFee = poolRatioAfterExitFee ** (1 / daiNorm);
             const tAo = currentDaiBalance * (1 - tokenRatioBeforeSwapFee) * (1 - swapFee * (1 - daiNorm));
 
@@ -424,7 +425,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('pAo = joinswapExternAmountInMMM(joinswapPoolAmountOutMMM(pAo))', async () => {
-            const pAo = 10;
+            const pAo = 0.5;
             const tAi = await pool.joinswapPoolAmountOutMMM.call(WETH, toWei(String(pAo)), MAX);
             const calculatedPAo = await pool.joinswapExternAmountInMMM.call(WETH, String(tAi), toWei('0'));
 
@@ -464,7 +465,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('pAi = exitswapExternAmountOutMMM(exitswapPoolAmountInMMM(pAi))', async () => {
-            const pAi = 10;
+            const pAi = 0.01;
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
             const calculatedPAi = await pool.exitswapExternAmountOutMMM.call(WETH, String(tAo), MAX);
 

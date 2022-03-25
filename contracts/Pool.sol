@@ -363,22 +363,11 @@ contract Pool is PoolToken {
     {        
         require(_finalized, "1");
         require(_records[tokenIn].bound, "2");
-        require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
-        
-        Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
 
-        uint nTokens = _tokens.length;
-        Struct.TokenGlobal[] memory tokensInfoOut = new Struct.TokenGlobal[](nTokens - 1);
-        
-        // Extracting tokens Out info
-        uint count = 0;
-        for (uint i = 0; i < nTokens; i++) {
-            if (_tokens[i] == tokenIn){
-                continue;
-            }
-            tokensInfoOut[count] = getTokenLatestInfo(_tokens[i]);
-            count++;
-        }
+        Struct.TokenGlobal memory tokenInInfo;
+        Struct.TokenGlobal[] memory remainingTokensInfo;
+    
+        (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
             Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
@@ -395,8 +384,8 @@ contract Pool is PoolToken {
 
             poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
                 _totalSupply,
-                tokenInfoIn,
-                tokensInfoOut,
+                tokenInInfo,
+                remainingTokensInfo,
                 swapParameters,
                 gbmParameters,
                 hpParameters
@@ -405,7 +394,9 @@ contract Pool is PoolToken {
 
         require(poolAmountOut >= minPoolAmountOut, "9");
 
-        _records[tokenIn].balance += tokenAmountIn;
+        tokenInInfo.info.balance += tokenAmountIn;
+        _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
+        _records[tokenIn].balance = tokenInInfo.info.balance;
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
@@ -426,20 +417,10 @@ contract Pool is PoolToken {
         require(_finalized, "1");
         require(_records[tokenIn].bound, "2");
 
-        Struct.TokenGlobal memory tokenInfoIn = getTokenLatestInfo(tokenIn);
-
-        uint nTokens = _tokens.length;
-        Struct.TokenGlobal[] memory tokensInfoOut = new Struct.TokenGlobal[](nTokens - 1);
-        
-        // Extracting tokens Out info
-        uint count = 0;
-        for (uint i = 0; i < nTokens; i++) {
-            if (_tokens[i] == tokenIn){
-                continue;
-            }
-            tokensInfoOut[count] = getTokenLatestInfo(_tokens[i]);
-            count++;
-        }
+        Struct.TokenGlobal memory tokenInInfo;
+        Struct.TokenGlobal[] memory remainingTokensInfo;
+    
+        (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
             Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
@@ -456,8 +437,8 @@ contract Pool is PoolToken {
         
             tokenAmountIn = Math.calcSingleInGivenPoolOutMMM(
                             _totalSupply,
-                            tokenInfoIn,
-                            tokensInfoOut,
+                            tokenInInfo,
+                            remainingTokensInfo,
                             swapParameters,
                             gbmParameters,
                             hpParameters
@@ -467,9 +448,9 @@ contract Pool is PoolToken {
         require(tokenAmountIn != 0, "5");
         require(tokenAmountIn <= maxAmountIn, "8");
         
-        require(tokenAmountIn <=  Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), "6");
-
-        _records[tokenIn].balance += tokenAmountIn;
+        tokenInInfo.info.balance += tokenAmountIn;
+        _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
+        _records[tokenIn].balance = tokenInInfo.info.balance;
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
@@ -490,20 +471,10 @@ contract Pool is PoolToken {
         require(_finalized, "1");
         require(_records[tokenOut].bound, "2");
 
-        Struct.TokenGlobal memory tokenInfoOut = getTokenLatestInfo(tokenOut);
-
-        uint nTokens = _tokens.length;
-        Struct.TokenGlobal[] memory remainingTokensInfo = new Struct.TokenGlobal[](nTokens - 1);
-        
-        // Extracting the remaining unswaped tokens' info
-        uint count = 0;
-        for (uint i = 0; i < nTokens; i++) {
-            if (_tokens[i] == tokenOut){
-                continue;
-            }
-            remainingTokensInfo[count] = getTokenLatestInfo(_tokens[i]);
-            count++;
-        }
+        Struct.TokenGlobal memory tokenOutInfo;
+        Struct.TokenGlobal[] memory remainingTokensInfo;
+    
+        (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
 
         {
             Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
@@ -520,7 +491,7 @@ contract Pool is PoolToken {
 
         tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
                             _totalSupply,
-                            tokenInfoOut,
+                            tokenOutInfo,
                             remainingTokensInfo,
                             swapParameters,
                             gbmParameters,
@@ -530,9 +501,9 @@ contract Pool is PoolToken {
 
         require(tokenAmountOut >= minAmountOut, "9");
         
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
-
-        _records[tokenOut].balance -= tokenAmountOut;
+        tokenOutInfo.info.balance -= tokenAmountOut;
+        _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
+        _records[tokenOut].balance = tokenOutInfo.info.balance;
 
         uint exitFee =  Num.bmul(poolAmountIn, Const.EXIT_FEE);
 
@@ -555,22 +526,11 @@ contract Pool is PoolToken {
     {
         require(_finalized, "1");
         require(_records[tokenOut].bound, "2");
-        require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), "7");
 
-        Struct.TokenGlobal memory tokenInfoOut = getTokenLatestInfo(tokenOut);
-
-        uint nTokens = _tokens.length;
-        Struct.TokenGlobal[] memory remainingTokensInfo = new Struct.TokenGlobal[](nTokens - 1);
-        
-        // Extracting the remaining unswaped tokens' info
-        uint count = 0;
-        for (uint i = 0; i < nTokens; i++) {
-            if (_tokens[i] == tokenOut){
-                continue;
-            }
-            remainingTokensInfo[count] = getTokenLatestInfo(_tokens[i]);
-            count++;
-        }
+        Struct.TokenGlobal memory tokenOutInfo;
+        Struct.TokenGlobal[] memory remainingTokensInfo;
+    
+        (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
 
         {
             Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
@@ -587,7 +547,7 @@ contract Pool is PoolToken {
 
         poolAmountIn = Math.calcPoolInGivenSingleOutMMM(
                             _totalSupply,
-                            tokenInfoOut,
+                            tokenOutInfo,
                             remainingTokensInfo,
                             swapParameters,
                             gbmParameters,
@@ -599,7 +559,9 @@ contract Pool is PoolToken {
         require(poolAmountIn != 0, "5");
         require(poolAmountIn <= maxPoolAmountIn, "8");
 
-        _records[tokenOut].balance -= tokenAmountOut;
+        tokenOutInfo.info.balance -= tokenAmountOut;
+        _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
+        _records[tokenOut].balance = tokenOutInfo.info.balance;
 
         uint exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
 
@@ -1316,6 +1278,106 @@ contract Pool is PoolToken {
     function _getTokenPriceDecimals(IAggregatorV3 priceFeed) internal view returns (uint8) {
         return priceFeed.decimals();
     }
+    
+    /**
+    * @notice Returns all the binded token's global information (token record + latest round info)  
+    * @param swappedToken the address of the swapped token 
+    * @return swappedTokenInfo swapped token's global information
+    * @return remainingTokensInfo remaining tokens' global information
+    */
+    function _getAllTokensInfo(address swappedToken)
+    private view returns (
+        Struct.TokenGlobal memory swappedTokenInfo,
+        Struct.TokenGlobal[] memory remainingTokensInfo
+    ) {
 
+        swappedTokenInfo = getTokenLatestInfo(swappedToken);
+
+        uint nRemainingTokens = _tokens.length - 1;
+        remainingTokensInfo = new Struct.TokenGlobal[](nRemainingTokens);
+        
+        // Extracting the remaining un-traded tokens' info
+        uint count;
+        for (uint i; count < nRemainingTokens;) {
+            if (_tokens[i] != swappedToken) {
+                remainingTokensInfo[count] = getTokenLatestInfo(_tokens[i]);
+                unchecked{++count;}
+            }
+            unchecked{++i;}
+        }
+
+    }
+
+    /**
+    * @notice Check if the spot prices falls within the limits of the oracle price
+    * - spot prices of the remaining tokens must be < oraclePrice * (Const.MAX_PRICE_UNPEG_RATIO)
+    * @dev tokenInInfo.info.balance should contain the balance after the trade
+    * - spot prices of the remaining tokens are computed in terms of tokenIn
+    * @param tokenInInfo swapped token's info
+    * @param remainingTokensInfo untraded tokens' info
+    */
+    function _checkJoinSwapPrices (
+        Struct.TokenGlobal memory tokenInInfo,
+        Struct.TokenGlobal[] memory remainingTokensInfo
+    ) internal view {
+        
+        uint256 spotPriceAfter;
+
+        for (uint256 i; i < remainingTokensInfo.length;)
+        {
+            spotPriceAfter = Math.calcSpotPrice(
+                tokenInInfo.info.balance,
+                tokenInInfo.info.weight,
+                remainingTokensInfo[i].info.balance,
+                remainingTokensInfo[i].info.weight,
+                0
+            );
+
+            require(
+                Num.bdiv(
+                    spotPriceAfter,
+                    ChainlinkUtils.getTokenRelativePrice(tokenInInfo.latestRound, remainingTokensInfo[i].latestRound)
+                ) <= Const.MAX_PRICE_UNPEG_RATIO,
+                "44"
+            );
+            unchecked{++i;}
+        }
+    }
+
+    /**
+    * @notice Check if the spot prices falls within the limits of the oracle price
+    * - spot price of tokenOut must be < oraclePrice * (Const.MAX_PRICE_UNPEG_RATIO)
+    * @dev tokenOutInfo.info.balance should contain the balance after the trade
+    * - spot price of tokenOut is computed in terms of the remaining tokens independently
+    * @param tokenOutInfo swapped token's info
+    * @param remainingTokensInfo untraded tokens' info
+    */
+    function _checkExitSwapPrices (
+        Struct.TokenGlobal memory tokenOutInfo,
+        Struct.TokenGlobal[] memory remainingTokensInfo
+    ) internal view {
+        
+        uint256 spotPriceAfter;
+
+        for (uint256 i; i < remainingTokensInfo.length;)
+        {
+            spotPriceAfter = Math.calcSpotPrice(
+                remainingTokensInfo[i].info.balance,
+                remainingTokensInfo[i].info.weight,
+                tokenOutInfo.info.balance,
+                tokenOutInfo.info.weight,
+                0
+            );
+
+            require(
+                Num.bdiv(
+                    spotPriceAfter,
+                    ChainlinkUtils.getTokenRelativePrice(remainingTokensInfo[i].latestRound, tokenOutInfo.latestRound)
+                ) <= Const.MAX_PRICE_UNPEG_RATIO,
+                "44"
+            );
+            unchecked{++i;}
+        }
+    }
 
 }
