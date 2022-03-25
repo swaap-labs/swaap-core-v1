@@ -636,7 +636,7 @@ library Math {
 
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         totalAdjustedWeight = tokenGlobalIn.info.weight;
-        for(uint i = 0; i < tokensGlobalOut.length; i++) {
+        for (uint i; i < tokensGlobalOut.length;) {
 
             (uint256[] memory pricesOut,
             uint256[] memory timestampsOut,
@@ -659,6 +659,7 @@ library Math {
             );
 
             totalAdjustedWeight += tokensGlobalOut[i].info.weight;
+            unchecked {++i;}
         }
 
         return totalAdjustedWeight;

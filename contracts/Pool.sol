@@ -123,8 +123,6 @@ contract Pool is PoolToken {
         _controller = msg.sender;
         _factory = msg.sender;
         _swapFee = Const.MIN_FEE;
-        _publicSwap = false;
-        _finalized = false;
         priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
         priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
         dynamicCoverageFeesZ = Const.BASE_Z;
@@ -193,7 +191,6 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-
         require(_records[token].bound, "2");
         uint256 denorm = _records[token].denorm;
         return Num.bdiv(denorm, _totalWeight);
@@ -203,7 +200,6 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-
         require(_records[token].bound, "2");
         return _records[token].balance;
     }
@@ -231,8 +227,6 @@ contract Pool is PoolToken {
         require(msg.sender == _controller, "3");
         require(swapFee >= Const.MIN_FEE, "14");
         require(swapFee <= Const.MAX_FEE, "15");
-        require(swapFee >= 0, "16");
-        require(swapFee <= Const.BONE, "17");
         _swapFee = swapFee;
     }
 
@@ -303,7 +297,7 @@ contract Pool is PoolToken {
         uint256 ratio = Num.bdiv(poolAmountOut, poolTotal);
         require(ratio != 0, "5");
 
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        for (uint256 i; i < _tokens.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
@@ -312,6 +306,7 @@ contract Pool is PoolToken {
             _records[t].balance = _records[t].balance + tokenAmountIn;
             emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
+            unchecked{++i;}
         }
         _mintPoolShare(poolAmountOut);
         _pushPoolShare(msg.sender, poolAmountOut);
@@ -340,7 +335,7 @@ contract Pool is PoolToken {
         _pushPoolShare(_factory, exitFee);
         _burnPoolShare(pAiAfterExitFee);
 
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        for (uint256 i; i < _tokens.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountOut = Num.bmul(ratio, bal);
@@ -349,6 +344,7 @@ contract Pool is PoolToken {
             _records[t].balance = _records[t].balance - tokenAmountOut;
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
+            unchecked{++i;}
         }
 
     }
@@ -633,7 +629,6 @@ contract Pool is PoolToken {
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_dynamicCoverageFeesZ >= 0, "20");
         require(_dynamicCoverageFeesZ <= Const.MAX_Z, "21");
         dynamicCoverageFeesZ = _dynamicCoverageFeesZ;
     }
@@ -749,8 +744,9 @@ contract Pool is PoolToken {
     returns (uint256)
     {
         uint256 _totalWeightMMM;
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        for (uint256 i; i < _tokens.length;) {
             _totalWeightMMM += _getAdjustedTokenWeight(_tokens[i]);
+            unchecked{++i;}
         }
         return _totalWeightMMM;
     }
