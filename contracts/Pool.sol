@@ -25,7 +25,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
 
-contract Pool is PoolToken {
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+
+contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
     using SafeERC20 for IERC20; 
 
@@ -277,6 +280,41 @@ contract Pool is PoolToken {
     {
         require(_records[token].bound, "2");
         _records[token].balance = IERC20(token).balanceOf(address(this));
+    }   
+
+    /**
+    * @notice Add liquidity to a pool
+    * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
+    * @param poolAmountOut Amount of pool shares a LP wishes to receive
+    * @param maxAmountsIn Maximum accepted token amount in
+    */
+    function permitJoinPool(
+        address owner,
+        uint256 poolAmountOut,
+        uint256[] calldata maxAmountsIn,
+        uint deadline,
+        bytes calldata signature
+        )
+    external
+    {   
+        require(block.timestamp < deadline, "6");
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
+            Const.FUNCTION_HASH,
+            poolAmountOut,
+            maxAmountsIn,
+            owner,
+            _nonces[owner],
+            deadline
+        )));
+
+        address signer = ECDSA.recover(digest, signature);
+        require(signer == owner, "7");
+        
+        // require(signer != address(0), "35"); already stated in PoolToken._move(address src, address dst, uint256 amt)
+
+        unchecked{++_nonces[owner];}
+
+        _joinPool(owner, poolAmountOut, maxAmountsIn);
     }
 
     /**
@@ -287,10 +325,15 @@ contract Pool is PoolToken {
     */
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
     external
+    {
+        _joinPool(msg.sender, poolAmountOut, maxAmountsIn);
+    }
+
+    function _joinPool(address owner, uint256 poolAmountOut, uint256[] calldata maxAmountsIn) 
+    internal     
     _logs_
     _lock_
-    _whenNotPaused_
-    {
+    _whenNotPaused_{
         require(_finalized, "1");
 
         uint256 poolTotal = totalSupply();
@@ -304,12 +347,12 @@ contract Pool is PoolToken {
             require(tokenAmountIn != 0, "5");
             require(tokenAmountIn <= maxAmountsIn[i], "8");
             _records[t].balance = _records[t].balance + tokenAmountIn;
-            emit LOG_JOIN(msg.sender, t, tokenAmountIn);
+            emit LOG_JOIN(owner, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
             unchecked{++i;}
         }
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
+        _pushPoolShare(owner, poolAmountOut);
     }
 
     /**
@@ -596,6 +639,9 @@ contract Pool is PoolToken {
     function _pushPoolShare(address to, uint256 amount)
     internal
     {
+        unchecked {
+            _blockWaitingTime[to] = block.number + Const.BLOCK_WAITING_TIME;
+        } 
         _push(to, amount);
     }
 
