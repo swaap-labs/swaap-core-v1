@@ -45,10 +45,10 @@ library ChainlinkUtils {
 
 
     /**
-    * @notice Computes the price of token 1 in terms of token 2
+    * @notice Computes the price of token 2 in terms of token 1
     * @param latestRound_1 The latest oracle data for token 1
     * @param latestRound_2 The latest oracle data for token 2
-    * @return The price of token 2 in terms of token 1
+    * @return The last price of token 2 divded by the last price of token 1
     */
     function getTokenRelativePrice(
         Struct.LatestRound memory latestRound_1, Struct.LatestRound memory latestRound_2
@@ -87,11 +87,11 @@ library ChainlinkUtils {
     }
 
     /**
-    * @notice Computes the previous price of tokenIn in terms of tokenOut
-    * @dev previous price correspond to price at lastRoundId - 1
+    * @notice Computes the previous price of token 2 in terms of token 1
+    * @dev The previous price corresponds to the price at the lastRoundId - 1
     * @param latestRound_1 The latest oracle data for tokenIn
     * @param latestRound_2 The latest oracle data for tokenIn
-    * @return The price of token 2 in terms of token 1
+    * @return The previous price of token 2 divded by the previous price of token 1
     */
     function getPreviousPrice(
         Struct.LatestRound memory latestRound_1,

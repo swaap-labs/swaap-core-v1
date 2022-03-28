@@ -40,6 +40,7 @@ library Math {
     // wO = tokenWeightOut                                                                       //
     // sF = swapFee                                                                              //
     **********************************************************************************************/
+
     function calcSpotPrice(
         uint256 tokenBalanceIn,
         uint256 tokenWeightIn,
@@ -191,16 +192,17 @@ library Math {
 
         return poolAmountOut;
     }
-
+        
     /**********************************************************************************************
+    // Using the same equation as calcPoolOutGivenSingleIn but with tAi as the unknown           //
     // calcSingleInGivenPoolOut                                                                  //
     // tAi = tokenAmountIn              //(pS + pAo)\     /    1    \\                           //
     // pS = poolSupply                 || ---------  | ^ | --------- || * bI - bI                //
     // pAo = poolAmountOut              \\    pS    /     \(wI / tW)//                           //
     // bI = balanceIn          tAi =  --------------------------------------------               //
-    // wI = weightIn                              /      wI  \                                   //
-    // tW = totalWeight                          |  1 - ----  |  * sF                            //
-    // sF = swapFee                               \      tW  /                                   //
+    // wI = weightIn                          /     /      wI  \       \                         //
+    // tW = totalWeight                      | 1 - |  1 - ----  |  * sF |                        //
+    // sF = swapFee                           \     \      tW  /       /                         //
     **********************************************************************************************/
     function calcSingleInGivenPoolOut(
         uint tokenBalanceIn,
@@ -423,7 +425,7 @@ library Math {
     * 2) the pool is in abundance of tokenOut ==> the pool doesn't charge any spread
     * The spread is charged through an increase in weightOut proportional to the GBM forecast of
     * the tokenOut_tokenIn price process, that directly translates into an increase in the spot price,
-    * which is defined as such: price = (balance_in * weight_out) / (balance_in * weight_out)
+    * which is defined as such: price = (balance_in / weight_in) / (balance_out / weight_out)
     * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
     * @param tokenGlobalIn The pool global information on tokenIn
     * @param tokenGlobalOut The pool global information on tokenOut
