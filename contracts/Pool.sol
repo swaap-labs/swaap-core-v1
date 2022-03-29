@@ -289,11 +289,11 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     * @param maxAmountsIn Maximum accepted token amount in
     */
     function permitJoinPool(
+        bytes calldata signature,
+        uint256[] calldata maxAmountsIn,
         address owner,
         uint256 poolAmountOut,
-        uint256[] calldata maxAmountsIn,
-        uint deadline,
-        bytes calldata signature
+        uint256 deadline
         )
     external
     {   
