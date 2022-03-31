@@ -986,9 +986,9 @@ contract Pool is PoolToken {
         require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
         require(
             Num.bdiv(
-                spotPriceAfter,
+                Num.bmul(spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
-            ) <= Const.MAX_PRICE_UNPEG_RATIO + _swapFee,
+            ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
 
@@ -1130,9 +1130,9 @@ contract Pool is PoolToken {
         require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
         require(
             Num.bdiv(
-                spotPriceAfter,
+                Num.bmul(spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
-            ) <= Const.MAX_PRICE_UNPEG_RATIO + _swapFee,
+            ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
 
