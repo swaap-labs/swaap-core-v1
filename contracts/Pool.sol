@@ -298,13 +298,17 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     {
         require(_records[token].bound, "2");
         _records[token].balance = IERC20(token).balanceOf(address(this));
-    }   
+    }
 
     /**
     * @notice Add liquidity to a pool
     * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
+    * ref: https://eips.ethereum.org/EIPS/eip-712
+    * @param owner Address of the receiver
     * @param poolAmountOut Amount of pool shares a LP wishes to receive
     * @param maxAmountsIn Maximum accepted token amount in
+    * @param deadline Expiration date of the signature
+    * @param signature Owner's signature
     */
     function permitJoinPool(
         bytes calldata signature,
@@ -312,22 +316,22 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         address owner,
         uint256 poolAmountOut,
         uint256 deadline
-        )
+    )
     external
-    {   
+    {
         require(block.timestamp < deadline, "6");
         bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
             Const.FUNCTION_HASH,
+            owner,
             poolAmountOut,
             maxAmountsIn,
-            owner,
-            _nonces[owner],
-            deadline
+            deadline,
+            _nonces[owner]
         )));
 
         address signer = ECDSA.recover(digest, signature);
         require(signer == owner, "7");
-        
+
         // require(signer != address(0), "35"); already stated in PoolToken._move(address src, address dst, uint256 amt)
 
         unchecked{++_nonces[owner];}
