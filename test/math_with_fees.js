@@ -14,6 +14,9 @@ const swapFee = 10 ** -3; // 0.001;
 const exitFee = 0;
 const verbose = process.env.VERBOSE;
 const TConstantOracle = artifacts.require('TConstantOracle');
+const {
+    advanceBlock
+} = require('../lib/time');
 
 contract('Pool', async (accounts) => {
 
@@ -271,7 +274,9 @@ contract('Pool', async (accounts) => {
             // so that the balances of all tokens will go back exactly to what they were before joinPool()
             const pAi = 1 / (1 - exitFee);
             const pAiAfterExitFee = pAi * (1 - exitFee);
-
+            
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             await pool.exitPool(toWei(String(pAi)), [toWei('0'), toWei('0')]);
 
             // Update balance states
@@ -362,6 +367,9 @@ contract('Pool', async (accounts) => {
             const pAi = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
 
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
+
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             await pool.exitswapPoolAmountInMMM(WETH, toWei(String(pAi)), toWei('0'));
 
             // Update balance states
@@ -466,6 +474,9 @@ contract('Pool', async (accounts) => {
 
         it('pAi = exitswapExternAmountOutMMM(exitswapPoolAmountInMMM(pAi))', async () => {
             const pAi = 0.01;
+
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
             const calculatedPAi = await pool.exitswapExternAmountOutMMM.call(WETH, String(tAo), MAX);
 

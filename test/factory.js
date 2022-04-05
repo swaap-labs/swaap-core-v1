@@ -4,7 +4,6 @@ const TToken = artifacts.require('TToken');
 const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
 const {
-    advanceTime,
     advanceBlock,
     advanceTimeAndBlock
 } = require('../lib/time');
@@ -107,8 +106,9 @@ contract('Factory', async (accounts) => {
             await pool.finalize();
 
             await pool.joinPool(toWei('10'), [MAX, MAX], { from: nonAdmin });
+            // By default with truffle each transaction is mined on a different block so we only need to skip 2 block for JIT
+            await advanceBlock(2);
             await pool.exitPool(toWei('10'), [toWei('0'), toWei('0')], { from: nonAdmin });
-
             // Exit fee = 0 so this wont do anything
             await factory.collect(POOL);
 
@@ -136,7 +136,7 @@ contract('Factory', async (accounts) => {
         });
 
         it('admin cannot set/unset pause after time window', async () => {
-            advanceTimeAndBlock(86400 * 61);
+            await advanceTimeAndBlock(86400 * 61);
             await truffleAssert.reverts(factory.setPause(true, {from: admin}), '45');
             await truffleAssert.reverts(factory.setPause(false, {from: admin}), '45');
         });

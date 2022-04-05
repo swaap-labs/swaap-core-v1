@@ -11,6 +11,9 @@ const errorDelta = 10 ** -8;
 const swapFee = 0.001; // 0.001;
 const exitFee = 0;
 const verbose = process.env.VERBOSE;
+const {
+    advanceBlock
+} = require('../lib/time');
 
 
 contract('Pool', async (accounts) => {
@@ -231,6 +234,8 @@ contract('Pool', async (accounts) => {
             const poolAmountIn = 1 / (1 - exitFee);
             const poolAmountInAfterExitFee = Decimal(poolAmountIn).mul(Decimal(1).sub(exitFee));
 
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             await pool.exitPool(toWei(String(poolAmountIn)), [toWei('0'), toWei('0')]);
 
             // Update balance states
@@ -334,12 +339,13 @@ contract('Pool', async (accounts) => {
         */
 
         it('exitswapPoolAmountInMMM should revert', async () => {
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             // Call function
             const poolRatioAfterExitFee = 0.9;
             const poolAmountIn = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
             
             try {
-
                 await pool.exitswapPoolAmountInMMM(WETH, toWei(String(poolAmountIn)), toWei('0'))
             }
             catch(e) {
@@ -354,7 +360,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('exitswapExternAmountOutMMM', async () => {
-            // Call functionc
+            // Call function
             const poolRatioAfterExitFee = 0.99;
             const tokenRatioBeforeSwapFee = poolRatioAfterExitFee ** (1 / daiNorm);
             const tokenAmountOut = currentDaiBalance * (1 - tokenRatioBeforeSwapFee) * (1 - swapFee * (1 - daiNorm));
@@ -411,6 +417,8 @@ contract('Pool', async (accounts) => {
         });
 
         it('poolAmountIn = exitswapExternAmountOutMMM(exitswapPoolAmountInMMM(poolAmountIn))', async () => {
+            // Necessary for JIT protection block waiting time
+            advanceBlock(2);
             const poolAmountIn = 0.01;
             const tokenAmountOut = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(poolAmountIn)), toWei('0'));
             const calculatedpoolAmountIn = await pool.exitswapExternAmountOutMMM.call(WETH, String(tokenAmountOut), MAX);
