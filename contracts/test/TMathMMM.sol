@@ -59,49 +59,6 @@ library TMathMMM {
         );
     }
 
-//    function calcOutGivenInMMM(
-//        Struct.TokenGlobal memory tokenGlobalIn,
-//        Struct.TokenGlobal memory tokenGlobalOut,
-//        uint256 relativePrice,
-//        Struct.SwapParameters memory swapParameters,
-//        Struct.GBMParameters memory gbmParameters,
-//        Struct.HistoricalPricesParameters memory hpParameters
-//    )
-//    public pure
-//    returns (uint256 spotPriceMMM, uint256 spread)
-//    {
-//        Struct.TokenRecord memory tokenIn = Struct.TokenRecord(
-//            tokenInBalance,
-//            tokenInWeight
-//        );
-//        Struct.LatestRound memory tokenIn = Struct.TokenRecord(
-//            address oracle,
-//            uint80 roundId,
-//            int256 price,
-//            uint256 timestamp,
-//        );
-//        Struct.TokenRecord memory tokenOut = Struct.TokenRecord(
-//            tokenOutBalance,
-//            tokenOutWeight
-//        );
-//        Struct.SwapParameters memory swapParameters = Struct.SwapParameters(tokenAmountIn, swapFee);
-//        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(z, horizon);
-//        Struct.GBMEstimation memory gbmEstimation = Struct.GBMEstimation(
-//            mean, variance
-//        );
-//        Struct.SwapResult memory result = Math.calcOutGivenInMMM(
-//            tokenGlobalIn,
-//            tokenGlobalOut,
-//            relativePrice,
-//            swapParameters,
-//            gbmParameters,
-//            hpParameters
-////            tokenGlobalIn, tokenGlobalOut, relativePrice, swapParameters, gbmParameters, gbmEstimation
-//        );
-//
-//        return (result.amount, result.spread);
-//    }
-
     function calcAdaptiveFeeGivenInAndOut(
         uint256 tokenBalanceIn,
         uint256 tokenAmountIn,

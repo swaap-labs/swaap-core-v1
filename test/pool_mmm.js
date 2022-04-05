@@ -141,36 +141,43 @@ contract('Pool', async (accounts) => {
     	const _now = lastBlock.timestamp
     	if (_now != now) {
     		now = _now
+
+    		let wethOracleTimestamps = [..._wethOracleTimestamps]
+    		let daiOracleTimestamps = [..._daiOracleTimestamps]
 			const [wethOracleStartIndexWETHDAI, daiOracleStartIndexWETHDAI] = getStartIndices(
-				_wethOracleTimestamps, _daiOracleTimestamps,
+				wethOracleTimestamps, daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWETHDAI, _expectedVarianceWETHDAI] = getParametersEstimation(
-				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWETHDAI,
-				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWETHDAI,
+				[..._wethOraclePrices], wethOracleTimestamps, wethOracleStartIndexWETHDAI,
+				[..._daiOraclePrices], daiOracleTimestamps, daiOracleStartIndexWETHDAI,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWETHDAI = _expectedMeanWETHDAI;
 			expectedVarianceWETHDAI = _expectedVarianceWETHDAI;
 
+    		daiOracleTimestamps = [..._daiOracleTimestamps]
+    		let wbtcOracleTimestamps = [..._wbtcOracleTimestamps]
 			const [wbtcOracleStartIndexWBTCDAI, daiOracleStartIndexWBTCDAI] = getStartIndices(
-				_wbtcOracleTimestamps, _daiOracleTimestamps,
+				wbtcOracleTimestamps, daiOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCDAI, _expectedVarianceWBTCDAI] = getParametersEstimation(
-				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCDAI,
-				[..._daiOraclePrices], [..._daiOracleTimestamps], daiOracleStartIndexWBTCDAI,
+				[..._wbtcOraclePrices], wbtcOracleTimestamps, wbtcOracleStartIndexWBTCDAI,
+				[..._daiOraclePrices], _daiOracleTimestamps, daiOracleStartIndexWBTCDAI,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWBTCDAI = _expectedMeanWBTCDAI;
 			expectedVarianceWBTCDAI = _expectedVarianceWBTCDAI;
 
+    		wethOracleTimestamps = [..._wethOracleTimestamps]
+    		wbtcOracleTimestamps = [..._wbtcOracleTimestamps]
 			const [wbtcOracleStartIndexWBTCWETH, wethOracleStartIndexWBTCWETH] = getStartIndices(
-				_wbtcOracleTimestamps, _wethOracleTimestamps,
+				wbtcOracleTimestamps, wethOracleTimestamps,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			)
 			const [_expectedMeanWBTCWETH, _expectedVarianceWBTCWETH] = getParametersEstimation(
-				[..._wbtcOraclePrices], [..._wbtcOracleTimestamps], wbtcOracleStartIndexWBTCWETH,
+				[..._wbtcOraclePrices], wbtcOracleTimestamps, wbtcOracleStartIndexWBTCWETH,
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWBTCWETH,
 				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 			);
@@ -199,20 +206,21 @@ contract('Pool', async (accounts) => {
             await pool.bindMMM(WETH, toWei(parseFloat(wethInitialBalance).toString()), toWei('5'), WETHOracleAddress);
             await pool.bindMMM(WBTC, toWei(parseFloat(wbtcInitialBalance).toString()), toWei('5'), WBTCOracleAddress);
             await pool.bindMMM(DAI, toWei(parseFloat(daiInitialBalance).toString()), toWei('5'), DAIOracleAddress);
-            const numTokens = await pool.getNumTokens();
+            const tokens = await pool.getTokens();
+            const numTokens = tokens.length
             assert.equal(3, numTokens);
-            const totalDenormWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(15, fromWei(totalDenormWeight));
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+            assert.equal(15, totalDenormWeight);
             const wethDenormWeight = await pool.getDenormalizedWeight(WETH);
             assert.equal(5, fromWei(wethDenormWeight));
-            const wethNormWeight = await pool.getNormalizedWeight(WETH);
-            assert.equal(0.333333333333333333, fromWei(wethNormWeight));
+            assert.equal(0.333333333333333333, fromWei(wethDenormWeight) / totalDenormWeight);
             const wbtcBalance = await pool.getBalance(WBTC);
             assert.equal(wbtcInitialBalance, fromWei(wbtcBalance));
         });
 
         it('Get current tokens', async () => {
-            const currentTokens = await pool.getCurrentTokens();
+            const currentTokens = await pool.getTokens();
             assert.sameMembers(currentTokens, [WETH, WBTC, DAI]);
         });
 
@@ -249,7 +257,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Get final tokens', async () => {
-            const finalTokens = await pool.getFinalTokens();
+            const finalTokens = await pool.getTokens();
             assert.sameMembers(finalTokens, [WETH, WBTC, DAI]);
         });
 
@@ -274,30 +282,21 @@ contract('Pool', async (accounts) => {
             assert.equal(2500 - wethInitialBalance * (5 / 100), fromWei(userWethBalance));
         });
 
-        it('getSpotPriceMMM', async () => {
+        it('getSpotPrice', async () => {
 
-            updateState()
+            await updateState()
 
-			const expectedMMMSpread = computeMMMSpread(
-				expectedMeanWETHDAI,
-				expectedVarianceWETHDAI,
-				z,
-				horizon
-			)
+            const daiBalance = await pool.getBalance(DAI);
+            const wethBalance = await pool.getBalance(WETH);
 
-            const price = await pool.getSpotPriceSansFeeMMM(WETH, DAI);
+            const price = await pool.getSpotPriceSansFee(WETH, DAI);
 
             const expectedPriceSansFee = parseFloat(
-            	expectedMMMSpread * (wethInitialBalance * (105 / 100) / 5) / (daiInitialBalance * (105 / 100) / 5)
+            	(wethInitialBalance * (105 / 100) / 5) / (daiInitialBalance * (105 / 100) / 5)
             )
 
             const relDif = calcRelativeDiff(expectedPriceSansFee, parseFloat(fromWei(price)));
             assert.isAtMost(relDif.toNumber(), errorDelta);
-
-            const priceFee = await pool.getSpotPriceMMM(WETH, DAI);
-            const priceFeeCheck = expectedPriceSansFee * (1 / (1 - 0.003));
-            const relDifFee = calcRelativeDiff(priceFeeCheck, parseFloat(fromWei(priceFee)));
-            assert.isAtMost(relDifFee.toNumber(), errorDelta);
 
         });
 
@@ -340,7 +339,7 @@ contract('Pool', async (accounts) => {
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
 
-            updateState()
+            await updateState()
 
 			const [expectedAmount, expectedSpread] = calcOutGivenInMMM(
 				parseFloat(fromWei(wethBalance)),
@@ -364,7 +363,6 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualAmount}`);
                 console.log(`relDif  : ${relDifAmount}`);
             }
-            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
 
 			const actualSpread = fromWei(log.args[5]);
             const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
@@ -374,18 +372,23 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualSpread}`);
                 console.log(`relDif  : ${relDifSpread}`);
             }
+
+            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
             assert.isAtMost(relDifSpread.toNumber(), errorDelta);
 
             const userDaiBalance = await dai.balanceOf(user2);
             assert.equal(fromWei(userDaiBalance), Number(fromWei(log.args[4])));
 
-            const wethPrice = await pool.getSpotPriceMMM(DAI, WETH);
-            updateState()
-			const wethPriceFeeCheck = (((parseFloat(fromWei(daiBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wethBalance)) + amount) / 5)) * (1 / (1 - 0.003));
-            assert.approximately(Number(fromWei(wethPrice)), Number(wethPriceFeeCheck), errorDelta);
+            const wethPrice = await pool.getSpotPriceSansFee(DAI, WETH);
+			const wethPriceSansFeeCheck = ((parseFloat(fromWei(daiBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wethBalance)) + amount) / 5);
+            assert.approximately(Number(fromWei(wethPrice)), Number(wethPriceSansFeeCheck), errorDelta);
 
-            const daiNormWeight = await pool.getNormalizedWeight(DAI);
-            assert.equal(0.333333333333333333, fromWei(daiNormWeight));
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+
+            const daiNormWeight = await pool.getDenormalizedWeight(DAI);
+            assert.equal(0.333333333333333333, fromWei(daiNormWeight) / totalDenormWeight);
         });
 
 		it('swapExactAmountInMMM WBTC -> WETH', async () => {
@@ -434,6 +437,8 @@ contract('Pool', async (accounts) => {
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
 
+            await updateState()
+
             const actualAmount = fromWei(log.args[4]);
             const relDifAmount = calcRelativeDiff(expectedAmount, actualAmount);
             if (verbose) {
@@ -442,7 +447,6 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualAmount}`);
                 console.log(`relDif  : ${relDifAmount}`);
             }
-            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
 
 			const actualSpread = fromWei(log.args[5]);
             const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
@@ -452,75 +456,21 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualSpread}`);
                 console.log(`relDif  : ${relDifSpread}`);
             }
+
+            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
             assert.isAtMost(relDifSpread.toNumber(), errorDelta);
 
-            const wbtcPrice = await pool.getSpotPriceMMM(WETH, WBTC);
-            const wbtcPriceFeeCheck = (((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5)) * (1 / (1 - 0.003));
-            assert.approximately(Number(fromWei(wbtcPrice)), Number(wbtcPriceFeeCheck), errorDelta);
+            const wbtcPrice = await pool.getSpotPriceSansFee(WETH, WBTC);
+            const wbtcPriceSansFeeCheck = ((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5);
+            assert.approximately(Number(fromWei(wbtcPrice)), Number(wbtcPriceSansFeeCheck), errorDelta);
 
-            const wethNormWeight = await pool.getNormalizedWeight(WETH);
-            assert.equal(0.333333333333333333, fromWei(wethNormWeight));
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+
+            const wethDenormWeight = await pool.getDenormalizedWeight(WETH);
+            assert.equal(0.333333333333333333, fromWei(wethDenormWeight) / totalDenormWeight);
         });
-
-		it('MMM spread WETH/DAI', async () => {
-            const priceSansFee1 = await pool.getSpotPriceSansFeeMMM(WETH, DAI);
-            const priceSansFee2 = await pool.getSpotPriceSansFeeMMM(DAI, WETH);
-            const actualMMMSpread = fromWei(priceSansFee1) * fromWei(priceSansFee2);
-            updateState()
-			const expectedMMMSpread = computeMMMSpread(
-				expectedMeanWETHDAI,
-				expectedVarianceWETHDAI,
-				z,
-				horizon
-			)
-			if (verbose) {
-                console.log('MMM spread WETH/DAI');
-                console.log(`expected: ${expectedMMMSpread}`);
-                console.log(`actual  : ${actualMMMSpread}`);
-            }
-            const relDif = calcRelativeDiff(expectedMMMSpread, actualMMMSpread);
-            assert.isAtMost(relDif.toNumber(), errorDelta);
-		})
-
-		it('MMM spread WBTC/DAI', async () => {
-            const priceSansFee1 = await pool.getSpotPriceSansFeeMMM(WBTC, DAI);
-            const priceSansFee2 = await pool.getSpotPriceSansFeeMMM(DAI, WBTC);
-            const actualMMMSpread = fromWei(priceSansFee1) * fromWei(priceSansFee2);
-            updateState()
-			const expectedMMMSpread = computeMMMSpread(
-				expectedMeanWBTCDAI,
-				expectedVarianceWBTCDAI,
-				z,
-				horizon
-			)
-            if (verbose) {
-				console.log('MMM spread WBTC/DAI');
-				console.log(`expected: ${expectedMMMSpread}`);
-				console.log(`actual  : ${actualMMMSpread}`);
-			}
-            const relDif = calcRelativeDiff(expectedMMMSpread, actualMMMSpread);
-            assert.isAtMost(relDif.toNumber(), errorDelta);
-		})
-
-		it('MMM spread WBTC/WETH', async () => {
-            const priceSansFee1 = await pool.getSpotPriceSansFeeMMM(WBTC, WETH);
-            const priceSansFee2 = await pool.getSpotPriceSansFeeMMM(WETH, WBTC);
-            const actualMMMSpread = fromWei(priceSansFee1) * fromWei(priceSansFee2);
-			updateState
-			const expectedMMMSpread = computeMMMSpread(
-				expectedMeanWBTCWETH,
-				expectedVarianceWBTCWETH,
-				z,
-				horizon
-			)
-            if (verbose) {
-                console.log('MMM spread WBTC/WETH');
-                console.log(`expected: ${expectedMMMSpread}`);
-                console.log(`actual  : ${actualMMMSpread}`);
-            }
-            const relDif = calcRelativeDiff(expectedMMMSpread, actualMMMSpread);
-            assert.isAtMost(relDif.toNumber(), errorDelta);
-		})
 
 		it('swapExactAmountOutMMM WBTC -> WETH', async () => {
             // 0.1 WBTC -> WETH
@@ -567,6 +517,7 @@ contract('Pool', async (accounts) => {
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
+            await updateState()
 
             const actualAmount = fromWei(log.args[3]);
             const relDifAmount = calcRelativeDiff(amount, actualAmount);
@@ -576,7 +527,6 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualAmount}`);
                 console.log(`relDif  : ${relDifAmount}`);
             }
-            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
 
 			const actualSpread = fromWei(log.args[5]);
             const relDifSpread = calcRelativeDiff(expectedSpread, actualSpread);
@@ -586,14 +536,20 @@ contract('Pool', async (accounts) => {
                 console.log(`actual  : ${actualSpread}`);
                 console.log(`relDif  : ${relDifSpread}`);
             }
+
+            assert.isAtMost(relDifAmount.toNumber(), errorDelta);
             assert.isAtMost(relDifSpread.toNumber(), errorDelta);
 
-            const wbtcPrice = await pool.getSpotPriceMMM(WETH, WBTC);
-            const wbtcPriceFeeCheck = (((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5)) * (1 / (1 - 0.003));
-            assert.approximately(Number(fromWei(wbtcPrice)), Number(wbtcPriceFeeCheck), errorDelta);
+            const wbtcPrice = await pool.getSpotPriceSansFee(WETH, WBTC);
+            const wbtcPriceSansFeeCheck = ((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5);
+            assert.approximately(Number(fromWei(wbtcPrice)), Number(wbtcPriceSansFeeCheck), errorDelta);
 
-            const wethNormWeight = await pool.getNormalizedWeight(WETH);
-            assert.equal(0.333333333333333333, fromWei(wethNormWeight));
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+
+            const wethDenormWeight = await pool.getDenormalizedWeight(WETH);
+            assert.equal(0.333333333333333333, fromWei(wethDenormWeight) / totalDenormWeight);
         });
 
     });

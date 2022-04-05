@@ -104,7 +104,8 @@ contract('Pool', async (accounts) => {
         });
 
         it('Pool starts with no bound tokens', async () => {
-            const numTokens = await pool.getNumTokens();
+            const tokens = await pool.getTokens();
+            const numTokens = tokens.length
             assert.equal(0, numTokens);
             const isBound = await pool.isBound.call(WETH);
             assert(!isBound);
@@ -155,14 +156,15 @@ contract('Pool', async (accounts) => {
             await pool.bindMMM(WETH, toWei('50'), toWei('5'), WETHOracleAddress);
             await pool.bindMMM(MKR, toWei('2000'), toWei('5'), MKROracleAddress);
             await pool.bindMMM(DAI, toWei('100000'), toWei('5'), DAIOracleAddress);
-            const numTokens = await pool.getNumTokens();
+            const tokens = await pool.getTokens();
+            const numTokens = tokens.length
             assert.equal(3, numTokens);
-            const totalDenormWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(15, fromWei(totalDenormWeight));
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+            assert.equal(15, totalDenormWeight);
             const wethDenormWeight = await pool.getDenormalizedWeight(WETH);
             assert.equal(5, fromWei(wethDenormWeight));
-            const wethNormWeight = await pool.getNormalizedWeight(WETH);
-            assert.equal(0.333333333333333333, fromWei(wethNormWeight));
+            assert.equal(0.333333333333333333, fromWei(wethDenormWeight) / totalDenormWeight);
             const mkrBalance = await pool.getBalance(MKR);
             assert.equal(2000, fromWei(mkrBalance));
         });
@@ -174,10 +176,12 @@ contract('Pool', async (accounts) => {
             await pool.unbindMMM(XXX);
             adminBalance = await xxx.balanceOf(admin);
             assert.equal(10, fromWei(adminBalance));
-            const numTokens = await pool.getNumTokens();
+            const tokens = await pool.getTokens();
+            const numTokens = tokens.length
             assert.equal(3, numTokens);
-            const totalDenormWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(15, fromWei(totalDenormWeight));
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+            assert.equal(15, totalDenormWeight);
         });
 
         it('Fails binding above MAX TOTAL WEIGHT', async () => {
@@ -203,16 +207,10 @@ contract('Pool', async (accounts) => {
         });
 
         it('Get current tokens', async () => {
-            const currentTokens = await pool.getCurrentTokens();
+            const currentTokens = await pool.getTokens();
             assert.sameMembers(currentTokens, [WETH, MKR, DAI]);
         });
 
-        it('Fails getting final tokens before finalized', async () => {
-            await truffleAssert.reverts(
-                pool.getFinalTokens(),
-                '1',
-            );
-        });
     });
 
 
@@ -375,7 +373,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Get final tokens', async () => {
-            const finalTokens = await pool.getFinalTokens();
+            const finalTokens = await pool.getTokens();
             assert.sameMembers(finalTokens, [WETH, MKR, DAI]);
         });
     });
@@ -435,13 +433,10 @@ contract('Pool', async (accounts) => {
             await truffleAssert.reverts(pool.unbindMMM(DAI), '4');
         });
 
-        it('getSpotPriceSansFeeMMM and getSpotPrice', async () => {
-            const wethPrice = await pool.getSpotPriceSansFeeMMM(DAI, WETH);
-            assert.equal(2000, fromWei(wethPrice));
-
-            const wethPriceFee = await pool.getSpotPriceMMM(DAI, WETH);
-            const wethPriceFeeCheck = ((105000 / 5) / (52.5 / 5)) * (1 / (1 - 0.003));
-            assert.equal(fromWei(wethPriceFee), wethPriceFeeCheck);
+        it('getSpotPriceSansFee', async () => {
+            const wethPriceSansFee = await pool.getSpotPriceSansFee(DAI, WETH);
+            const wethPriceSansFeeCheck = (105000 / 5) / (52.5 / 5);
+            assert.equal(fromWei(wethPriceSansFee), wethPriceSansFeeCheck);
         });
 
         it('Fail swapExactAmountInMMM unbound or over min max ratios', async () => {
@@ -484,12 +479,15 @@ contract('Pool', async (accounts) => {
             assert.equal(fromWei(userDaiBalance), Number(fromWei(log.args[4])));
 
             // 182.804672101083406128
-            const wethPrice = await pool.getSpotPriceMMM(DAI, WETH);
-            const wethPriceFeeCheck = ((104950.173656 / 5) / (52.525 / 5)) * (1 / (1 - 0.003));
-            assert.approximately(Number(fromWei(wethPrice)), Number(wethPriceFeeCheck), errorDelta);
+            const wethPriceSansFee = await pool.getSpotPriceSansFee(DAI, WETH);
+            const wethPriceSansFeeCheck = (104950.173656 / 5) / (52.525 / 5);
+            assert.approximately(Number(fromWei(wethPriceSansFee)), Number(wethPriceSansFeeCheck), errorDelta);
 
-            const daiNormWeight = await pool.getNormalizedWeight(DAI);
-            assert.equal(0.333333333333333333, fromWei(daiNormWeight));
+            const daiNormWeight = await pool.getDenormalizedWeight(DAI);
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+            assert.equal(0.333333333333333333, fromWei(daiNormWeight) / parseFloat(totalDenormWeight));
         });
 
         it('swapExactAmountOut', async () => {
@@ -592,27 +590,11 @@ contract('Pool', async (accounts) => {
                 '2',
             );
             await truffleAssert.reverts(
-                pool.getNormalizedWeight(XXX),
-                '2',
-            );
-            await truffleAssert.reverts(
                 pool.getBalance(XXX),
                 '2',
             );
             await truffleAssert.reverts(
-                pool.getSpotPriceMMM(DAI, XXX),
-                '2',
-            );
-            await truffleAssert.reverts(
-                pool.getSpotPriceMMM(XXX, DAI),
-                '2',
-            );
-            await truffleAssert.reverts(
-                pool.getSpotPriceSansFeeMMM(DAI, XXX),
-                '2',
-            );
-            await truffleAssert.reverts(
-                pool.getSpotPriceSansFeeMMM(XXX, DAI),
+                pool.getSpotPriceSansFee(DAI, XXX),
                 '2',
             );
         });

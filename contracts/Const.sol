@@ -40,11 +40,9 @@ library Const {
     uint256 public constant MAX_OUT_RATIO         = (BONE / 3) + 1 wei;
 
     uint64 public constant BASE_Z                 = uint64(6 * BONE / 10);
-    uint64 public constant MAX_Z                  = uint64(4 * BONE);
 
     uint256 public constant MIN_HORIZON           = 1 * BONE;
     uint256 public constant BASE_HORIZON          = 300 * BONE;
-    uint256 public constant MAX_HORIZON           = 86400 * BONE;
 
     uint8 public constant MIN_LOOKBACK_IN_ROUND   = 1;
     uint8 public constant BASE_LOOKBACK_IN_ROUND  = 4;
@@ -52,7 +50,6 @@ library Const {
 
     uint256 public constant MIN_LOOKBACK_IN_SEC   = 1;
     uint256 public constant BASE_LOOKBACK_IN_SEC  = 3600;
-    uint256 public constant MAX_LOOKBACK_IN_SEC   = 86400;
 
     uint256 public constant MAX_PRICE_UNPEG_RATIO = BONE + 2 * BONE / 100;
 

@@ -153,25 +153,10 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         return _records[t].bound;
     }
 
-    function getNumTokens()
-    external view
-    returns (uint256)
-    {
-        return _tokens.length;
-    }
-
-    function getCurrentTokens()
+    function getTokens()
     external view
     returns (address[] memory tokens)
     {
-        return _tokens;
-    }
-
-    function getFinalTokens()
-    external view
-    returns (address[] memory tokens)
-    {
-        require(_finalized, "1");
         return _tokens;
     }
 
@@ -181,22 +166,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     {
         require(_records[token].bound, "2");
         return _records[token].denorm;
-    }
-
-    function getTotalDenormalizedWeight()
-    external view
-    returns (uint256)
-    {
-        return _totalWeight;
-    }
-
-    function getNormalizedWeight(address token)
-    external view
-    returns (uint256)
-    {
-        require(_records[token].bound, "2");
-        uint256 denorm = _records[token].denorm;
-        return Num.bdiv(denorm, _totalWeight);
     }
 
     function getBalance(address token)
@@ -258,7 +227,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     * @dev This function is necessary to finalize pools using for proxy contracts in order to send pool shares to the caller
     * @param receiver The address that will receive the pool shares
     */
-    function finalize(address receiver)
+    function finalizeTo(address receiver)
     external
     {
         require(receiver != address(0), "35");
@@ -266,7 +235,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     }
 
     /**
-    * @notice Enables publicswap and finalizes the pool's tokens, price feeds, initial shares, balances and weights 
+    * @notice Enables publicswap and finalizes the pool's tokens, price feeds, initial shares, balances and weights
     */
     function finalize()
     external
@@ -427,7 +396,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
         Struct.TokenGlobal memory tokenInInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
-    
         (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
@@ -480,7 +448,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
         Struct.TokenGlobal memory tokenInInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
-    
+
         (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
@@ -495,20 +463,19 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
                 priceStatisticsLookbackInSec,
                 block.timestamp
             );
-        
             tokenAmountIn = Math.calcSingleInGivenPoolOutMMM(
-                            _totalSupply,
-                            tokenInInfo,
-                            remainingTokensInfo,
-                            swapParameters,
-                            gbmParameters,
-                            hpParameters
-                        );
+                _totalSupply,
+                tokenInInfo,
+                remainingTokensInfo,
+                swapParameters,
+                gbmParameters,
+                hpParameters
+            );
         }
 
         require(tokenAmountIn != 0, "5");
         require(tokenAmountIn <= maxAmountIn, "8");
-        
+
         tokenInInfo.info.balance += tokenAmountIn;
         _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
         _records[tokenIn].balance = tokenInInfo.info.balance;
@@ -550,14 +517,14 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
                 block.timestamp
             );
 
-        tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
-                            _totalSupply,
-                            tokenOutInfo,
-                            remainingTokensInfo,
-                            swapParameters,
-                            gbmParameters,
-                            hpParameters
-                        );
+            tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
+                _totalSupply,
+                tokenOutInfo,
+                remainingTokensInfo,
+                swapParameters,
+                gbmParameters,
+                hpParameters
+            );
         }
 
         require(tokenAmountOut >= minAmountOut, "9");
@@ -590,7 +557,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
         Struct.TokenGlobal memory tokenOutInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
-    
+
         (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
 
         {
@@ -606,16 +573,15 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
                 block.timestamp
             );
 
-        poolAmountIn = Math.calcPoolInGivenSingleOutMMM(
-                            _totalSupply,
-                            tokenOutInfo,
-                            remainingTokensInfo,
-                            swapParameters,
-                            gbmParameters,
-                            hpParameters
-                        );
+            poolAmountIn = Math.calcPoolInGivenSingleOutMMM(
+                _totalSupply,
+                tokenOutInfo,
+                remainingTokensInfo,
+                swapParameters,
+                gbmParameters,
+                hpParameters
+            );
         }
-
 
         require(poolAmountIn != 0, "5");
         require(poolAmountIn <= maxPoolAmountIn, "8");
@@ -631,7 +597,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         _pullPoolShare(msg.sender, poolAmountIn);
         _burnPoolShare(poolAmountIn - exitFee);
         _pushPoolShare(_factory, exitFee);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);        
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return poolAmountIn;
     }
@@ -703,7 +669,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_dynamicCoverageFeesZ <= Const.MAX_Z, "21");
         dynamicCoverageFeesZ = _dynamicCoverageFeesZ;
     }
 
@@ -715,7 +680,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
         require(_dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "22");
-        require(_dynamicCoverageFeesHorizon <= Const.MAX_HORIZON, "23");
         dynamicCoverageFeesHorizon = _dynamicCoverageFeesHorizon;
     }
 
@@ -739,7 +703,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
         require(_priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "26");
-        require(_priceStatisticsLookbackInSec <= Const.MAX_LOOKBACK_IN_SEC, "27");
         priceStatisticsLookbackInSec = _priceStatisticsLookbackInSec;
     }
 
@@ -755,28 +718,10 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         );
     }
 
-    function getTokenPriceDecimals(address token)
-    external view
-    returns (uint8)
-    {
-        require(_records[token].bound, "2");
-        return _getTokenPriceDecimals(_prices[token].oracle);
-    }
-
-    function getTokenOraclePrice(address token)
-    external view
-    returns (uint256)
-    {
-
-        require(_records[token].bound, "2");
-        return _getTokenCurrentPrice(_prices[token].oracle);
-    }
-
     function getTokenOracleInitialPrice(address token)
     external view
     returns (uint256)
     {
-
         require(_records[token].bound, "2");
         return _prices[token].initialPrice;
     }
@@ -785,44 +730,8 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     external view
     returns (address)
     {
-
         require(_records[token].bound, "2");
         return address(_prices[token].oracle);
-    }
-
-    function getDenormalizedWeightMMM(address token)
-    external view
-    returns (uint256)
-    {
-        require(_records[token].bound, "2");
-        return _getAdjustedTokenWeight(token);
-    }
-
-    function getTotalDenormalizedWeightMMM()
-    external view
-    returns (uint256)
-    {
-        return _getTotalDenormalizedWeightMMM();
-    }
-
-    function getNormalizedWeightMMM(address token)
-    external view
-    returns (uint256)
-    {
-        require(_records[token].bound, "2");
-        return Num.bdiv(_getAdjustedTokenWeight(token), _getTotalDenormalizedWeightMMM());
-    }
-
-    function _getTotalDenormalizedWeightMMM()
-    internal view
-    returns (uint256)
-    {
-        uint256 _totalWeightMMM;
-        for (uint256 i; i < _tokens.length;) {
-            _totalWeightMMM += _getAdjustedTokenWeight(_tokens[i]);
-            unchecked{++i;}
-        }
-        return _totalWeightMMM;
     }
 
     /**
@@ -948,42 +857,18 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
     }
 
-    function _getSpotPriceMMMWithTimestamp(address tokenIn, address tokenOut, uint256 swapFee, uint256 timestamp)
-    internal view
+    function getSpotPriceSansFee(address tokenIn, address tokenOut)
+    external view
     returns (uint256 spotPrice)
     {
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
-
-        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
-        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-        
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
-        Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-            priceStatisticsLookbackInRound,
-            priceStatisticsLookbackInSec,
-            timestamp
+        return Math.calcSpotPrice(
+            _records[tokenIn].balance,
+            _records[tokenIn].denorm,
+            _records[tokenOut].balance,
+            _records[tokenOut].denorm,
+            0
         );
-
-        return Math.calcSpotPriceMMM(
-            tokenGlobalIn, tokenGlobalOut,
-            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
-            swapFee, Const.FALLBACK_SPREAD, gbmParameters,
-            hpParameters
-        );
-    }
-
-    function getSpotPriceMMM(address tokenIn, address tokenOut)
-    external view
-    returns (uint256 spotPrice)
-    {
-        return _getSpotPriceMMMWithTimestamp(tokenIn, tokenOut, _swapFee, block.timestamp);
-    }
-
-    function getSpotPriceSansFeeMMM(address tokenIn, address tokenOut)
-    external view
-    returns (uint256 spotPrice)
-    {
-        return _getSpotPriceMMMWithTimestamp(tokenIn, tokenOut, 0, block.timestamp);
     }
 
     function swapExactAmountInMMM(
@@ -994,31 +879,40 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         uint256 maxPrice
     )
     external
-    returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
-    {
-        return _swapExactAmountInMMMWithTimestamp(
-            tokenIn,
-            tokenAmountIn,
-            tokenOut,
-            minAmountOut,
-            maxPrice,
-            block.timestamp
-        );
-    }
-
-    function _swapExactAmountInMMMWithTimestamp(
-        address tokenIn,
-        uint256 tokenAmountIn,
-        address tokenOut,
-        uint256 minAmountOut,
-        uint256 maxPrice,
-        uint256 timestamp
-    )
-    internal
     _logs_
     _lock_
     _whenNotPaused_
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
+    {
+        Struct.SwapResult memory swapResult;
+        (swapResult, spotPriceAfter) = getAmountOutGivenInMMM(
+            tokenIn,
+            tokenAmountIn,
+            tokenOut,
+            minAmountOut,
+            maxPrice
+        );
+
+        _records[address(tokenIn)].balance += tokenAmountIn;
+        _records[address(tokenOut)].balance -= swapResult.amount;
+
+        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
+
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+        _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
+
+        return (tokenAmountOut = swapResult.amount, spotPriceAfter);
+    }
+
+    function getAmountOutGivenInMMM(
+        address tokenIn,
+        uint256 tokenAmountIn,
+        address tokenOut,
+        uint256 minAmountOut,
+        uint256 maxPrice
+    )
+    public view
+    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
 
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
@@ -1037,21 +931,18 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
         require(spotPriceBefore <= maxPrice, "11");
 
-        Struct.SwapResult memory swapResult = _getAmountOutGivenInMMMWithTimestamp(
+        swapResult = _getAmountOutGivenInMMMWithTimestamp(
             tokenGlobalIn,
             tokenGlobalOut,
             tokenAmountIn,
-            timestamp
+            block.timestamp
         );
         require(swapResult.amount >= minAmountOut, "9");
 
-        _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + tokenAmountIn;
-        _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - swapResult.amount;
-
         spotPriceAfter = Math.calcSpotPrice(
-            _records[address(tokenIn)].balance,
+            tokenGlobalIn.info.balance + tokenAmountIn,
             tokenGlobalIn.info.weight,
-            _records[address(tokenOut)].balance,
+            tokenGlobalOut.info.balance - swapResult.amount,
             tokenGlobalOut.info.weight,
             _swapFee
         );
@@ -1066,34 +957,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
             "44"
         );
 
-        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
-
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
-
-        return (tokenAmountOut = swapResult.amount, spotPriceAfter);
-    }
-
-    function getAmountOutGivenInMMM(
-        address tokenIn,
-        uint256 tokenAmountIn,
-        address tokenOut
-    )
-    external view
-    returns (uint256 tokenAmountOut)
-    {
-
-        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
-        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-
-        Struct.SwapResult memory swapResult = _getAmountOutGivenInMMMWithTimestamp(
-            tokenGlobalIn,
-            tokenGlobalOut,
-            tokenAmountIn,
-            block.timestamp
-        );
-
-        return tokenAmountOut = swapResult.amount;
+        return (swapResult, spotPriceAfter);
     }
 
     function _getAmountOutGivenInMMMWithTimestamp(
@@ -1137,31 +1001,41 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         uint256 maxPrice
     )
     external
-    returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
-    {
-        return _swapExactAmountOutMMMWithTimestamp(
-            tokenIn,
-            maxAmountIn,
-            tokenOut,
-            tokenAmountOut,
-            maxPrice,
-            block.timestamp
-        );
-    }
-
-    function _swapExactAmountOutMMMWithTimestamp(
-        address tokenIn,
-        uint256 maxAmountIn,
-        address tokenOut,
-        uint256 tokenAmountOut,
-        uint256 maxPrice,
-        uint256 timestamp
-    )
-    internal
     _logs_
     _lock_
     _whenNotPaused_
     returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
+    {
+
+        Struct.SwapResult memory swapResult;
+        (swapResult, spotPriceAfter)= getAmountInGivenOutMMM(
+            tokenIn,
+            maxAmountIn,
+            tokenOut,
+            tokenAmountOut,
+            maxPrice
+        );
+
+        _records[address(tokenIn)].balance += swapResult.amount;
+        _records[address(tokenOut)].balance -= tokenAmountOut;
+
+        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
+
+        _pullUnderlying(tokenIn, msg.sender, swapResult.amount);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+
+        return (tokenAmountIn = swapResult.amount, spotPriceAfter);
+    }
+
+    function getAmountInGivenOutMMM(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    )
+    public view
+    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
 
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
@@ -1180,22 +1054,19 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
         require(spotPriceBefore <= maxPrice, "11");
 
-        Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
+        swapResult = _getAmountInGivenOutMMMWithTimestamp(
             tokenGlobalIn,
             tokenGlobalOut,
             tokenAmountOut,
-            timestamp
+            block.timestamp
         );
 
         require(swapResult.amount <= maxAmountIn, "8");
 
-        _records[address(tokenIn)].balance = tokenGlobalIn.info.balance + swapResult.amount;
-        _records[address(tokenOut)].balance = tokenGlobalOut.info.balance - tokenAmountOut;
-
         spotPriceAfter = Math.calcSpotPrice(
-            _records[address(tokenIn)].balance,
+            tokenGlobalIn.info.balance + swapResult.amount,
             tokenGlobalIn.info.weight,
-            _records[address(tokenOut)].balance,
+            tokenGlobalOut.info.balance - tokenAmountOut,
             tokenGlobalOut.info.weight,
             _swapFee
         );
@@ -1210,34 +1081,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
             "44"
         );
 
-        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
-
-        _pullUnderlying(tokenIn, msg.sender, swapResult.amount);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        return (tokenAmountIn = swapResult.amount, spotPriceAfter);
-    }
-
-    function getAmountInGivenOutMMM(
-        address tokenIn,
-        address tokenOut,
-        uint256 tokenAmountOut
-    )
-    public view
-    returns (uint256 tokenAmountIn)
-    {
-
-        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
-        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
-
-        Struct.SwapResult memory swapResult = _getAmountInGivenOutMMMWithTimestamp(
-            tokenGlobalIn,
-            tokenGlobalOut,
-            tokenAmountOut,
-            block.timestamp
-        );
-
-        return tokenAmountIn = swapResult.amount;
+        return (swapResult, spotPriceAfter);
     }
 
     function _getAmountInGivenOutMMMWithTimestamp(
@@ -1284,18 +1128,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         return Num.bdiv(
             latestPrice,
             initialPrice
-        );
-    }
-
-    function _getAdjustedTokenWeight(address token)
-    internal view returns (uint256) {
-        // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
-        return Num.bmul(
-            _records[token].denorm,
-            _getTokenPerformance(
-                _prices[token].initialPrice,
-                _getTokenCurrentPrice(_prices[token].oracle)
-            )
         );
     }
 
@@ -1346,10 +1178,6 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         return Num.abs(price);  // we consider the token price to be > 0
     }
 
-    function _getTokenPriceDecimals(IAggregatorV3 priceFeed) internal view returns (uint8) {
-        return priceFeed.decimals();
-    }
-    
     /**
     * @notice Returns all the binded token's global information (token record + latest round info)  
     * @param swappedToken the address of the swapped token 

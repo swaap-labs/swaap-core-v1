@@ -276,7 +276,7 @@ contract('Pool', async (accounts) => {
             const pAiAfterExitFee = pAi * (1 - exitFee);
             
             // Necessary for JIT protection block waiting time
-            advanceBlock(2);
+            await advanceBlock(3);
             await pool.exitPool(toWei(String(pAi)), [toWei('0'), toWei('0')]);
 
             // Update balance states
@@ -366,10 +366,11 @@ contract('Pool', async (accounts) => {
             const poolRatioAfterExitFee = 0.995;
             const pAi = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
 
+            await advanceBlock(3);
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
 
             // Necessary for JIT protection block waiting time
-            advanceBlock(2);
+            await advanceBlock(3);
             await pool.exitswapPoolAmountInMMM(WETH, toWei(String(pAi)), toWei('0'));
 
             // Update balance states
@@ -402,7 +403,7 @@ contract('Pool', async (accounts) => {
             const poolRatioAfterExitFee = 0.995;
             const tokenRatioBeforeSwapFee = poolRatioAfterExitFee ** (1 / daiNorm);
             const tAo = currentDaiBalance * (1 - tokenRatioBeforeSwapFee) * (1 - swapFee * (1 - daiNorm));
-
+            await advanceBlock(3);
             const pAi = await pool.exitswapExternAmountOutMMM.call(DAI, toWei(String(tAo)), MAX);
             await pool.exitswapExternAmountOutMMM(DAI, toWei(String(tAo)), MAX);
 
@@ -476,7 +477,7 @@ contract('Pool', async (accounts) => {
             const pAi = 0.01;
 
             // Necessary for JIT protection block waiting time
-            advanceBlock(2);
+            await advanceBlock(3);
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
             const calculatedPAi = await pool.exitswapExternAmountOutMMM.call(WETH, String(tAo), MAX);
 

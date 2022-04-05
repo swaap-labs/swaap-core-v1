@@ -104,6 +104,8 @@ contract('Factory', async (accounts) => {
             await pool.bindMMM(DAI, toWei('200'), toWei('5'), daiOracle.address);
 
             await pool.finalize();
+			let adminBalance = await pool.balanceOf(admin);
+			assert.equal(fromWei(adminBalance), '100');
 
             await pool.joinPool(toWei('10'), [MAX, MAX], { from: nonAdmin });
             // By default with truffle each transaction is mined on a different block so we only need to skip 2 block for JIT
@@ -112,7 +114,7 @@ contract('Factory', async (accounts) => {
             // Exit fee = 0 so this wont do anything
             await factory.collect(POOL);
 
-            const adminBalance = await pool.balanceOf(admin);
+            adminBalance = await pool.balanceOf(admin);
             assert.equal(fromWei(adminBalance), '100');
         });
 

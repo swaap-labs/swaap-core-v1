@@ -102,8 +102,11 @@ contract('Pool', async (accounts) => {
             await pool.bindMMM(GGG, toWei('40'), toWei('6'), gggOracleAddress);
             await pool.bindMMM(HHH, toWei('70'), toWei('2.3'), hhhOracleAddress);
 
-            const totalDernomWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(33.79, fromWei(totalDernomWeight));
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+
+            assert.equal(33.79, totalDenormWeight);
         });
 
         it('Fails binding more than 8 tokens', async () => {
@@ -121,8 +124,11 @@ contract('Pool', async (accounts) => {
             const factoryBalance = await hhh.balanceOf(FACTORY);
             assert.equal(fromWei(factoryBalance), 0);
 
-            const totalDernomWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(33.59, fromWei(totalDernomWeight));
+            const tokens = await pool.getTokens();
+            const weights = await Promise.all(tokens.map(t => pool.getDenormalizedWeight(t)));
+            const totalDenormWeight = weights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0);
+
+            assert.equal(33.589999999999996, totalDenormWeight);
         });
 
         it('Fails gulp on unbound token', async () => {
