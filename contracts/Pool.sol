@@ -374,7 +374,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
             unchecked{++i;}
         }
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(owner, poolAmountOut);
+        _pushPoolShareAndBlock(owner, poolAmountOut);
     }
 
     /**
@@ -462,7 +462,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
+        _pushPoolShareAndBlock(msg.sender, poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         return poolAmountOut;
@@ -516,7 +516,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
+        _pushPoolShareAndBlock(msg.sender, poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         return tokenAmountIn;
@@ -658,12 +658,18 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         _pull(from, amount);
     }
 
-    function _pushPoolShare(address to, uint256 amount)
+    function _pushPoolShareAndBlock(address to, uint256 amount)
     internal
     {
         unchecked {
             _blockWaitingTime[to] = block.number + Const.BLOCK_WAITING_TIME;
         } 
+        _push(to, amount);
+    }
+
+    function _pushPoolShare(address to, uint256 amount)
+    internal
+    {
         _push(to, amount);
     }
 
