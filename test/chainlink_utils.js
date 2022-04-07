@@ -3,6 +3,7 @@ const truffleAssert = require('truffle-assertions');
 const { calcRelativeDiff } = require('../lib/calc_comparisons');
 
 const TChainlinkUtils = artifacts.require('TChainlinkUtils');
+const TOracle = artifacts.require('TOracle');
 
 const errorDelta = 10 ** -8;
 
@@ -21,34 +22,33 @@ contract('Chainlink Utils', async (accounts) => {
 
     let chainlinkUtils;
 
+    const roundId = 100
+
     before(async () => {
 
 		chainlinkUtils = await TChainlinkUtils.deployed();
 
     });
 
-	async function assertGetPreviousPrice(tsIn, tsOut, expected) {
+	async function assertGetMaxRelativePriceInLastBlock(
+			inPrices, inTimestamps, inDecimals,
+			outPrices, outTimestamps, outDecimals,
+			expectedIn, expectedOut
+		) {
 
-		const newPriceIn = 200
-		const priceIn = 100
-		const decimalsIn = 2
+		inOracle = await TOracle.new(inPrices, inTimestamps, inDecimals, roundId);
+		outOracle = await TOracle.new(outPrices, outTimestamps, outDecimals, roundId);
 
-		const newPriceOut = 500
-		const priceOut = 10000
-		const decimalsOut = 3
+		const roundDataIn = await inOracle.latestRoundData();
+		const roundDataOut = await outOracle.latestRoundData();
 
-		const actual = await chainlinkUtils.getPreviousPrice(
-			toWei(priceIn.toString()),
-			toWei(tsIn.toString()),
-			decimalsIn,
-			toWei(newPriceIn.toString()),
-			toWei(priceOut.toString()),
-			toWei(tsOut.toString()),
-			decimalsOut,
-			toWei(newPriceOut.toString()),
+		const actual = await chainlinkUtils.getMaxRelativePriceInLastBlock(
+			inOracle.address,
+			outOracle.address,
 		)
 
 		// Checking
+		expected = (expectedOut / 10**outDecimals) / (expectedIn / 10**inDecimals)
 		const relDif = calcRelativeDiff(expected, Decimal(fromWei(actual)));
 		if (verbose) {
 			console.log('Previous Price');
@@ -62,15 +62,39 @@ contract('Chainlink Utils', async (accounts) => {
     describe('Chainlink Utils', () => {
 
 		[
-			[10, 9, 500 / 100 / 10], [9, 10, 10000 / 200 / 10], [10, 10, 10000 / 100 / 10]
+			[[3, 2, 1], [0, 1, 1], 0, [10, 20, 40], [0, 2, 2], 1, 2, 20],
+			[[3, 2, 1], [0, 1, 1], 0, [10, 20, 40], [1, 2, 2], 1, 2, 10],
+			[[3, 2, 1], [1, 1, 1], 0, [10, 20, 40], [0, 2, 2], 1, 3, 20],
+			[[3, 2, 1], [1, 1, 1], 0, [10, 20, 40], [1, 2, 2], 1, 3, 10],
+			[[3, 2, 1], [0, 0, 1], 0, [10, 20, 40], [0, 0, 2], 1, 1, 40],
+			[[3, 2, 1], [0, 0, 1], 0, [15, 20, 40], [0, 1, 2], 1, 1, 20],
+			[[3, 2, 1], [0, 1, 1], 0, [15, 20, 40], [0, 1, 2], 1, 2, 20],
+
+			[[1, 2, 3], [0, 1, 1], 0, [10, 20, 40], [0, 0, 2], 1, 1, 40],
+			[[1, 2, 3], [0, 1, 1], 0, [10, 20, 40], [0, 1, 2], 1, 1, 20],
+			[[1, 2, 3], [0, 1, 1], 0, [40, 20, 10], [0, 0, 2], 1, 1, 40],
+
+			[[10, 20, 1], [0, 1, 1], 0, [1, 1, 1], [0, 0, 2], 1, 10, 1],
+			[[10, 20, 1], [1, 1, 1], 0, [1, 1, 1], [0, 0, 2], 1, 10, 1],
+
+			[[20, 10, 1], [0, 1, 1], 0, [1, 1, 1], [0, 0, 2], 1, 10, 1],
+			[[20, 10, 30], [1, 1, 1], 0, [1, 1, 1], [0, 0, 2], 1, 20, 1],
 		].forEach(async t => {
 
-			const [tsIn, tsOut, expected] = t
+			const [
+				inPrices, inTimestamps, inDecimals,
+            	outPrices, outTimestamps, outDecimals,
+            	expectedIn, expectedOut
+            ] = t
 
 			it(
-				`getPreviousPrice ${tsIn} ${tsOut}`,
+				`getRecentPriceLowerBound expectedIn=${expectedIn} expectedOut=${expectedOut} `,
 				async () => {
-					await assertGetPreviousPrice(tsIn, tsOut, expected)
+					await assertGetMaxRelativePriceInLastBlock(
+						inPrices, inTimestamps, inDecimals,
+						outPrices, outTimestamps, outDecimals,
+						expectedIn, expectedOut
+					)
 				}
 			)
 		})

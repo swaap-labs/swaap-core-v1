@@ -1155,13 +1155,20 @@ library Math {
             // no additional fees
             return alpha = baseFee;
         }
-        uint256 previousPrice = ChainlinkUtils.getPreviousPrice(
-            tokenGlobalIn.latestRound, tokenGlobalOut.latestRound
+        uint256 recentPriceUpperBound = ChainlinkUtils.getMaxRelativePriceInLastBlock(
+            tokenGlobalIn.latestRound.oracle,
+            tokenGlobalIn.latestRound.roundId,
+            tokenGlobalIn.latestRound.price,
+            tokenGlobalIn.latestRound.timestamp,
+            tokenGlobalOut.latestRound.oracle,
+            tokenGlobalOut.latestRound.roundId,
+            tokenGlobalOut.latestRound.price,
+            tokenGlobalOut.latestRound.timestamp
         );
-        if (previousPrice == 0) {
+        if (recentPriceUpperBound == 0) {
             // we were not able to retrieve the previous price
             return alpha = fallbackSpread;
-        } else if (previousPrice > relativePrice) {
+        } else if (recentPriceUpperBound <= relativePrice) {
             // no additional fees
             return alpha = baseFee;
         }

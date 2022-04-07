@@ -32,13 +32,13 @@ library ChainlinkUtils {
     */
     function getRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
         try priceFeed.getRoundData(_roundId) returns (
-        uint80 ,
-        int256 _price,
-        uint256 ,
-        uint256 _timestamp,
-        uint80
+            uint80 ,
+            int256 _price,
+            uint256 ,
+            uint256 _timestamp,
+            uint80
         ) {
-        return (_price, _timestamp);
+            return (_price, _timestamp);
         } catch {}
         return (0, 0);
     }
@@ -87,58 +87,64 @@ library ChainlinkUtils {
     }
 
     /**
-    * @notice Computes the previous price of token 2 in terms of token 1
-    * @dev The previous price corresponds to the price at the lastRoundId - 1
-    * @param latestRound_1 The latest oracle data for tokenIn
-    * @param latestRound_2 The latest oracle data for tokenIn
-    * @return The previous price of token 2 divded by the previous price of token 1
+    * @notice Computes the previous price of tokenIn in terms of tokenOut 's upper bound
+    * @param oracleAddress_1 The token_1 oracle's address
+    * @param roundId_1 The latest token_1 oracle update's roundId
+    * @param price_1 The latest token_1 oracle update's price
+    * @param timestamp_1 The latest token_1 oracle update's timestamp
+    * @param oracleAddress_2 The token_2 oracle's address
+    * @param roundId_2 The latest token_2 oracle update's roundId
+    * @param price_2 The latest token_2 oracle update's price
+    * @param timestamp_2 The latest token_2 oracle update's timestamp
+    * @return The ratio of token 2 and token 1 values if well defined, else 0
     */
-    function getPreviousPrice(
-        Struct.LatestRound memory latestRound_1,
-        Struct.LatestRound memory latestRound_2
+    function getMaxRelativePriceInLastBlock(
+        address oracleAddress_1,
+        uint80 roundId_1,
+        int256 price_1,
+        uint256 timestamp_1,
+        address oracleAddress_2,
+        uint80 roundId_2,
+        int256 price_2,
+        uint256 timestamp_2
     ) internal view returns (uint256) {
-
-        IAggregatorV3 oracleIn = IAggregatorV3(latestRound_1.oracle);
-        (int256 priceIn, uint256 tsIn) = ChainlinkUtils.getRoundData(
-            oracleIn, latestRound_1.roundId - 1
-        );
-        if (priceIn == 0) {
-            return 0;
+        IAggregatorV3 oracle_1 = IAggregatorV3(oracleAddress_1);
+        {
+            int256 temp_price_1 = price_1;
+            while (timestamp_1 == block.timestamp) {
+                --roundId_1;
+                (temp_price_1, timestamp_1) = ChainlinkUtils.getRoundData(
+                    oracle_1, roundId_1
+                );
+                if (temp_price_1 == 0) {
+                    return 0;
+                }
+                if (temp_price_1 < price_1) {
+                    price_1 = temp_price_1;
+                }
+            }
         }
-        IAggregatorV3 oracleOut = IAggregatorV3(latestRound_2.oracle);
-        (int256 priceOut, uint256 tsOut)  = ChainlinkUtils.getRoundData(
-            oracleOut, latestRound_2.roundId - 1
-        );
-        if (priceOut == 0) {
-            return 0;
+        IAggregatorV3 oracle_2 = IAggregatorV3(oracleAddress_2);
+        {
+            int256 temp_price_2 = price_2;
+            while (timestamp_2 == block.timestamp) {
+                --roundId_2;
+                (temp_price_2, timestamp_2) = ChainlinkUtils.getRoundData(
+                    oracle_2, roundId_2
+                );
+                if (temp_price_2 == 0) {
+                    return 0;
+                }
+                if (temp_price_2 > price_2) {
+                    price_2 = temp_price_2;
+                }
+            }
         }
-        return _getPreviousPrice(
-            priceIn, tsIn, oracleIn.decimals(), latestRound_1.price,
-            priceOut, tsOut, oracleOut.decimals(), latestRound_2.price
+
+        return _getTokenRelativePrice(
+            price_1, oracle_1.decimals(),
+            price_2, oracle_2.decimals()
         );
-
-    }
-
-    function _getPreviousPrice(
-        int256 priceIn, uint256 tsIn, uint8 decimalsIn, int256 newPriceIn,
-        int256 priceOut, uint256 tsOut, uint8 decimalsOut, int256 newPriceOut
-    ) internal pure returns (uint256) {
-        if (tsIn > tsOut) {
-            return _getTokenRelativePrice(
-                priceIn, decimalsIn,
-                newPriceOut, decimalsOut
-            );
-        } else if (tsIn < tsOut) {
-            return _getTokenRelativePrice(
-                newPriceIn, decimalsIn,
-                priceOut, decimalsOut
-            );
-        } else {
-            return _getTokenRelativePrice(
-                priceIn, decimalsIn,
-                priceOut, decimalsOut
-            );
-        }
     }
 
 }

@@ -18,13 +18,23 @@ import "../ChainlinkUtils.sol";
 
 library TChainlinkUtils {
 
-    function getPreviousPrice(
-        int256 priceIn, uint256 tsIn, uint8 decimalsIn, int256 newPriceIn,
-        int256 priceOut, uint256 tsOut, uint8 decimalsOut, int256 newPriceOut
-    ) public pure returns (uint256) {
-        return ChainlinkUtils._getPreviousPrice(
-            priceIn, tsIn, decimalsIn, newPriceIn,
-            priceOut, tsOut, decimalsOut, newPriceOut
+    function getMaxRelativePriceInLastBlock(
+        address oracleAddress_1,
+        address oracleAddress_2
+    ) public view returns (uint256) {
+
+        (uint80 roundId_1, int256 price_1, , uint256 timestamp_1, ) = IAggregatorV3(oracleAddress_1).latestRoundData();
+        (uint80 roundId_2, int256 price_2, , uint256 timestamp_2, ) = IAggregatorV3(oracleAddress_2).latestRoundData();
+
+        return ChainlinkUtils.getMaxRelativePriceInLastBlock(
+            oracleAddress_1,
+            roundId_1,
+            price_1,
+            timestamp_1,
+            oracleAddress_2,
+            roundId_2,
+            price_2,
+            timestamp_2
         );
     }
 
