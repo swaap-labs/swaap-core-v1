@@ -122,6 +122,9 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     uint256 private dynamicCoverageFeesHorizon;
     uint256 private priceStatisticsLookbackInSec;
 
+    // nonce for permitJoinPool
+    mapping(address => uint256) private _nonces;
+
     constructor() {
         _controller = msg.sender;
         _factory = msg.sender;
@@ -188,6 +191,13 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
     returns (address)
     {
         return _controller;
+    }
+
+    function getNonce(address owner)
+    external view
+    returns (uint256)
+    {
+        return _nonces[owner];
     }
 
     function setSwapFee(uint256 swapFee)

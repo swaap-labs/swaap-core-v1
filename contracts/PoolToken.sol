@@ -21,7 +21,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract PoolToken is IERC20 {
 
     mapping(address => uint256)                   internal _blockWaitingTime;
-    mapping(address => uint256)                   internal _nonces;
     mapping(address => uint256)                   internal _balance;
     mapping(address => mapping(address=>uint256)) internal _allowance;
     uint256 internal _totalSupply;
