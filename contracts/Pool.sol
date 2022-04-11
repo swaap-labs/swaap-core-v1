@@ -234,27 +234,9 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
 
     /**
     * @notice Enables publicswap and finalizes the pool's tokens, price feeds, initial shares, balances and weights
-    * @dev This function is necessary to finalize pools using for proxy contracts in order to send pool shares to the caller
-    * @param receiver The address that will receive the pool shares
-    */
-    function finalizeTo(address receiver)
-    external
-    {
-        require(receiver != address(0), "35");
-        _finalize(receiver);
-    }
-
-    /**
-    * @notice Enables publicswap and finalizes the pool's tokens, price feeds, initial shares, balances and weights
     */
     function finalize()
     external
-    {
-        _finalize(msg.sender);
-    }
-
-    function _finalize(address receiver)
-    internal
     _logs_
     _lock_
     {
@@ -266,7 +248,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
         _publicSwap = true;
 
         _mintPoolShare(Const.INIT_POOL_SUPPLY);
-        _pushPoolShare(receiver, Const.INIT_POOL_SUPPLY);
+        _pushPoolShare(msg.sender, Const.INIT_POOL_SUPPLY);
     }
 
     // Absorb any tokens that have been sent to this contract into the pool
