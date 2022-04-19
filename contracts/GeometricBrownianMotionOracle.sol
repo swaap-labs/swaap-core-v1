@@ -30,13 +30,36 @@ import "./structs/Struct.sol";
 */
 library GeometricBrownianMotionOracle {
 
+    /**
+    * @notice Gets asset-pair approximate historical return's mean and variance
+    * @param oracleIn The address of tokenIn's oracle
+    * @param oracleOut The address of tokenOut's oracle
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return gbmEstimation The asset-pair historical return's mean and variance
+    */
+    function getParametersEstimation(
+        address oracleIn,
+        address oracleOut,
+        Struct.HistoricalPricesParameters memory hpParameters
+    )
+    external view returns (Struct.GBMEstimation memory gbmEstimation) {
+        Struct.LatestRound memory latestRoundIn = getLatestRound(oracleIn);
+        Struct.LatestRound memory latestRoundOut = getLatestRound(oracleOut);
+        return (
+            getParametersEstimation(
+                latestRoundIn,
+                latestRoundOut,
+                hpParameters
+            )
+        );
+    }
 
     /**
-    * @notice Gets asset-pair approximate historical returns mean and variance
+    * @notice Gets asset-pair approximate historical return's mean and variance
     * @param latestRoundIn The round-to-start-from's data including its ID of tokenIn
     * @param latestRoundOut The round-to-start-from's data including its ID of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
-    * @return gbmEstimation The asset-pair historical returns mean and variance
+    * @return gbmEstimation The asset-pair historical return's mean and variance
     */
     function getParametersEstimation(
         Struct.LatestRound memory latestRoundIn,
@@ -75,11 +98,11 @@ library GeometricBrownianMotionOracle {
     }
 
     /**
-    * @notice Gets asset-pair historical data returns mean and variance
+    * @notice Gets asset-pair historical data return's mean and variance
     * @param hpDataIn Historical prices data of tokenIn
     * @param hpDataOut Historical prices data of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
-    * @return gbmEstimation The asset-pair historical returns mean and variance
+    * @return gbmEstimation The asset-pair historical return's mean and variance
     */
     function _getParametersEstimation(
         bool noMoreDataPoints,
@@ -178,8 +201,8 @@ library GeometricBrownianMotionOracle {
     * @notice Gets asset-pair historical mean/variance from timestamped data
     * @param values The historical values
     * @param timestamps The corresponding time deltas, in seconds
-    * @return The asset-pair historical returns mean
-    * @return The asset-pair historical returns variance
+    * @return The asset-pair historical return's mean
+    * @return The asset-pair historical return's variance
     */
     function getStatistics(int256[] memory values, uint256[] memory timestamps)
     internal pure returns (int256, uint256) {
@@ -402,4 +425,15 @@ library GeometricBrownianMotionOracle {
         } catch {}
         return (0, 0);
     }
+
+    function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
+        (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+         return Struct.LatestRound(
+            oracle,
+            latestRoundId,
+            latestPrice,
+            latestTimestamp
+        );
+    }
+
 }
