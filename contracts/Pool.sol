@@ -285,12 +285,10 @@ contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
             Const.FUNCTION_HASH,
             owner,
             poolAmountOut,
-            maxAmountsIn,
+            keccak256(abi.encodePacked(maxAmountsIn)),
             deadline,
             _nonces[owner]
         )));
-
-        digest = ECDSA.toEthSignedMessageHash(digest);
 
         address signer = ECDSA.recover(digest, signature);
         require(signer == owner, "7");
