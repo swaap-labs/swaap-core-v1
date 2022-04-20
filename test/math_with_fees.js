@@ -5,6 +5,9 @@ const {
     calcInGivenOut,
     calcRelativeDiff,
 } = require('../lib/calc_comparisons');
+const {
+    advanceBlock
+} = require('../lib/time');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');
@@ -14,9 +17,6 @@ const swapFee = 10 ** -3; // 0.001;
 const exitFee = 0;
 const verbose = process.env.VERBOSE;
 const TConstantOracle = artifacts.require('TConstantOracle');
-const {
-    advanceBlock
-} = require('../lib/time');
 
 contract('Pool', async (accounts) => {
 
@@ -274,7 +274,7 @@ contract('Pool', async (accounts) => {
             // so that the balances of all tokens will go back exactly to what they were before joinPool()
             const pAi = 1 / (1 - exitFee);
             const pAiAfterExitFee = pAi * (1 - exitFee);
-            
+
             // Necessary for JIT protection block waiting time
             await advanceBlock(3);
             await pool.exitPool(toWei(String(pAi)), [toWei('0'), toWei('0')]);

@@ -7,6 +7,8 @@ const {
 		calcAdaptiveFeeGivenInAndOut, getOutTargetGivenIn
 	} = require('../lib/mmm');
 
+const { getInAmountAtPrice } = require('../lib/mmm');
+
 const TMathMMM = artifacts.require('TMathMMM');
 
 const errorDelta = 10 ** -8;

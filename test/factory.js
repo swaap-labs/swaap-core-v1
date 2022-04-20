@@ -3,6 +3,7 @@ const Factory = artifacts.require('Factory');
 const TToken = artifacts.require('TToken');
 const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
+
 const {
     advanceBlock,
     advanceTimeAndBlock
@@ -108,8 +109,9 @@ contract('Factory', async (accounts) => {
 			assert.equal(fromWei(adminBalance), '100');
 
             await pool.joinPool(toWei('10'), [MAX, MAX], { from: nonAdmin });
-            // By default with truffle each transaction is mined on a different block so we only need to skip 2 block for JIT
-            await advanceBlock(2);
+
+            await advanceBlock(3);
+
             await pool.exitPool(toWei('10'), [toWei('0'), toWei('0')], { from: nonAdmin });
             // Exit fee = 0 so this wont do anything
             await factory.collect(POOL);

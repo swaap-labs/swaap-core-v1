@@ -23,7 +23,8 @@ contract('Pool', async (accounts) => {
 
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
-    const errorDelta = 10 ** -6;
+    const errorDelta = 10 ** -5;
+    const spreadErrorDelta = 5 * (10 ** -4);
     const MAX = web3.utils.toTwosComplement(-1);
 
     const z = 1;
@@ -296,7 +297,7 @@ contract('Pool', async (accounts) => {
             )
 
             const relDif = calcRelativeDiff(expectedPriceSansFee, parseFloat(fromWei(price)));
-            assert.isAtMost(relDif.toNumber(), errorDelta);
+            assert.isAtMost(relDif.toNumber(), spreadErrorDelta);
 
         });
 
@@ -374,7 +375,7 @@ contract('Pool', async (accounts) => {
             }
 
             assert.isAtMost(relDifAmount.toNumber(), errorDelta);
-            assert.isAtMost(relDifSpread.toNumber(), errorDelta);
+            assert.isAtMost(relDifSpread.toNumber(), spreadErrorDelta);
 
             const userDaiBalance = await dai.balanceOf(user2);
             assert.equal(fromWei(userDaiBalance), Number(fromWei(log.args[4])));
@@ -458,7 +459,7 @@ contract('Pool', async (accounts) => {
             }
 
             assert.isAtMost(relDifAmount.toNumber(), errorDelta);
-            assert.isAtMost(relDifSpread.toNumber(), errorDelta);
+            assert.isAtMost(relDifSpread.toNumber(), spreadErrorDelta);
 
             const wbtcPrice = await pool.getSpotPriceSansFee(WETH, WBTC);
             const wbtcPriceSansFeeCheck = ((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5);
@@ -538,7 +539,7 @@ contract('Pool', async (accounts) => {
             }
 
             assert.isAtMost(relDifAmount.toNumber(), errorDelta);
-            assert.isAtMost(relDifSpread.toNumber(), errorDelta);
+            assert.isAtMost(relDifSpread.toNumber(), spreadErrorDelta);
 
             const wbtcPrice = await pool.getSpotPriceSansFee(WETH, WBTC);
             const wbtcPriceSansFeeCheck = ((parseFloat(fromWei(wethBalance)) - expectedAmount)  / 5) / ((parseFloat(fromWei(wbtcBalance)) + amount) / 5);

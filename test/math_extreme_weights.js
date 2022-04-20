@@ -235,7 +235,7 @@ contract('Pool', async (accounts) => {
             const poolAmountInAfterExitFee = Decimal(poolAmountIn).mul(Decimal(1).sub(exitFee));
 
             // Necessary for JIT protection block waiting time
-            advanceBlock(2);
+            await advanceBlock(3);
             await pool.exitPool(toWei(String(poolAmountIn)), [toWei('0'), toWei('0')]);
 
             // Update balance states

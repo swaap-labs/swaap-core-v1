@@ -14,7 +14,8 @@ const TWETHOracle = artifacts.require('TWETHOracle');
 const TWBTCOracle = artifacts.require('TWBTCOracle');
 const TDAIOracle = artifacts.require('TDAIOracle');
 
-const errorDelta = 10 ** -6;
+const errorDelta = 10 ** -8;
+const varianceErrorDelta = 2 * 10 ** -6;
 const negligibleValue = 10 ** -25;
 
 const verbose = process.env.VERBOSE;
@@ -137,7 +138,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 			console.log(`relDif  : ${relDifVariance}`);
 		}
 		if (actualVariance > negligibleValue) {
-			assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+			assert.isAtMost(relDifVariance.toNumber(), varianceErrorDelta);
 		}
 
 		// debug only
@@ -346,7 +347,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 					console.log(`relDif  : ${relDifVariance}`);
 				}
 				if (actualVariance > negligibleValue) {
-					assert.isAtMost(relDifVariance.toNumber(), errorDelta);
+					assert.isAtMost(relDifVariance.toNumber(), varianceErrorDelta);
 				}
 
 			});
