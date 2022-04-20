@@ -39,7 +39,7 @@ contract PoolToken is IERC20 {
 
     function _move(address src, address dst, uint256 amt) internal {
         require(dst != address(0), "35");
-        require(_blockWaitingTime[src] < block.number, "17");
+        require(_blockWaitingTime[src] <= block.number, "17");
         _balance[src] = _balance[src] - amt;
         _balance[dst] = _balance[dst] + amt;
         emit Transfer(src, dst, amt);

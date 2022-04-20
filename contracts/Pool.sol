@@ -28,7 +28,8 @@ import "./interfaces/IPausedFactory.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-contract Pool is PoolToken, EIP712("Swaap Pool Token", "1.0.0") {
+
+contract Pool is PoolToken, EIP712("Swaap Pool", "1.0.0") {
 
     using SafeERC20 for IERC20; 
 

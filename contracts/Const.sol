@@ -58,6 +58,7 @@ library Const {
     uint256 public constant FALLBACK_SPREAD       = 3 * BONE / 1000;
 
     bytes32 public constant FUNCTION_HASH = keccak256("_joinPool(address owner,uint256 poolAmountOut,uint256[] maxAmountsIn,uint256 deadline,uint256 nonce)");
-    uint256 public constant BLOCK_WAITING_TIME = 2;
+
+    uint256 public constant BLOCK_WAITING_TIME = 3;
 
 }
