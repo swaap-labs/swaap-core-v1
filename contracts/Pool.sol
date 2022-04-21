@@ -365,14 +365,12 @@ contract Pool is PoolToken {
 
     }
 
-    function joinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
-        external
-        _logs_
-        _lock_
-        _whenNotPaused_
-        returns (uint poolAmountOut)
+    function getJoinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn)
+    public
+    view
+    returns (uint256 poolAmountOut)
+    {
 
-    {        
         require(_finalized, "1");
         require(_records[tokenIn].bound, "2");
 
@@ -401,13 +399,29 @@ contract Pool is PoolToken {
                 gbmParameters,
                 hpParameters
             );
+
+            tokenInInfo.info.balance += tokenAmountIn;
+            _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
+
+            return poolAmountOut;
         }
+
+    }
+
+    function joinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
+    external
+    _logs_
+    _lock_
+    _whenNotPaused_
+    returns (uint poolAmountOut)
+    {        
+        poolAmountOut = getJoinswapExternAmountInMMM(
+            tokenIn, tokenAmountIn
+        );
 
         require(poolAmountOut >= minPoolAmountOut, "9");
 
-        tokenInInfo.info.balance += tokenAmountIn;
-        _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
-        _records[tokenIn].balance = tokenInInfo.info.balance;
+        _records[tokenIn].balance = _records[tokenIn].balance + tokenAmountIn;
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
