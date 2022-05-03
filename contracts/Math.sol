@@ -590,77 +590,89 @@ library Math {
             return (Num.bdiv(tokenWeight, spreadFactor), spread);
         }
     }
-    
+
     /**
-    * @notice Computes the total denormalized weight assuming that all the tokensOut are in shortage or in abundance 
+    * @notice Adjusts every token's weight (except from the pivotToken) with a spread factor and computes the sum
     * @dev The initial weights of the tokens are the ones adjusted by their price performance only
-    * @param shortage True if tokenOut is in shortage
+    * @param pivotTokenIsInput True if and only if pivotToken should be considered as an input token
     * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
-    * @param tokenGlobalIn The tokenIn's global information (token records + latest round info)
-    * @param tokensGlobalOut All the tokenOuts' global information (token records + latest rounds info)
+    * @param pivotToken The tokenIn's global information (token records + latest round info)
+    * @param otherTokens Other pool's tokens' global information (token records + latest rounds info)
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
-    * @return totalAdjustedWeight The total adjusted weight where tokens out are only in shortage
+    * @return totalAdjustedWeight The total adjusted weight
     */
     function getTotalWeightMMM(
-        bool shortage,
+        bool pivotTokenIsInput,
         uint256 fallbackSpread,
-        Struct.TokenGlobal memory tokenGlobalIn,
-        Struct.TokenGlobal[] memory tokensGlobalOut,
+        Struct.TokenGlobal memory pivotToken,
+        Struct.TokenGlobal[] memory otherTokens,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
-    ) 
-        internal view 
-        returns (uint totalAdjustedWeight)
+    )
+    internal view
+    returns (uint totalAdjustedWeight)
     {
-        
-        bool noMoreDataPointIn;
-        Struct.HistoricalPricesData memory hpDataIn;
 
-        {   
-            uint256[] memory pricesIn;
-            uint256[] memory timestampsIn;
-            uint256 startIndexIn;
+        bool noMoreDataPointPivot;
+        Struct.HistoricalPricesData memory hpDataPivot;
+
+        {
+            uint256[] memory pricesPivot;
+            uint256[] memory timestampsPivot;
+            uint256 startIndexPivot;
             // retrieve historical prices of tokenIn
-            (pricesIn,
-             timestampsIn,
-             startIndexIn,
-             noMoreDataPointIn) = GeometricBrownianMotionOracle.getHistoricalPrices(tokenGlobalIn.latestRound, hpParameters);
+            (pricesPivot,
+            timestampsPivot,
+            startIndexPivot,
+            noMoreDataPointPivot) = GeometricBrownianMotionOracle.getHistoricalPrices(pivotToken.latestRound, hpParameters);
 
-            hpDataIn = Struct.HistoricalPricesData(startIndexIn, timestampsIn, pricesIn);
+            hpDataPivot = Struct.HistoricalPricesData(startIndexPivot, timestampsPivot, pricesPivot);
 
-            // reducing lookback time window    
-            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsIn[startIndexIn];
+            // reducing lookback time window
+            uint256 reducedLookbackInSecCandidate = hpParameters.timestamp - timestampsPivot[startIndexPivot];
             if (reducedLookbackInSecCandidate < hpParameters.lookbackInSec) {
                 hpParameters.lookbackInSec = reducedLookbackInSecCandidate;
-            }   
+            }
         }
 
-        // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        totalAdjustedWeight = tokenGlobalIn.info.weight;
-        for (uint i; i < tokensGlobalOut.length;) {
+        // to get the total adjusted weight, we apply a spread factor on every weight except from the pivotToken's one.
+        totalAdjustedWeight = pivotToken.info.weight;
+        for (uint i; i < otherTokens.length;) {
 
-            (uint256[] memory pricesOut,
-            uint256[] memory timestampsOut,
-            uint256 startIndexOut,
-            bool noMoreDataPointOut) = GeometricBrownianMotionOracle.getHistoricalPrices(tokensGlobalOut[i].latestRound, hpParameters);
-        
-            Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
-                    noMoreDataPointIn && noMoreDataPointOut,
-                    hpDataIn,
-                    Struct.HistoricalPricesData(startIndexOut, timestampsOut, pricesOut),
+            (uint256[] memory pricesOthers,
+            uint256[] memory timestampsOthers,
+            uint256 startIndexOthers,
+            bool noMoreDataPointOthers) = GeometricBrownianMotionOracle.getHistoricalPrices(otherTokens[i].latestRound, hpParameters);
+
+            Struct.GBMEstimation memory gbmEstimation;
+            if (pivotTokenIsInput) {
+                // weight is increased
+                gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
+                    noMoreDataPointPivot && noMoreDataPointOthers,
+                    hpDataPivot,
+                    Struct.HistoricalPricesData(startIndexOthers, timestampsOthers, pricesOthers),
                     hpParameters
-            );
-            
-            (tokensGlobalOut[i].info.weight, ) = getMMMWeight(
-                shortage,
+                );
+            } else {
+                // weight is reduced
+                gbmEstimation = GeometricBrownianMotionOracle._getParametersEstimation(
+                    noMoreDataPointPivot && noMoreDataPointOthers,
+                    Struct.HistoricalPricesData(startIndexOthers, timestampsOthers, pricesOthers),
+                    hpDataPivot,
+                    hpParameters
+                );
+            }
+
+            (otherTokens[i].info.weight, ) = getMMMWeight(
+                pivotTokenIsInput,
                 fallbackSpread,
-                tokensGlobalOut[i].info.weight,
+                otherTokens[i].info.weight,
                 gbmEstimation,
                 gbmParameters
             );
 
-            totalAdjustedWeight += tokensGlobalOut[i].info.weight;
+            totalAdjustedWeight += otherTokens[i].info.weight;
             unchecked {++i;}
         }
 
