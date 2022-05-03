@@ -70,7 +70,7 @@ library ChainlinkUtils {
     pure
     returns (uint256) {
         // we consider tokens price to be > 0
-        uint256 rawDiv = Num.bdiv(Num.abs(price_2), Num.abs(price_1));
+        uint256 rawDiv = Num.bdiv(Num.positivePart(price_2), Num.positivePart(price_1));
         if (decimal_1 == decimal_2) {
             return rawDiv;
         } else if (decimal_1 > decimal_2) {

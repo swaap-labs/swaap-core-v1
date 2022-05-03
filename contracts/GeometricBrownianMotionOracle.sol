@@ -236,7 +236,7 @@ library GeometricBrownianMotionOracle {
         }
         variance = Num.bdivInt256(variance, int256(n * Const.BONE));
 
-        return (mean, uint256(Num.abs(variance)));
+        return (mean, uint256(Num.positivePart(variance)));
     }
 
     /**

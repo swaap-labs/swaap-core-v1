@@ -1117,7 +1117,7 @@ contract Pool is PoolToken {
                 record.denorm,
                 _getTokenPerformance(
                     price.initialPrice,
-                    Num.abs(latestPrice) // we consider the token price to be > 0
+                    Num.positivePart(latestPrice) // we consider the token price to be > 0
                 )
             )
         );
@@ -1139,7 +1139,7 @@ contract Pool is PoolToken {
     function _getTokenCurrentPrice(IAggregatorV3 priceFeed) internal view returns (uint256) {
         (, int256 price, , ,) = priceFeed.latestRoundData();
         require(price > 0, "16");
-        return Num.abs(price);  // we consider the token price to be > 0
+        return Num.positivePart(price); // we consider the token price to be > 0
     }
 
     /**

@@ -161,7 +161,7 @@ library Num {
         }
     }
 
-    function abs(int256 value) internal pure returns (uint256) {
+    function positivePart(int256 value) internal pure returns (uint256) {
         if (value <= 0) {
             return uint256(0);
         }
