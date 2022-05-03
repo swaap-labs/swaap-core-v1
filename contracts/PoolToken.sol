@@ -20,7 +20,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PoolToken is IERC20 {
 
-    mapping(address => uint256)                   internal _blockWaitingTime;
     mapping(address => uint256)                   internal _balance;
     mapping(address => mapping(address=>uint256)) internal _allowance;
     uint256 internal _totalSupply;
@@ -39,7 +38,6 @@ contract PoolToken is IERC20 {
 
     function _move(address src, address dst, uint256 amt) internal {
         require(dst != address(0), "35");
-        require(_blockWaitingTime[src] <= block.number, "17");
         _balance[src] = _balance[src] - amt;
         _balance[dst] = _balance[dst] + amt;
         emit Transfer(src, dst, amt);

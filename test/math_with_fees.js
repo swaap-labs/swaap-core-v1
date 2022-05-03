@@ -5,9 +5,6 @@ const {
     calcInGivenOut,
     calcRelativeDiff,
 } = require('../lib/calc_comparisons');
-const {
-    advanceBlock
-} = require('../lib/time');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');
@@ -275,8 +272,6 @@ contract('Pool', async (accounts) => {
             const pAi = 1 / (1 - exitFee);
             const pAiAfterExitFee = pAi * (1 - exitFee);
 
-            // Necessary for JIT protection block waiting time
-            await advanceBlock(3);
             await pool.exitPool(toWei(String(pAi)), [toWei('0'), toWei('0')]);
 
             // Update balance states
@@ -365,15 +360,9 @@ contract('Pool', async (accounts) => {
             // Call function
             const poolRatioAfterExitFee = 0.995;
             const pAi = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
-  
-            await advanceBlock(3);
-            // newPool() Transaction is sent to mine blocks so we can call next line with no errors
-            await factory.newPool();
 
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
 
-            // Necessary for JIT protection block waiting time
-            await advanceBlock(3);
             await pool.exitswapPoolAmountInMMM(WETH, toWei(String(pAi)), toWei('0'));
 
             // Update balance states
@@ -406,7 +395,6 @@ contract('Pool', async (accounts) => {
             const poolRatioAfterExitFee = 0.995;
             const tokenRatioBeforeSwapFee = poolRatioAfterExitFee ** (1 / daiNorm);
             const tAo = currentDaiBalance * (1 - tokenRatioBeforeSwapFee) * (1 - swapFee * (1 - daiNorm));
-            await advanceBlock(3);
             const pAi = await pool.exitswapExternAmountOutMMM.call(DAI, toWei(String(tAo)), MAX);
             await pool.exitswapExternAmountOutMMM(DAI, toWei(String(tAo)), MAX);
 
@@ -479,8 +467,6 @@ contract('Pool', async (accounts) => {
         it('pAi = exitswapExternAmountOutMMM(exitswapPoolAmountInMMM(pAi))', async () => {
             const pAi = 0.01;
 
-            // Necessary for JIT protection block waiting time
-            await advanceBlock(3);
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
             const calculatedPAi = await pool.exitswapExternAmountOutMMM.call(WETH, String(tAo), MAX);
 

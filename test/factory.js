@@ -5,7 +5,6 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
 
 const {
-    advanceBlock,
     advanceTimeAndBlock
 } = require('../lib/time');
 
@@ -20,29 +19,6 @@ contract('Factory', async (accounts) => {
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
     const { hexToUtf8 } = web3.utils;
-
-    const increaseTime = function(duration) {
-        const id = Date.now()
-      
-        return new Promise((resolve, reject) => {
-          web3.currentProvider.sendAsync({
-            jsonrpc: '2.0',
-            method: 'evm_increaseTime',
-            params: [duration],
-            id: id,
-          }, err1 => {
-            if (err1) return reject(err1)
-      
-            web3.currentProvider.sendAsync({
-              jsonrpc: '2.0',
-              method: 'evm_mine',
-              id: id+1,
-            }, (err2, res) => {
-              return err2 ? reject(err2) : resolve(res)
-            })
-          })
-        })
-      }      
 
     const MAX = web3.utils.toTwosComplement(-1);
 
@@ -109,8 +85,6 @@ contract('Factory', async (accounts) => {
 			assert.equal(fromWei(adminBalance), '100');
 
             await pool.joinPool(toWei('10'), [MAX, MAX], { from: nonAdmin });
-
-            await advanceBlock(3);
 
             await pool.exitPool(toWei('10'), [toWei('0'), toWei('0')], { from: nonAdmin });
             // Exit fee = 0 so this wont do anything

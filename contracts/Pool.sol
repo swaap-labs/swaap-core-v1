@@ -125,9 +125,6 @@ contract Pool is PoolToken {
     uint256 private dynamicCoverageFeesHorizon;
     uint256 private priceStatisticsLookbackInSec;
 
-    // nonce for permitJoinPool
-    mapping(address => uint256) private _nonces;
-
     constructor() {
         _controller = msg.sender;
         _factory = msg.sender;
@@ -195,13 +192,6 @@ contract Pool is PoolToken {
     returns (address)
     {
         return _controller;
-    }
-
-    function getNonce(address owner)
-    external view
-    returns (uint256)
-    {
-        return _nonces[owner];
     }
 
     function setSwapFee(uint256 swapFee)
@@ -313,7 +303,7 @@ contract Pool is PoolToken {
             unchecked{++i;}
         }
         _mintPoolShare(poolAmountOut);
-        _pushPoolShareAndBlock(owner, poolAmountOut);
+        _pushPoolShare(owner, poolAmountOut);
     }
 
     /**
@@ -400,7 +390,7 @@ contract Pool is PoolToken {
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
         _mintPoolShare(poolAmountOut);
-        _pushPoolShareAndBlock(msg.sender, poolAmountOut);
+        _pushPoolShare(msg.sender, poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         return poolAmountOut;
@@ -453,7 +443,7 @@ contract Pool is PoolToken {
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
         _mintPoolShare(poolAmountOut);
-        _pushPoolShareAndBlock(msg.sender, poolAmountOut);
+        _pushPoolShare(msg.sender, poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         return tokenAmountIn;
@@ -592,15 +582,6 @@ contract Pool is PoolToken {
     internal
     {
         _pull(from, amount);
-    }
-
-    function _pushPoolShareAndBlock(address to, uint256 amount)
-    internal
-    {
-        unchecked {
-            _blockWaitingTime[to] = block.number + Const.BLOCK_WAITING_TIME;
-        } 
-        _push(to, amount);
     }
 
     function _pushPoolShare(address to, uint256 amount)
