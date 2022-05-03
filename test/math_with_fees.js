@@ -365,8 +365,11 @@ contract('Pool', async (accounts) => {
             // Call function
             const poolRatioAfterExitFee = 0.995;
             const pAi = currentPoolBalance * (1 - poolRatioAfterExitFee) * (1 / (1 - exitFee));
-
+  
             await advanceBlock(3);
+            // newPool() Transaction is sent to mine blocks so we can call next line with no errors
+            await factory.newPool();
+
             const tAo = await pool.exitswapPoolAmountInMMM.call(WETH, toWei(String(pAi)), toWei('0'));
 
             // Necessary for JIT protection block waiting time

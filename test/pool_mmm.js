@@ -303,10 +303,17 @@ contract('Pool', async (accounts) => {
 
         it('Fail swapExactAmountInMMM unpegged', async () => {
             // 320 represent about 10% of WETH balance
-            await truffleAssert.reverts(
+            try {
+                await pool.swapExactAmountInMMM(WETH, toWei('320'), DAI, toWei('0'), toWei('4000'), { from: user2 });
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert(e.reason, '44');
+            }
+            /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('320'), DAI, toWei('0'), toWei('4000'), { from: user2 }),
                 '44'
-            );
+            );*/
         });
 
         it('swapExactAmountInMMM WETH -> DAI', async () => {

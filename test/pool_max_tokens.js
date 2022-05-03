@@ -145,7 +145,20 @@ contract('Pool', async (accounts) => {
 
         it('Fails swapExactAmountIn with limits', async () => {
             await pool.setPublicSwap(true);
-            await truffleAssert.reverts(
+            try { 
+                await pool.swapExactAmountInMMM(
+                    AAA,
+                    toWei('1'),
+                    BBB,
+                    toWei('0'),
+                    toWei('0.9'),
+                );
+                throw 'did not revert';
+            }
+            catch(e){
+                assert.equal(e.reason, '11');
+            }
+            /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
@@ -154,8 +167,21 @@ contract('Pool', async (accounts) => {
                     toWei('0.9'),
                 ),
                 '11',
-            );
-            await truffleAssert.reverts(
+            );*/
+            try {
+                await pool.swapExactAmountInMMM(
+                    AAA,
+                    toWei('1'),
+                    BBB,
+                    toWei('2'),
+                    toWei('3.5'),
+                );
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert.equal(e.reason, '9');
+            }
+            /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
                     AAA,
                     toWei('1'),
@@ -164,11 +190,24 @@ contract('Pool', async (accounts) => {
                     toWei('3.5'),
                 ),
                 '9',
-            );
+            );*/
         });
 
         it('Fails swapExactAmountOutMMM with limits', async () => {
-            await truffleAssert.reverts(
+            try {
+                await pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('5'),
+                    BBB,
+                    toWei('1'),
+                    toWei('1'),
+                );
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert.equal(e.reason, '11');
+            }
+            /*await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
                     AAA,
                     toWei('5'),
@@ -178,6 +217,23 @@ contract('Pool', async (accounts) => {
                 ),
                 '11',
             );
+            */
+
+            try {
+                await pool.swapExactAmountOutMMM(
+                    AAA,
+                    toWei('1'),
+                    BBB,
+                    toWei('1'),
+                    toWei('5'),
+                );
+                throw 'did not revert';
+            }
+            catch (e) {
+                assert.equal(e.reason, '8');
+            } 
+            
+            /*
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
                     AAA,
@@ -188,6 +244,7 @@ contract('Pool', async (accounts) => {
                 ),
                 '8',
             );
+            */
         });
     });
 });
