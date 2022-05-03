@@ -708,9 +708,7 @@ contract Pool is PoolToken {
     function bindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
     external
     {
-        require(msg.sender == _controller, "3");
         require(!_records[token].bound, "28");
-        require(!_finalized, "4");
 
         require(_tokens.length < Const.MAX_BOUND_TOKENS, "29");
 
@@ -736,9 +734,8 @@ contract Pool is PoolToken {
     function rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
     external
     {
-        require(msg.sender == _controller, "3");
         require(_records[token].bound, "2");
-        require(!_finalized, "4");
+
         _rebindMMM(token, balance, denorm, _priceFeedAddress);
     }
 
@@ -748,6 +745,9 @@ contract Pool is PoolToken {
     _lock_
     _whenNotPaused_
     {
+        require(msg.sender == _controller, "3");
+        require(!_finalized, "4");
+
         require(denorm >= Const.MIN_WEIGHT, "30");
         require(denorm <= Const.MAX_WEIGHT, "31");
         require(balance >= Const.MIN_BALANCE, "32");
