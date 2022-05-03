@@ -18,6 +18,7 @@ import "./interfaces/IAggregatorV3.sol";
 import "./Num.sol";
 import "./Const.sol";
 import "./LogExpMath.sol";
+import "./ChainlinkUtils.sol";
 import "./structs/Struct.sol";
 
 
@@ -357,7 +358,7 @@ library GeometricBrownianMotionOracle {
             while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
 
                 _roundId--;
-                (int256 _price, uint256 _timestamp) = getRoundData(priceFeed, _roundId);
+                (int256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(priceFeed, _roundId);
 
                 if (_price > 0 && _timestamp > 0) {
 
@@ -403,27 +404,6 @@ library GeometricBrownianMotionOracle {
             }
         }
 
-    }
-
-    /**
-    * @notice Retrieves historical data from round id.
-    * @dev Will not fail and return (0, 0) if no data can be found.
-    * @param priceFeed The oracle of interest
-    * @param _roundId The the round of interest ID
-    * @return The round price
-    * @return The round timestamp
-    */
-    function getRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
-        try priceFeed.getRoundData(_roundId) returns (
-            uint80 ,
-            int256 _price,
-            uint256 ,
-            uint256 _timestamp,
-            uint80
-        ) {
-            return (_price, _timestamp);
-        } catch {}
-        return (0, 0);
     }
 
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
