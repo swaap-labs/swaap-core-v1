@@ -264,7 +264,7 @@ contract('Pool', async (accounts) => {
         it('Fails when other users interact before finalizing', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('5'), toWei('5'), WETHOracleAddress, { from: user1 }),
-                '3',
+                '2',
             );
             await truffleAssert.reverts(
                 pool.rebindMMM(WETH, toWei('5'), toWei('5'), WETHOracleAddress, { from: user1 }),
