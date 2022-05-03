@@ -44,8 +44,8 @@ library GeometricBrownianMotionOracle {
         Struct.HistoricalPricesParameters memory hpParameters
     )
     external view returns (Struct.GBMEstimation memory gbmEstimation) {
-        Struct.LatestRound memory latestRoundIn = getLatestRound(oracleIn);
-        Struct.LatestRound memory latestRoundOut = getLatestRound(oracleOut);
+        Struct.LatestRound memory latestRoundIn = ChainlinkUtils._getLatestRound(oracleIn);
+        Struct.LatestRound memory latestRoundOut = ChainlinkUtils._getLatestRound(oracleOut);
         return (
             getParametersEstimation(
                 latestRoundIn,
@@ -404,16 +404,6 @@ library GeometricBrownianMotionOracle {
             }
         }
 
-    }
-
-    function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
-        (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
-         return Struct.LatestRound(
-            oracle,
-            latestRoundId,
-            latestPrice,
-            latestTimestamp
-        );
     }
 
 }

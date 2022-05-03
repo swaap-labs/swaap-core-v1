@@ -22,6 +22,16 @@ import "./Num.sol";
 
 library ChainlinkUtils {
 
+    function _getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
+        (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+         return Struct.LatestRound(
+            oracle,
+            latestRoundId,
+            latestPrice,
+            latestTimestamp
+        );
+    }
+
     /**
     * @notice Retrieves historical data from round id.
     * @dev Will not fail and return (0, 0) if no data can be found.
