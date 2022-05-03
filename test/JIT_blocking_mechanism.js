@@ -8,6 +8,7 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 const truffleAssert = require('truffle-assertions');
 const { sign } = require('../lib/eip712JoinPool');
 const { advanceBlock } = require('../lib/time');
+const TProxy = artifacts.require('TProxy');
 
 contract('Pool - JIT blocking mechanism', async (accounts) => {
   
@@ -65,11 +66,7 @@ contract('Pool - JIT blocking mechanism', async (accounts) => {
     await weth.mint(admin, toWei('150000'));
     await dai.mint(admin, toWei('450000000'));
     await wbtc.mint(admin, toWei('10000'));
-    // User1 balances
-    await weth.mint(user1, toWei('150'), { from: admin });
-    await dai.mint(user1,  toWei('450000'), { from: admin });
-    await wbtc.mint(user1, toWei('10'), { from: admin });
-    
+
     await weth.approve(POOL, MAX);
     await dai.approve(POOL, MAX);
     await wbtc.approve(POOL, MAX);
@@ -81,26 +78,14 @@ contract('Pool - JIT blocking mechanism', async (accounts) => {
     await pool.finalize();
   });
 
-  it('Permit join pool', async () => {
-    let nonce = 0;
-    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
-    let deadline = MAX;
+  it('Join pool using tx.origin', async () => {
     let poolAmountOut = toWei('100');
-    let owner = user1;
-
-    let signature = await sign(
-        owner,
-        poolAmountOut,
-        maxAmountsIn,
-        deadline,
-        nonce,
-        POOL
-    );
+    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
 
     // The funds will be taken from the caller
-    await pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin});
+    await pool.joinPoolForTxOrigin(poolAmountOut, maxAmountsIn, {from: admin});
 
-    assert.equal((await pool.balanceOf.call(owner)).toString(), toWei('100'));
+    assert.equal((await pool.balanceOf.call(admin)).toString(), toWei('200'));
 
   });
 
@@ -108,115 +93,52 @@ contract('Pool - JIT blocking mechanism', async (accounts) => {
     await advanceBlock(3);
     let poolAmountIn = toWei('100');
     let minAmountsOut = [toWei('0'), toWei('4500000'), toWei('100')];
-    await pool.exitPool(poolAmountIn, minAmountsOut, {from: user1});
-    assert.equal((await pool.balanceOf.call(user1)).toString(), toWei('0'));
+    await pool.exitPool(poolAmountIn, minAmountsOut, {from: admin});
+    assert.equal((await pool.balanceOf.call(admin)).toString(), toWei('100'));
   });
 
+  it('Join using tx.origin and a Proxy', async () => {
+    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
+    let poolAmountOut = toWei('100');
+
+    let proxy = await TProxy.new();
+
+    await weth.approve(proxy.address, MAX, {from: admin});
+    await dai.approve(proxy.address, MAX, {from: admin});
+    await wbtc.approve(proxy.address, MAX, {from: admin});
+
+    await proxy.proxyJoinPool(POOL, poolAmountOut, maxAmountsIn, {from: admin});
+
+    assert.equal((await pool.balanceOf.call(admin)).toString(), toWei('200'));
+  });
 
   it('Fail when trying to exit right after a join', async () => {
-    let nonce = 1;
-    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
-    let deadline = MAX;
     let poolAmountOut = toWei('100');
-    let owner = user1;
-
-    let signature = await sign(
-        owner,
-        poolAmountOut,
-        maxAmountsIn,
-        deadline,
-        nonce,
-        POOL
-    );
+    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
 
     // The funds will be taken from the caller
-    await pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin});
+    await pool.joinPool(poolAmountOut, maxAmountsIn, {from: admin});
 
-    let poolAmountIn = toWei('100');
-    let minAmountsOut = [toWei('1500'), toWei('4500000'), toWei('100')];
+    let poolAmountIn = toWei('5');
+    let minAmountsOut = [toWei('0'), toWei('0'), toWei('0')];
+
     await truffleAssert.reverts(
-        pool.exitPool(poolAmountIn, minAmountsOut, {from: user1}),
+        pool.exitPool(poolAmountIn, minAmountsOut, {from: admin}),
         "17",
     );
   });
   
   it('Fail when transfering LP tokens after a join', async () => {
-    let nonce = 2;
-    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
-    let deadline = MAX;
     let poolAmountOut = toWei('100');
-    let owner = user1;
-
-    let signature = await sign(
-        owner,
-        poolAmountOut,
-        maxAmountsIn,
-        deadline,
-        nonce,
-        POOL
-    );
+    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
 
     // The funds will be taken from the caller
-    await pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin});
+    await pool.joinPool(poolAmountOut, maxAmountsIn, {from: admin});
     
     await truffleAssert.reverts(
-        pool.transfer(admin, toWei('100'), {from: user1}),
+        pool.transfer(user1, toWei('100'), {from: admin}),
         "17",
     );
   });
   
-  it('Fail when re-using the same signature', async () => {
-    let signature;
-
-    let nonce = 2;
-    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
-    let deadline = MAX;
-    let poolAmountOut = toWei('100');
-    let owner = user1;
-
-    signature = await sign(
-        owner,
-        poolAmountOut,
-        maxAmountsIn,
-        deadline,
-        nonce,
-        POOL
-    );
-
-    await truffleAssert.reverts(
-        pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin}),
-        "7",
-    );
-  });
-
-  it('Fail permitJoinPool when signature deadline is passed', async () => {
-    let signature;
-
-    let nonce = 3;
-    let maxAmountsIn = [toWei('1500'), toWei('4500000'), toWei('100')];
-    let deadline = 1;
-    let poolAmountOut = toWei('100');
-    let owner = user1;
-
-    signature = await sign(
-        owner,
-        poolAmountOut,
-        maxAmountsIn,
-        deadline,
-        nonce,
-        POOL
-    );
-
-    await truffleAssert.reverts(
-        pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin}),
-        "6",
-    );
-
-    deadline = MAX;
-    await truffleAssert.reverts(
-        pool.permitJoinPool(signature, maxAmountsIn, owner, poolAmountOut, deadline, {from: admin}),
-        "7",
-    );
-  });
-
 });

@@ -25,11 +25,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-
-contract Pool is PoolToken, EIP712("Swaap Pool", "1.0.0") {
+contract Pool is PoolToken {
 
     using SafeERC20 for IERC20; 
 
@@ -263,46 +260,7 @@ contract Pool is PoolToken, EIP712("Swaap Pool", "1.0.0") {
     }
 
     /**
-    * @notice Add liquidity to a pool
-    * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
-    * ref: https://eips.ethereum.org/EIPS/eip-712
-    * @param signature Owner's signature
-    * @param maxAmountsIn Maximum accepted token amount in
-    * @param owner Address of the receiver
-    * @param poolAmountOut Amount of pool shares a LP wishes to receive
-    * @param deadline Expiration date of the signature
-    */
-    function permitJoinPool(
-        bytes calldata signature,
-        uint256[] calldata maxAmountsIn,
-        address owner,
-        uint256 poolAmountOut,
-        uint256 deadline
-    )
-    external
-    {
-        require(block.timestamp < deadline, "6");
-        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
-            Const.FUNCTION_HASH,
-            owner,
-            poolAmountOut,
-            keccak256(abi.encodePacked(maxAmountsIn)),
-            deadline,
-            _nonces[owner]
-        )));
-
-        address signer = ECDSA.recover(digest, signature);
-        require(signer == owner, "7");
-
-        // require(signer != address(0), "35"); already stated in PoolToken._move(address src, address dst, uint256 amt)
-
-        unchecked{++_nonces[owner];}
-
-        _joinPool(owner, poolAmountOut, maxAmountsIn);
-    }
-
-    /**
-    * @notice Add liquidity to a pool
+    * @notice Add liquidity to a pool and credit msg.sender
     * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
     * @param poolAmountOut Amount of pool shares a LP wishes to receive
     * @param maxAmountsIn Maximum accepted token amount in
@@ -311,6 +269,19 @@ contract Pool is PoolToken, EIP712("Swaap Pool", "1.0.0") {
     external
     {
         _joinPool(msg.sender, poolAmountOut, maxAmountsIn);
+    }
+
+    /**
+    * @notice Add liquidity to a pool and credit tx.origin
+    * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
+    * This method is useful when joining a pool via a proxy contract
+    * @param poolAmountOut Amount of pool shares a LP wishes to receive
+    * @param maxAmountsIn Maximum accepted token amount in
+    */
+    function joinPoolForTxOrigin(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
+    external
+    {
+        _joinPool(tx.origin, poolAmountOut, maxAmountsIn);
     }
 
     function _joinPool(address owner, uint256 poolAmountOut, uint256[] calldata maxAmountsIn) 
