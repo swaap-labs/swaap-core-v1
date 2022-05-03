@@ -401,14 +401,20 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fails binding new token after finalized', async () => {
-            await truffleAssert.reverts(
-                pool.bindMMM(XXX, toWei('10'), toWei('5'), XXXOracleAddress),
-                '4',
-            );
-            await truffleAssert.reverts(
-                pool.rebindMMM(DAI, toWei('10'), toWei('5'), DAIOracleAddress),
-                '4',
-            );
+            try {
+                await pool.bindMMM(XXX, toWei('10'), toWei('5'), XXXOracleAddress);
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert(e.reason, '4');
+            }
+            try {
+                await pool.rebindMMM(DAI, toWei('10'), toWei('5'), DAIOracleAddress);
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert(e.reason, '4');
+            }
         });
 
         it('Fails unbinding after finalized', async () => {
