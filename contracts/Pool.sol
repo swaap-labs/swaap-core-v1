@@ -89,6 +89,11 @@ contract Pool is PoolToken {
         _unlock();
     }
 
+    modifier _viewlock_() {
+        require(!_mutex, "0");
+        _;
+    }
+
     function _whenNotPaused() private view {
         IPausedFactory(_factory).whenNotPaused();
     }
@@ -156,6 +161,7 @@ contract Pool is PoolToken {
 
     function getTokens()
     external view
+    _viewlock_
     returns (address[] memory tokens)
     {
         return _tokens;
@@ -823,6 +829,7 @@ contract Pool is PoolToken {
 
     function getSpotPriceSansFee(address tokenIn, address tokenOut)
     external view
+    _viewlock_
     returns (uint256 spotPrice)
     {
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
@@ -849,7 +856,7 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
         Struct.SwapResult memory swapResult;
-        (swapResult, spotPriceAfter) = getAmountOutGivenInMMM(
+        (swapResult, spotPriceAfter) = _getAmountOutGivenInMMM(
             tokenIn,
             tokenAmountIn,
             tokenOut,
@@ -875,7 +882,27 @@ contract Pool is PoolToken {
         uint256 minAmountOut,
         uint256 maxPrice
     )
-    public view
+    external view
+    _viewlock_
+    returns (Struct.SwapResult memory, uint256)
+    {
+        return _getAmountOutGivenInMMM(
+            tokenIn,
+            tokenAmountIn,
+            tokenOut,
+            minAmountOut,
+            maxPrice
+        );
+    }
+
+    function _getAmountOutGivenInMMM(
+        address tokenIn,
+        uint256 tokenAmountIn,
+        address tokenOut,
+        uint256 minAmountOut,
+        uint256 maxPrice
+    )
+    internal view
     returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
 
@@ -972,7 +999,7 @@ contract Pool is PoolToken {
     {
 
         Struct.SwapResult memory swapResult;
-        (swapResult, spotPriceAfter)= getAmountInGivenOutMMM(
+        (swapResult, spotPriceAfter)= _getAmountInGivenOutMMM(
             tokenIn,
             maxAmountIn,
             tokenOut,
@@ -998,7 +1025,27 @@ contract Pool is PoolToken {
         uint256 tokenAmountOut,
         uint256 maxPrice
     )
-    public view
+    external view
+    _viewlock_
+    returns (Struct.SwapResult memory, uint256)
+    {
+        return _getAmountInGivenOutMMM(
+            tokenIn,
+            maxAmountIn,
+            tokenOut,
+            tokenAmountOut,
+            maxPrice
+        );
+    }
+
+    function _getAmountInGivenOutMMM(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    )
+    internal view
     returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
 
