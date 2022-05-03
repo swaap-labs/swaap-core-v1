@@ -100,6 +100,7 @@ library GeometricBrownianMotionOracle {
 
     /**
     * @notice Gets asset-pair historical data return's mean and variance
+    * @param noMoreDataPoints True if and only if the retrieved data span over the whole time window of interest
     * @param hpDataIn Historical prices data of tokenIn
     * @param hpDataOut Historical prices data of tokenOut
     * @param hpParameters The parameters for historical prices retrieval
@@ -309,11 +310,10 @@ library GeometricBrownianMotionOracle {
     /**
     * @notice Gets historical prices from a Chainlink data feed
     * @dev Few specificities:
-    * - if the returned index = hpParameters.lookbackInRound it means "no historical data was found"
-    * - if stops filling the prices/timestamps when:
-    * a) round data are 0 or when
-    * b) hpParameters.lookbackInRound rounds have already been found
-    * c) time window induced by hpParameters.lookbackInRound is no more satisfied
+    * - it filters out round data with null price or timestamp
+    * - it stops filling the prices/timestamps when:
+    * a) hpParameters.lookbackInRound rounds have already been found
+    * b) time window induced by hpParameters.lookbackInSec is no more satisfied
     * @param latestRound The round-to-start-from's data including its ID
     * @param hpParameters The parameters for historical prices retrieval
     * @return The historical prices
