@@ -22,9 +22,22 @@ import "./Num.sol";
 
 library ChainlinkUtils {
 
-    function _getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
+    /**
+    * @notice Retrieves the latest price from the given oracle price feed
+    * @dev We consider the token price to be > 0
+    * @param oracle The price feed oracle
+    * @return The latest price
+    */
+    function getTokenLatestPrice(address oracle) internal view returns (uint256) {
+        (, int256 latestPrice, , ,) = IAggregatorV3(oracle).latestRoundData();
+        require(latestPrice > 0, "16");
+        return uint256(latestPrice); // we consider the token price to be > 0
+    }
+
+    function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
         (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
-         return Struct.LatestRound(
+        require(latestPrice > 0, "16");
+        return Struct.LatestRound(
             oracle,
             latestRoundId,
             latestPrice,
@@ -35,13 +48,13 @@ library ChainlinkUtils {
     /**
     * @notice Retrieves historical data from round id.
     * @dev Will not fail and return (0, 0) if no data can be found.
-    * @param priceFeed The oracle of interest
+    * @param oracle The price feed oracle
     * @param _roundId The the round of interest ID
     * @return The round price
     * @return The round timestamp
     */
-    function getRoundData(IAggregatorV3 priceFeed, uint80 _roundId) internal view returns (int256, uint256) {
-        try priceFeed.getRoundData(_roundId) returns (
+    function getRoundData(address oracle, uint80 _roundId) internal view returns (int256, uint256) {
+        try IAggregatorV3(oracle).getRoundData(_roundId) returns (
             uint80 ,
             int256 _price,
             uint256 ,
@@ -98,27 +111,26 @@ library ChainlinkUtils {
 
     /**
     * @notice Computes the previous price of tokenIn in terms of tokenOut 's upper bound
-    * @param oracleAddress_1 The token_1 oracle's address
+    * @param oracle_1 The token_1 oracle's address
     * @param roundId_1 The latest token_1 oracle update's roundId
     * @param price_1 The latest token_1 oracle update's price
     * @param timestamp_1 The latest token_1 oracle update's timestamp
-    * @param oracleAddress_2 The token_2 oracle's address
+    * @param oracle_2 The token_2 oracle's address
     * @param roundId_2 The latest token_2 oracle update's roundId
     * @param price_2 The latest token_2 oracle update's price
     * @param timestamp_2 The latest token_2 oracle update's timestamp
     * @return The ratio of token 2 and token 1 values if well defined, else 0
     */
     function getMaxRelativePriceInLastBlock(
-        address oracleAddress_1,
+        address oracle_1,
         uint80 roundId_1,
         int256 price_1,
         uint256 timestamp_1,
-        address oracleAddress_2,
+        address oracle_2,
         uint80 roundId_2,
         int256 price_2,
         uint256 timestamp_2
     ) internal view returns (uint256) {
-        IAggregatorV3 oracle_1 = IAggregatorV3(oracleAddress_1);
         {
             int256 temp_price_1 = price_1;
             while (timestamp_1 == block.timestamp) {
@@ -134,7 +146,6 @@ library ChainlinkUtils {
                 }
             }
         }
-        IAggregatorV3 oracle_2 = IAggregatorV3(oracleAddress_2);
         {
             int256 temp_price_2 = price_2;
             while (timestamp_2 == block.timestamp) {
@@ -152,8 +163,8 @@ library ChainlinkUtils {
         }
 
         return _getTokenRelativePrice(
-            price_1, oracle_1.decimals(),
-            price_2, oracle_2.decimals()
+            price_1, IAggregatorV3(oracle_1).decimals(),
+            price_2, IAggregatorV3(oracle_2).decimals()
         );
     }
 

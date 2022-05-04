@@ -14,7 +14,6 @@
 
 pragma solidity =0.8.12;
 
-import "./interfaces/IAggregatorV3.sol";
 import "./Num.sol";
 import "./Const.sol";
 import "./LogExpMath.sol";
@@ -44,8 +43,8 @@ library GeometricBrownianMotionOracle {
         Struct.HistoricalPricesParameters memory hpParameters
     )
     external view returns (Struct.GBMEstimation memory gbmEstimation) {
-        Struct.LatestRound memory latestRoundIn = ChainlinkUtils._getLatestRound(oracleIn);
-        Struct.LatestRound memory latestRoundOut = ChainlinkUtils._getLatestRound(oracleOut);
+        Struct.LatestRound memory latestRoundIn = ChainlinkUtils.getLatestRound(oracleIn);
+        Struct.LatestRound memory latestRoundOut = ChainlinkUtils.getLatestRound(oracleOut);
         return (
             getParametersEstimation(
                 latestRoundIn,
@@ -327,10 +326,6 @@ library GeometricBrownianMotionOracle {
     )
     internal view returns (uint256[] memory, uint256[] memory, uint256, bool)
     {
-        IAggregatorV3 priceFeed = IAggregatorV3(latestRound.oracle);
-
-        uint80 latestRoundId = latestRound.roundId;
-        int256 latestPrice = latestRound.price;
         uint256 latestTimestamp = latestRound.timestamp;
 
         // historical price endtimestamp >= lookback window or it reverts
@@ -343,7 +338,7 @@ library GeometricBrownianMotionOracle {
 
         {
 
-            prices[0] = uint256(latestPrice); // is supposed to be well valid
+            prices[0] = uint256(latestRound.price); // is supposed to be well valid
             timestamps[0] = latestTimestamp; // is supposed to be well valid
 
             if (latestTimestamp < timeLimit) {
@@ -353,12 +348,12 @@ library GeometricBrownianMotionOracle {
             uint80 count = 1;
 
             // buffer variables
-            uint80 _roundId = latestRoundId;
+            uint80 _roundId = latestRound.roundId;
 
             while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
 
                 _roundId--;
-                (int256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(priceFeed, _roundId);
+                (int256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(latestRound.oracle, _roundId);
 
                 if (_price > 0 && _timestamp > 0) {
 

@@ -25,6 +25,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
 
+import "./ChainlinkUtils.sol";
 
 contract Pool is PoolToken {
 
@@ -603,7 +604,7 @@ contract Pool is PoolToken {
     }
 
     struct Price {
-        IAggregatorV3 oracle;
+        address oracle;
         uint256 initialPrice;
     }
 
@@ -682,7 +683,7 @@ contract Pool is PoolToken {
     returns (address)
     {
         require(_records[token].bound, "2");
-        return address(_prices[token].oracle);
+        return _prices[token].oracle;
     }
 
     /**
@@ -765,12 +766,12 @@ contract Pool is PoolToken {
         // Add token price
         _prices[token] = Price(
             {
-                oracle: IAggregatorV3(_priceFeedAddress),
+                oracle: _priceFeedAddress,
                 initialPrice: 0 // set right below
             }
         );
-        _prices[token].initialPrice = _getTokenCurrentPrice(_prices[token].oracle);
-        emit LOG_PRICE(token, address(_prices[token].oracle), _prices[token].initialPrice);
+        _prices[token].initialPrice = ChainlinkUtils.getTokenLatestPrice(_prices[token].oracle);
+        emit LOG_PRICE(token, _prices[token].oracle, _prices[token].initialPrice);
     }
 
 
@@ -845,8 +846,8 @@ contract Pool is PoolToken {
             maxPrice
         );
 
-        _records[address(tokenIn)].balance += tokenAmountIn;
-        _records[address(tokenOut)].balance -= swapResult.amount;
+        _records[tokenIn].balance += tokenAmountIn;
+        _records[tokenOut].balance -= swapResult.amount;
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
 
@@ -988,8 +989,8 @@ contract Pool is PoolToken {
             maxPrice
         );
 
-        _records[address(tokenIn)].balance += swapResult.amount;
-        _records[address(tokenOut)].balance -= tokenAmountOut;
+        _records[tokenIn].balance += swapResult.amount;
+        _records[tokenOut].balance -= tokenAmountOut;
 
         emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
 
@@ -1137,7 +1138,7 @@ contract Pool is PoolToken {
     internal view returns (Struct.TokenGlobal memory tokenGlobal) {
         Record memory record = _records[token];
         Price memory price = _prices[token];
-        (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = price.oracle.latestRoundData();
+        Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(price.oracle);
         Struct.TokenRecord memory info = Struct.TokenRecord(
             record.balance,
             // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
@@ -1145,29 +1146,16 @@ contract Pool is PoolToken {
                 record.denorm,
                 _getTokenPerformance(
                     price.initialPrice,
-                    Num.positivePart(latestPrice) // we consider the token price to be > 0
+                    uint256(latestRound.price) // we consider the token price to be > 0
                 )
             )
         );
-        Struct.LatestRound memory latestRound = Struct.LatestRound(address(price.oracle), latestRoundId, latestPrice, latestTimestamp);
         return (
             tokenGlobal = Struct.TokenGlobal(
                 info,
                 latestRound
             )
         );
-    }
-
-    /**
-    * @notice Retrieves the latest price from the given oracle price feed
-    * @dev We consider the token price to be > 0
-    * @param priceFeed The price feed of interest
-    * @return The latest price
-    */
-    function _getTokenCurrentPrice(IAggregatorV3 priceFeed) internal view returns (uint256) {
-        (, int256 price, , ,) = priceFeed.latestRoundData();
-        require(price > 0, "16");
-        return Num.positivePart(price); // we consider the token price to be > 0
     }
 
     /**
