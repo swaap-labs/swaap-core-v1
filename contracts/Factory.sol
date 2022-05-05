@@ -29,9 +29,13 @@ contract Factory is IPausedFactory {
         address indexed pool
     );
 
-    event LOG_SWAAPLABS(
-        address indexed caller,
-        address indexed swaaplabs
+    event LOG_TRANSFER_REQUESTED(
+        address indexed from,
+        address indexed to
+    );
+    event LOG_NEW_SWAAPLABS(
+        address indexed from,
+        address indexed to
     );
 
     mapping(address=>bool) private _isPool;
@@ -54,6 +58,7 @@ contract Factory is IPausedFactory {
         return pool;
     }
 
+    address private _pendingSwaaplabs;
     address private _swaaplabs;
     bool private _paused;
     uint64 immutable private _setPauseWindow;
@@ -70,12 +75,32 @@ contract Factory is IPausedFactory {
         return _swaaplabs;
     }
 
-    function setSwaapLabs(address b)
+    /**
+    * @notice Allows an owner to begin transferring ownership to a new address,
+    * pending.
+    */
+    function transferOwnership(address _to)
         external
     {
         require(msg.sender == _swaaplabs, "34");
-        emit LOG_SWAAPLABS(msg.sender, b);
-        _swaaplabs = b;
+        _pendingSwaaplabs = _to;
+
+        emit LOG_TRANSFER_REQUESTED(msg.sender, _to);
+    }
+
+    /**
+    * @notice Allows an ownership transfer to be completed by the recipient.
+    */
+    function acceptOwnership()
+        external
+    {
+        require(msg.sender == _pendingSwaaplabs, "20");
+
+        address oldOwner = _swaaplabs;
+        _swaaplabs = msg.sender;
+        _pendingSwaaplabs = address(0);
+
+        emit LOG_NEW_SWAAPLABS(oldOwner, msg.sender);
     }
    
     function collect(address erc20)

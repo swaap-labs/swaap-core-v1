@@ -95,7 +95,8 @@ contract('Factory', async (accounts) => {
         });
 
         it('nonadmin cant set swaaplabs address', async () => {
-            await truffleAssert.reverts(factory.setSwaapLabs(nonAdmin, { from: nonAdmin }), '34');
+            await truffleAssert.reverts(factory.transferOwnership(nonAdmin, { from: nonAdmin }), '34');
+            await truffleAssert.reverts(factory.acceptOwnership({ from: nonAdmin }), '20');
         });
 
         it('fails to create new pool when paused', async () => {
@@ -120,7 +121,8 @@ contract('Factory', async (accounts) => {
         });
 
         it('admin changes swaaplabs address', async () => {
-            await factory.setSwaapLabs(user2);
+            await factory.transferOwnership(user2, {from: admin});
+            await factory.acceptOwnership({from: user2});
             const blab = await factory.getSwaapLabs();
             assert.equal(blab, user2);
         });

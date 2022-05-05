@@ -65,6 +65,11 @@ contract Pool is PoolToken {
         bytes           data
     ) anonymous;
 
+    event LOG_NEW_CONTROLLER(
+        address indexed from,
+        address indexed to
+    );
+
     // putting modifier logic in functions enables contract size optimization
     function _emitLog() private {
         emit LOG_CALL(msg.sig, msg.sender, msg.data);
@@ -112,6 +117,7 @@ contract Pool is PoolToken {
     bool private _publicSwap; // true if PUBLIC can call SWAP functions
     uint80 private _totalWeight;
     address private _controller; // has CONTROL role
+    address private _pendingController;
     
     bool private _finalized;
     address immutable private _factory;    // Factory address to push token exitFee to
@@ -207,14 +213,47 @@ contract Pool is PoolToken {
         _swapFee = swapFee;
     }
 
+    /**
+    * @notice Allows a controller to transfer ownership to a new address
+    * @dev It is recommended to use transferOwnership/acceptOwnership logic for safer transfers
+    * This function is useful when creating pools using a proxy contract
+    */    
     function setController(address manager)
     external
-    _logs_
     _lock_
     {
         require(msg.sender == _controller, "3");
         require(manager != address(0), "13");
         _controller = manager;
+        _pendingController = address(0);
+        emit LOG_NEW_CONTROLLER(msg.sender, manager);
+    }
+    
+    /**
+    * @notice Allows a controller to begin transferring ownership to a new address,
+    * pending.
+    */
+    function transferOwnership(address _to)
+    external
+    _logs_
+    {
+        require(msg.sender == _controller, "3");
+        _pendingController = _to;
+    }
+
+    /**
+    * @notice Allows a controller transfer to be completed by the recipient.
+    */
+    function acceptOwnership()
+    external
+    {
+        require(msg.sender == _pendingController, "47");
+
+        address oldController = _controller;
+        _controller = msg.sender;
+        _pendingController = address(0);
+
+        emit LOG_NEW_CONTROLLER(oldController, msg.sender);
     }
 
     function setPublicSwap(bool public_)
