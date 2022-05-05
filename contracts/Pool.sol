@@ -905,7 +905,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory, uint256)
+    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
         return _getAmountOutGivenInMMM(
             tokenIn,
@@ -1048,7 +1048,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory, uint256)
+    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
     {
         return _getAmountInGivenOutMMM(
             tokenIn,

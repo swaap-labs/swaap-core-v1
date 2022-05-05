@@ -596,7 +596,7 @@ library Math {
     * @dev The initial weights of the tokens are the ones adjusted by their price performance only
     * @param pivotTokenIsInput True if and only if pivotToken should be considered as an input token
     * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
-    * @param pivotToken The tokenIn's global information (token records + latest round info)
+    * @param pivotToken The pivot token's global information (token records + latest round info)
     * @param otherTokens Other pool's tokens' global information (token records + latest rounds info)
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
