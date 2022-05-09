@@ -302,29 +302,11 @@ contract Pool is PoolToken {
     * @param maxAmountsIn Maximum accepted token amount in
     */
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
-    external
-    {
-        _joinPool(msg.sender, poolAmountOut, maxAmountsIn);
-    }
-
-    /**
-    * @notice Add liquidity to a pool and credit tx.origin
-    * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
-    * This method is useful when joining a pool via a proxy contract
-    * @param poolAmountOut Amount of pool shares a LP wishes to receive
-    * @param maxAmountsIn Maximum accepted token amount in
-    */
-    function joinPoolForTxOrigin(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
-    external
-    {
-        _joinPool(tx.origin, poolAmountOut, maxAmountsIn);
-    }
-
-    function _joinPool(address owner, uint256 poolAmountOut, uint256[] calldata maxAmountsIn) 
-    internal     
     _logs_
     _lock_
-    _whenNotPaused_{
+    _whenNotPaused_
+    external
+    {
         require(_finalized, "1");
 
         uint256 poolTotal = totalSupply();
@@ -337,13 +319,13 @@ contract Pool is PoolToken {
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
             require(tokenAmountIn != 0, "5");
             require(tokenAmountIn <= maxAmountsIn[i], "8");
-            _records[t].balance = _records[t].balance + tokenAmountIn;
-            emit LOG_JOIN(owner, t, tokenAmountIn);
+            _records[t].balance = bal + tokenAmountIn;
+            emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
             unchecked{++i;}
         }
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(owner, poolAmountOut);
+        _pushPoolShare(msg.sender, poolAmountOut);
     }
 
     /**
