@@ -15,9 +15,18 @@
 pragma solidity =0.8.12;
 
 import "../Math.sol";
+import "../ChainlinkUtils.sol";
 import "../structs/Struct.sol";
 
 library TMathMMM {
+
+    struct FormattedInput {
+        Struct.TokenGlobal pivot;
+        Struct.TokenGlobal[] others;
+        Struct.JoinExitSwapParameters joinexitswapParameters;
+        Struct.GBMParameters gbmParameters;
+        Struct.HistoricalPricesParameters hpParameters;
+    }
 
     function getLogSpreadFactor(
         int256 mean, uint256 variance,
@@ -76,6 +85,34 @@ library TMathMMM {
         );
     }
 
+    function calcPoolOutGivenSingleInAdaptiveFees(
+        uint256 poolValueInTokenIn,
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenAmountIn
+    )
+    public pure
+    returns (uint256)
+    {
+        return Math.calcPoolOutGivenSingleInAdaptiveFees(
+            poolValueInTokenIn, tokenBalanceIn, tokenWeightIn, tokenAmountIn
+        );
+    }
+
+    function calcSingleOutGivenPoolInAdaptiveFees(
+        uint256 poolValueInTokenOut,
+        uint256 tokenBalanceOut,
+        uint256 normalizedTokenWeightOut,
+        uint256 normalizedPoolAmountOut
+    )
+    public pure
+    returns (uint256)
+    {
+        return Math.calcSingleOutGivenPoolInAdaptiveFees(
+            poolValueInTokenOut, tokenBalanceOut, normalizedTokenWeightOut, normalizedPoolAmountOut
+        );
+    }
+
     function getOutTargetGivenIn(
         uint256 tokenBalanceOut, uint256 relativePrice, uint256 tokenAmountIn
     )
@@ -83,6 +120,129 @@ library TMathMMM {
     returns (uint256)
     {
         return tokenBalanceOut - Num.bdiv(tokenAmountIn, relativePrice);
+    }
+
+    function getBasesTotalValue(
+        address quoteAddress,
+        address[] memory basesAddress,
+        uint256[] memory basesBalance
+    ) public view returns (uint256) {
+        Struct.LatestRound memory quote = ChainlinkUtils.getLatestRound(quoteAddress);
+        Struct.TokenGlobal[] memory bases = new Struct.TokenGlobal[](basesAddress.length);
+        for (uint i=0; i < basesAddress.length;) {
+            Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(basesAddress[i]);
+            Struct.TokenRecord memory info = Struct.TokenRecord(basesBalance[i], 0); // weight is not used in getTotalValue
+            Struct.TokenGlobal memory token = Struct.TokenGlobal(info, latestRound);
+            bases[i] = token;
+            unchecked { ++i; }
+        }
+        return Math.getBasesTotalValue(quote, bases);
+    }
+
+    function calcSingleOutGivenPoolInMMM(
+        address pivotOracleAddress,
+        uint256 pivotBalance,
+        uint256 pivotWeight,
+        address[] memory otherOracleAddresses,
+        uint256[] memory otherBalances,
+        uint256[] memory otherWeights,
+        uint256 amount,
+        uint256 fee,
+        uint256 fallbackSpread,
+        uint256 poolSupply
+    ) public view returns (uint256) {
+        FormattedInput memory forrmattedInput = _formatInput(
+            pivotOracleAddress,
+            pivotBalance,
+            pivotWeight,
+            otherOracleAddresses,
+            otherBalances,
+            otherWeights,
+            amount,
+            fee,
+            fallbackSpread,
+            poolSupply
+        );
+        return Math.calcSingleOutGivenPoolInMMM(
+            forrmattedInput.pivot,
+            forrmattedInput.others,
+            forrmattedInput.joinexitswapParameters,
+            forrmattedInput.gbmParameters,
+            forrmattedInput.hpParameters
+        );
+    }
+
+    function calcPoolOutGivenSingleInMMM(
+        address pivotOracleAddress,
+        uint256 pivotBalance,
+        uint256 pivotWeight,
+        address[] memory otherOracleAddresses,
+        uint256[] memory otherBalances,
+        uint256[] memory otherWeights,
+        uint256 amount,
+        uint256 fee,
+        uint256 fallbackSpread,
+        uint256 poolSupply
+    ) public view returns (uint256) {
+        FormattedInput memory forrmattedInput = _formatInput(
+            pivotOracleAddress,
+            pivotBalance,
+            pivotWeight,
+            otherOracleAddresses,
+            otherBalances,
+            otherWeights,
+            amount,
+            fee,
+            fallbackSpread,
+            poolSupply
+        );
+        return Math.calcPoolOutGivenSingleInMMM(
+            forrmattedInput.pivot,
+            forrmattedInput.others,
+            forrmattedInput.joinexitswapParameters,
+            forrmattedInput.gbmParameters,
+            forrmattedInput.hpParameters
+        );
+    }
+
+    function _formatInput(
+        address pivotOracleAddress,
+        uint256 pivotBalance,
+        uint256 pivotWeight,
+        address[] memory otherOracleAddresses,
+        uint256[] memory otherBalances,
+        uint256[] memory otherWeights,
+        uint256 amount,
+        uint256 fee,
+        uint256 fallbackSpread,
+        uint256 poolSupply
+    ) public view returns (FormattedInput memory formattedInput) {
+        Struct.LatestRound memory pivotLatestRound = ChainlinkUtils.getLatestRound(pivotOracleAddress);
+        Struct.TokenRecord memory pivotInfo = Struct.TokenRecord(pivotBalance, pivotWeight);
+        formattedInput.pivot = Struct.TokenGlobal(pivotInfo, pivotLatestRound);
+        formattedInput.others = new Struct.TokenGlobal[](otherOracleAddresses.length);
+        for (uint i=0; i < otherOracleAddresses.length;) {
+            Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(otherOracleAddresses[i]);
+            Struct.TokenRecord memory info = Struct.TokenRecord(otherBalances[i], otherWeights[i]);
+            Struct.TokenGlobal memory other = Struct.TokenGlobal(info, latestRound);
+            formattedInput.others[i] = other;
+            unchecked { ++i; }
+        }
+        formattedInput.joinexitswapParameters = Struct.JoinExitSwapParameters(
+            amount,
+            fee,
+            fallbackSpread,
+            poolSupply
+        );
+        // the spread is not considered here
+        formattedInput.gbmParameters = Struct.GBMParameters(
+            0,
+            0
+        );
+        formattedInput.hpParameters = Struct.HistoricalPricesParameters(
+            10, 1000, block.timestamp
+        );
+        return formattedInput;
     }
 
 }

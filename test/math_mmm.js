@@ -1,15 +1,19 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
-const { calcRelativeDiff } = require('../lib/calc_comparisons');
+const { calcRelativeDiff, calcSingleOutGivenPoolIn, calcPoolOutGivenSingleIn } = require('../lib/calc_comparisons');
 const {
 		getLogSpreadFactor, getMMMWeight,
 		getTokenBalanceAtEquilibrium, calcOutGivenInMMM,
-		calcAdaptiveFeeGivenInAndOut, getOutTargetGivenIn
+		calcAdaptiveFeeGivenInAndOut, getOutTargetGivenIn,
+		calcPoolOutGivenSingleInAdaptiveFees,
+		calcSingleOutGivenPoolInAdaptiveFees
 	} = require('../lib/mmm');
 
 const { getInAmountAtPrice } = require('../lib/mmm');
 
 const TMathMMM = artifacts.require('TMathMMM');
+const TConstantOracle = artifacts.require('TConstantOracle');
+const TOracle = artifacts.require('TOracle');
 
 const errorDelta = 10 ** -8;
 
@@ -23,15 +27,27 @@ const nullAddress = "0x0000000000000000000000000000000000000000"
 
 contract('MMM Math', async (accounts) => {
 
+	const now = 42;
+
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
     const MAX = web3.utils.toTwosComplement(-1);
 
     let math;
 
+    let wethOracle; let wethOraclePrice = 300000000000;
+    let mkrOracle; let mkrOraclePrice = 10000000000;
+    let daiOracle; let daiOraclePrice = 100000000;
+
+    const roundId = 100;
+
     before(async () => {
 
 		math = await TMathMMM.deployed();
+
+		wethOracle = await TConstantOracle.new(wethOraclePrice, now);
+		mkrOracle = await TConstantOracle.new(mkrOraclePrice, now);
+		daiOracle = await TConstantOracle.new(daiOraclePrice, now);
 
     });
 
@@ -305,6 +321,109 @@ contract('MMM Math', async (accounts) => {
 		assert.isAtMost(relDif.toNumber(), errorDelta);
 	}
 
+	async function assertCalcPoolOutGivenSingleInAdaptiveFees() {
+
+		const poolValueInTokenIn = 19.086622466755248
+		const balanceIn = 9.950371902099894
+		const weightIn = 0.5238095238095238
+		const amountIn = 0.019004798899032026
+
+		// Expected adaptiveFees
+		const expectedAdaptiveFees = calcPoolOutGivenSingleInAdaptiveFees(
+			poolValueInTokenIn, balanceIn, weightIn, amountIn
+		);
+
+		// Actual adaptiveFees
+		const adaptiveFees = await math.calcPoolOutGivenSingleInAdaptiveFees(
+			toWei(poolValueInTokenIn.toString()),
+			toWei(balanceIn.toString()),
+			toWei(weightIn.toString()),
+			toWei(amountIn.toString())
+		);
+
+		// Checking adaptiveFees
+		const actualAdaptiveFees = Decimal(fromWei(adaptiveFees));
+		const relDif = calcRelativeDiff(expectedAdaptiveFees, actualAdaptiveFees);
+		if (verbose) {
+			console.log('AdaptiveFees');
+			console.log(`expected: ${expectedAdaptiveFees}`);
+			console.log(`actual: ${actualAdaptiveFees}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
+	async function assertCalcSingleOutGivenPoolInAdaptiveFees() {
+
+		const poolValueInPivotToken = 20.11985099348402
+		const balanceOut = 10.059925496742009
+		const weightOut = 0.4975124378109453
+		const normalizedPoolAmountOut = 0.000999000999000999
+
+		// Expected adaptiveFees
+		const expectedAdaptiveFees = calcSingleOutGivenPoolInAdaptiveFees(
+			poolValueInPivotToken, balanceOut, weightOut, normalizedPoolAmountOut
+		);
+
+		// Actual adaptiveFees
+		const adaptiveFees = await math.calcSingleOutGivenPoolInAdaptiveFees(
+			toWei(poolValueInPivotToken.toString()),
+			toWei(balanceOut.toString()),
+			toWei(weightOut.toString()),
+			toWei(normalizedPoolAmountOut.toString())
+		);
+
+		// Checking adaptiveFees
+		const actualAdaptiveFees = Decimal(fromWei(adaptiveFees));
+		const relDif = calcRelativeDiff(expectedAdaptiveFees, actualAdaptiveFees);
+		if (verbose) {
+			console.log('AdaptiveFees');
+			console.log(`expected: ${expectedAdaptiveFees}`);
+			console.log(`actual: ${actualAdaptiveFees}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
+	async function assertGetBasesTotalValue() {
+
+        const allAddresses = [
+        	wethOracle.address, mkrOracle.address, daiOracle.address
+        ]
+        const allBalances = [100, 2000, 100000]
+        const allPrices = [wethOraclePrice, mkrOraclePrice, daiOraclePrice]
+
+		for (let quoteIdx = 0; quoteIdx < allAddresses.length; quoteIdx++) {
+			const baseAddress = allAddresses[quoteIdx]
+			const basesAddresses = allAddresses.filter((v, idx) => idx != quoteIdx)
+			const basesBalance = allBalances.filter((v, idx) => idx != quoteIdx)
+			const basesPrices = allPrices.filter((v, idx) => idx != quoteIdx)
+			// Expected value
+			const expectedValue = basesBalance.reduce((acc, b, idx) => {
+				return acc + b * basesPrices[idx] / allPrices[quoteIdx]
+			}, 0)
+
+			// Actual value
+			const value = await math.getBasesTotalValue(
+				baseAddress,
+				basesAddresses,
+				basesBalance.map(v => toWei(v.toString())),
+			);
+
+			// Checking adaptiveFees
+			const actualValue = Decimal(fromWei(value));
+			const relDif = calcRelativeDiff(expectedValue, actualValue);
+			if (verbose) {
+				console.log('Value in pivot terms');
+				console.log(`expected: ${expectedValue}`);
+				console.log(`actual: ${actualValue}`);
+				console.log(`relDif: ${relDif}`);
+			}
+			assert.isAtMost(relDif.toNumber(), errorDelta);
+		}
+
+	}
+
 	async function assertGetPreviousPrice() {
 
 		const priceIn = 100
@@ -340,6 +459,176 @@ contract('MMM Math', async (accounts) => {
 			console.log(`relDif: ${relDif}`);
 		}
 		assert.isAtMost(relDif.toNumber(), errorDelta);
+	}
+
+	async function assertCalcSingleOutGivenPoolInMMM() {
+
+		// the spread is not considered here
+
+		const joinexitswapParameters = {
+			amount: toWei("1"),
+			fee: toWei("0.001"),
+			fallbackSpread: toWei("0.003"),
+			poolSupply: toWei("100")
+		}
+
+		const pivotPrices = [3*10**8]
+		const pivotTimestamps = [1]
+		const pivotDecimals = [8]
+		const pivotOracle = await TOracle.new(pivotPrices, pivotTimestamps, pivotDecimals, roundId);
+		const pivotOracleAddress = pivotOracle.address;
+		const pivotBalance = toWei("140");
+		const pivotWeight = toWei("5");
+
+		const otherPrices = [[40*10**8], [1*10**6]]
+		const otherTimestamps = [[1], [0]]
+		const otherDecimals = [[8], [6]]
+		const WETHOracle = await TOracle.new(otherPrices[0], otherTimestamps[0], otherDecimals[0], roundId);
+		const DAIOracle = await TOracle.new(otherPrices[1], otherTimestamps[1], otherDecimals[1], roundId);
+		const otherOracleAddresses = [WETHOracle.address, DAIOracle.address]
+		const otherBalances = [toWei("10"), toWei("400")]
+		const otherWeights = [toWei("5"), toWei("5")]
+
+		const totalAdjustedWeight = parseFloat(fromWei(pivotWeight)) + parseFloat(otherWeights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0))
+
+		let fee = parseFloat(fromWei(joinexitswapParameters["fee"]));
+
+		let blockHasPriceUpdate = pivotTimestamps[0] == 0;
+		let i = 0;
+		while ((!blockHasPriceUpdate) && (i < otherPrices.length)) {
+			if (otherTimestamps[i][0] == 0) {
+				blockHasPriceUpdate = true;
+			}
+			++i;
+		}
+		if (blockHasPriceUpdate) {
+			const poolValueInPivotToken = parseFloat(fromWei(pivotBalance)) + otherBalances.reduce((acc, b, idx) => {
+				return acc + parseFloat(fromWei(b)) * (otherPrices[idx][0] / (10**otherDecimals[idx][0])) / (pivotPrices[0] / (10**pivotDecimals[0]))
+			}, 0)
+			fee += calcSingleOutGivenPoolInAdaptiveFees(
+				poolValueInPivotToken,
+				parseFloat(fromWei(pivotBalance)),
+				parseFloat(fromWei(pivotWeight)) / totalAdjustedWeight,
+				parseFloat(fromWei(joinexitswapParameters["amount"])) / parseFloat(fromWei(joinexitswapParameters["poolSupply"]))
+			);
+		}
+
+		const expected = calcSingleOutGivenPoolIn(
+            parseFloat(fromWei(pivotBalance)),
+            parseFloat(fromWei(pivotWeight)),
+            parseFloat(fromWei(joinexitswapParameters["poolSupply"])),
+            totalAdjustedWeight,
+            parseFloat(fromWei(joinexitswapParameters["amount"])),
+            parseFloat(fee)
+		)
+
+		const actual = await math.calcSingleOutGivenPoolInMMM(
+			pivotOracleAddress,
+			pivotBalance,
+			pivotWeight,
+			otherOracleAddresses,
+			otherBalances,
+			otherWeights,
+			joinexitswapParameters["amount"],
+			joinexitswapParameters["fee"],
+			joinexitswapParameters["fallbackSpread"],
+			joinexitswapParameters["poolSupply"]
+		);
+
+		const relDif = calcRelativeDiff(expected, fromWei(actual));
+		if (verbose) {
+			console.log('LogSpreadFactor');
+			console.log(`expected: ${expected}`);
+			console.log(`actual: ${fromWei(actual)}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+
+	}
+
+	async function assertCalcPoolOutGivenSingleInMMM() {
+
+		// the spread is not considered here
+
+		const joinexitswapParameters = {
+			amount: toWei("1"),
+			fee: toWei("0.001"),
+			fallbackSpread: toWei("0.003"),
+			poolSupply: toWei("100")
+		}
+
+		const pivotPrices = [3*10**8]
+		const pivotTimestamps = [1]
+		const pivotDecimals = [8]
+		const pivotOracle = await TOracle.new(pivotPrices, pivotTimestamps, pivotDecimals, roundId);
+		const pivotOracleAddress = pivotOracle.address;
+		const pivotBalance = toWei("130");
+		const pivotWeight = toWei("5");
+
+		const otherPrices = [[40*10**8], [1*10**6]]
+		const otherTimestamps = [[1], [0]]
+		const otherDecimals = [[8], [6]]
+		const WETHOracle = await TOracle.new(otherPrices[0], otherTimestamps[0], otherDecimals[0], roundId);
+		const DAIOracle = await TOracle.new(otherPrices[1], otherTimestamps[1], otherDecimals[1], roundId);
+		const otherOracleAddresses = [WETHOracle.address, DAIOracle.address]
+		const otherBalances = [toWei("10"), toWei("400")]
+		const otherWeights = [toWei("5"), toWei("5")]
+
+		const totalAdjustedWeight = parseFloat(fromWei(pivotWeight)) + parseFloat(otherWeights.reduce((acc, v) => acc + parseFloat(fromWei(v)), 0))
+
+		let fee = parseFloat(fromWei(joinexitswapParameters["fee"]));
+
+		let blockHasPriceUpdate = pivotTimestamps[0] == 0;
+		let i = 0;
+		while ((!blockHasPriceUpdate) && (i < otherPrices.length)) {
+			if (otherTimestamps[i][0] == 0) {
+				blockHasPriceUpdate = true;
+			}
+			++i;
+		}
+		if (blockHasPriceUpdate) {
+			const poolValueInPivotToken = parseFloat(fromWei(pivotBalance)) + otherBalances.reduce((acc, b, idx) => {
+				return acc + parseFloat(fromWei(b)) * (otherPrices[idx][0] / (10**otherDecimals[idx][0])) / (pivotPrices[0] / (10**pivotDecimals[0]))
+			}, 0)
+			fee += calcPoolOutGivenSingleInAdaptiveFees(
+				poolValueInPivotToken,
+				parseFloat(fromWei(pivotBalance)),
+				parseFloat(fromWei(pivotWeight)) / totalAdjustedWeight,
+				parseFloat(fromWei(joinexitswapParameters["amount"]))
+			);
+		}
+
+		const expected = calcPoolOutGivenSingleIn(
+            parseFloat(fromWei(pivotBalance)),
+            parseFloat(fromWei(pivotWeight)),
+            parseFloat(fromWei(joinexitswapParameters["poolSupply"])),
+            totalAdjustedWeight,
+            parseFloat(fromWei(joinexitswapParameters["amount"])),
+            parseFloat(fee)
+		)
+
+		const actual = await math.calcPoolOutGivenSingleInMMM(
+			pivotOracleAddress,
+			pivotBalance,
+			pivotWeight,
+			otherOracleAddresses,
+			otherBalances,
+			otherWeights,
+			joinexitswapParameters["amount"],
+			joinexitswapParameters["fee"],
+			joinexitswapParameters["fallbackSpread"],
+			joinexitswapParameters["poolSupply"]
+		);
+
+		const relDif = calcRelativeDiff(expected, fromWei(actual));
+		if (verbose) {
+			console.log('LogSpreadFactor');
+			console.log(`expected: ${expected}`);
+			console.log(`actual: ${fromWei(actual)}`);
+			console.log(`relDif: ${relDif}`);
+		}
+		assert.isAtMost(relDif.toNumber(), errorDelta);
+
 	}
 
     describe('Protocol math', () => {
@@ -444,6 +733,41 @@ contract('MMM Math', async (accounts) => {
 			`calcAdaptiveFeeGivenInAndOut`,
 			async () => {
 				await assertCalcAdaptiveFeeGivenInAndOut()
+			}
+		)
+
+		it(
+			`calcSingleInGivenPoolOutAdaptiveFees`,
+			async () => {
+				await assertCalcPoolOutGivenSingleInAdaptiveFees()
+			}
+		)
+
+		it(
+			`calcSingleOutGivenPoolInAdaptiveFees`,
+			async () => {
+				await assertCalcSingleOutGivenPoolInAdaptiveFees()
+			}
+		)
+
+		it(
+			`getBasesTotalValue`,
+			async () => {
+				await assertGetBasesTotalValue()
+			}
+		)
+
+		it(
+			`calcSingleOutGivenPoolInMMM`,
+			async () => {
+				await assertCalcSingleOutGivenPoolInMMM()
+			}
+		)
+
+		it(
+			`calcPoolOutGivenSingleInMMM`,
+			async () => {
+				await assertCalcPoolOutGivenSingleInMMM()
 			}
 		)
 

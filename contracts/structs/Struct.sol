@@ -63,6 +63,13 @@ contract Struct {
         uint256 fallbackSpread;
     }
 
+    struct JoinExitSwapParameters {
+        uint256 amount;
+        uint256 fee;
+        uint256 fallbackSpread;
+        uint256 poolSupply;
+    }
+
     struct GBMParameters {
         uint256 z;
         uint256 horizon;

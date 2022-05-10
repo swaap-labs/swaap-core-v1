@@ -380,10 +380,11 @@ contract Pool is PoolToken {
         (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+            Struct.JoinExitSwapParameters memory joinexitswapParameters = Struct.JoinExitSwapParameters(
                 tokenAmountIn,
                 _swapFee,
-                Const.FALLBACK_SPREAD
+                Const.FALLBACK_SPREAD,
+                _totalSupply
             );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
@@ -393,10 +394,9 @@ contract Pool is PoolToken {
             );
 
             poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
-                _totalSupply,
                 tokenInInfo,
                 remainingTokensInfo,
-                swapParameters,
+                joinexitswapParameters,
                 gbmParameters,
                 hpParameters
             );
@@ -433,79 +433,27 @@ contract Pool is PoolToken {
         return poolAmountOut;
     }
 
-    function joinswapPoolAmountOutMMM(address tokenIn, uint poolAmountOut, uint maxAmountIn)
-        external
-        _logs_
-        _lock_
-        _whenNotPaused_
-        returns (uint tokenAmountIn)
-    {
-        require(_finalized, "1");
-        require(_records[tokenIn].bound, "2");
-
-        Struct.TokenGlobal memory tokenInInfo;
-        Struct.TokenGlobal[] memory remainingTokensInfo;
-
-        (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
-
-        {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
-                poolAmountOut,
-                _swapFee,
-                Const.FALLBACK_SPREAD
-            );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
-            Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-                priceStatisticsLookbackInRound,
-                priceStatisticsLookbackInSec,
-                block.timestamp
-            );
-            tokenAmountIn = Math.calcSingleInGivenPoolOutMMM(
-                _totalSupply,
-                tokenInInfo,
-                remainingTokensInfo,
-                swapParameters,
-                gbmParameters,
-                hpParameters
-            );
-        }
-
-        require(tokenAmountIn != 0, "5");
-        require(tokenAmountIn <= maxAmountIn, "8");
-
-        tokenInInfo.info.balance += tokenAmountIn;
-        _checkJoinSwapPrices(tokenInInfo, remainingTokensInfo);
-        _records[tokenIn].balance = tokenInInfo.info.balance;
-
-        emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
-
-        _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-
-        return tokenAmountIn;
-    }
-
     function exitswapPoolAmountInMMM(address tokenOut, uint poolAmountIn, uint minAmountOut)
-        external
-        _logs_
-        _lock_
-        _whenNotPaused_
-        returns (uint tokenAmountOut)
+    external
+    _logs_
+    _lock_
+    _whenNotPaused_
+    returns (uint tokenAmountOut)
     {
         require(_finalized, "1");
         require(_records[tokenOut].bound, "2");
 
         Struct.TokenGlobal memory tokenOutInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
-    
+
         (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
 
         {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
+            Struct.JoinExitSwapParameters memory joinexitswapParameters = Struct.JoinExitSwapParameters(
                 poolAmountIn,
                 _swapFee,
-                Const.FALLBACK_SPREAD
+                Const.FALLBACK_SPREAD,
+                _totalSupply
             );
             Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
@@ -515,17 +463,16 @@ contract Pool is PoolToken {
             );
 
             tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
-                _totalSupply,
                 tokenOutInfo,
                 remainingTokensInfo,
-                swapParameters,
+                joinexitswapParameters,
                 gbmParameters,
                 hpParameters
             );
         }
 
         require(tokenAmountOut >= minAmountOut, "9");
-        
+
         tokenOutInfo.info.balance -= tokenAmountOut;
         _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
         _records[tokenOut].balance = tokenOutInfo.info.balance;
@@ -540,63 +487,6 @@ contract Pool is PoolToken {
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return tokenAmountOut;
-    }
-
-    function exitswapExternAmountOutMMM(address tokenOut, uint tokenAmountOut, uint maxPoolAmountIn)
-        external
-        _logs_
-        _lock_
-        _whenNotPaused_
-        returns (uint poolAmountIn)
-    {
-        require(_finalized, "1");
-        require(_records[tokenOut].bound, "2");
-
-        Struct.TokenGlobal memory tokenOutInfo;
-        Struct.TokenGlobal[] memory remainingTokensInfo;
-
-        (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
-
-        {
-            Struct.SwapParameters memory swapParameters = Struct.SwapParameters(
-                tokenAmountOut,
-                _swapFee,
-                Const.FALLBACK_SPREAD
-            );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
-            Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-                priceStatisticsLookbackInRound,
-                priceStatisticsLookbackInSec,
-                block.timestamp
-            );
-
-            poolAmountIn = Math.calcPoolInGivenSingleOutMMM(
-                _totalSupply,
-                tokenOutInfo,
-                remainingTokensInfo,
-                swapParameters,
-                gbmParameters,
-                hpParameters
-            );
-        }
-
-        require(poolAmountIn != 0, "5");
-        require(poolAmountIn <= maxPoolAmountIn, "8");
-
-        tokenOutInfo.info.balance -= tokenAmountOut;
-        _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
-        _records[tokenOut].balance = tokenOutInfo.info.balance;
-
-        uint exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
-
-        emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
-
-        _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn - exitFee);
-        _pushPoolShare(_factory, exitFee);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        return poolAmountIn;
     }
 
     // ==

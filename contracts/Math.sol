@@ -160,10 +160,9 @@ library Math {
     }
 
     function calcPoolOutGivenSingleInMMM(
-        uint poolSupply,
         Struct.TokenGlobal memory tokenGlobalIn,
         Struct.TokenGlobal[] memory tokensGlobalOut,
-        Struct.SwapParameters memory swapParameters,
+        Struct.JoinExitSwapParameters memory joinexitswapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
@@ -174,96 +173,45 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
-            swapParameters.fallbackSpread,
+            joinexitswapParameters.fallbackSpread,
             tokenGlobalIn,
             tokensGlobalOut,
             gbmParameters,
             hpParameters
         );
 
+        uint256 fee = joinexitswapParameters.fee;
+
+        bool blockHasPriceUpdate = block.timestamp == tokenGlobalIn.latestRound.timestamp;
+        {
+            uint8 i;
+            while ((!blockHasPriceUpdate) && (i < tokensGlobalOut.length)) {
+                if (block.timestamp == tokensGlobalOut[i].latestRound.timestamp) {
+                    blockHasPriceUpdate = true;
+                }
+                unchecked { ++i; }
+            }
+        }
+        if (blockHasPriceUpdate) {
+            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn.latestRound, tokensGlobalOut);
+            fee += calcPoolOutGivenSingleInAdaptiveFees(
+                poolValueInTokenIn,
+                tokenGlobalIn.info.balance,
+                Num.bdiv(tokenGlobalIn.info.weight, totalAdjustedWeight),
+                joinexitswapParameters.amount
+            );
+        }
+
         poolAmountOut = calcPoolOutGivenSingleIn(
-        tokenGlobalIn.info.balance,
-        tokenGlobalIn.info.weight,
-        poolSupply,
-        totalAdjustedWeight,
-        swapParameters.amount,
-        swapParameters.fee
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
+            joinexitswapParameters.poolSupply,
+            totalAdjustedWeight,
+            joinexitswapParameters.amount,
+            fee
         );
 
         return poolAmountOut;
-    }
-        
-    /**********************************************************************************************
-    // Using the same equation as calcPoolOutGivenSingleIn but with tAi as the unknown           //
-    // calcSingleInGivenPoolOut                                                                  //
-    // tAi = tokenAmountIn              //(pS + pAo)\     /    1    \\                           //
-    // pS = poolSupply                 || ---------  | ^ | --------- || * bI - bI                //
-    // pAo = poolAmountOut              \\    pS    /     \(wI / tW)//                           //
-    // bI = balanceIn          tAi =  --------------------------------------------               //
-    // wI = weightIn                          /     /      wI  \       \                         //
-    // tW = totalWeight                      | 1 - |  1 - ----  |  * sF |                        //
-    // sF = swapFee                           \     \      tW  /       /                         //
-    **********************************************************************************************/
-    function calcSingleInGivenPoolOut(
-        uint tokenBalanceIn,
-        uint tokenWeightIn,
-        uint poolSupply,
-        uint totalWeight,
-        uint poolAmountOut,
-        uint swapFee
-    )
-        public pure
-        returns (uint tokenAmountIn)
-    {
-        uint normalizedWeight = Num.bdiv(tokenWeightIn, totalWeight);
-        uint newPoolSupply = poolSupply + poolAmountOut;
-        uint poolRatio = Num.bdiv(newPoolSupply, poolSupply);
-      
-        //uint newBalTi = poolRatio^(1/weightTi) * balTi;
-        uint boo = Num.bdiv(Const.BONE, normalizedWeight); 
-        uint tokenInRatio = Num.bpow(poolRatio, boo);
-        uint newTokenBalanceIn = Num.bmul(tokenInRatio, tokenBalanceIn);
-        uint tokenAmountInAfterFee = newTokenBalanceIn - tokenBalanceIn;
-        // Do reverse order of fees charged in joinswap_ExternAmountIn, this way 
-        //     ``` pAo == joinswap_ExternAmountIn(Ti, joinswap_PoolAmountOut(pAo, Ti)) ```
-        //uint tAi = tAiAfterFee / (1 - (1-weightTi) * swapFee) ;
-        uint zar = Num.bmul(Const.BONE - normalizedWeight, swapFee);
-        tokenAmountIn = Num.bdiv(tokenAmountInAfterFee, Const.BONE - zar);
-        return tokenAmountIn;
-    }
-
-    function calcSingleInGivenPoolOutMMM(
-        uint poolSupply,
-        Struct.TokenGlobal memory tokenGlobalIn,
-        Struct.TokenGlobal[] memory tokensGlobalOut,
-        Struct.SwapParameters memory swapParameters,
-        Struct.GBMParameters memory gbmParameters,
-        Struct.HistoricalPricesParameters memory hpParameters
-    )
-        public view
-        returns (uint tokenAmountIn)
-    {
-
-        // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        uint totalAdjustedWeight = getTotalWeightMMM(
-            true,
-            swapParameters.fallbackSpread,
-            tokenGlobalIn,
-            tokensGlobalOut,
-            gbmParameters,
-            hpParameters
-        );
-
-        tokenAmountIn = calcSingleInGivenPoolOut(
-            tokenGlobalIn.info.balance,
-            tokenGlobalIn.info.weight,
-            poolSupply,
-            totalAdjustedWeight,
-            swapParameters.amount,
-            swapParameters.fee
-        );
-
-        return tokenAmountIn;
     }
 
     /**********************************************************************************************
@@ -285,8 +233,8 @@ library Math {
         uint poolAmountIn,
         uint swapFee
     )
-        public pure
-        returns (uint tokenAmountOut)
+    public pure
+    returns (uint tokenAmountOut)
     {
         uint normalizedWeight = Num.bdiv(tokenWeightOut, totalWeight);
         // charge exit fee on the pool token side
@@ -294,199 +242,72 @@ library Math {
         uint poolAmountInAfterExitFee = Num.bmul(poolAmountIn, Const.BONE - Const.EXIT_FEE);
         uint newPoolSupply = poolSupply - poolAmountInAfterExitFee;
         uint poolRatio = Num.bdiv(newPoolSupply, poolSupply);
-     
+
         // newBalTo = poolRatio^(1/weightTo) * balTo;
         uint tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(Const.BONE, normalizedWeight));
         uint newTokenBalanceOut = Num.bmul(tokenOutRatio, tokenBalanceOut);
 
         uint tokenAmountOutBeforeSwapFee = tokenBalanceOut - newTokenBalanceOut;
 
-        // charge swap fee on the output token side 
+        // charge swap fee on the output token side
         //uint tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
-        uint zaz = Num.bmul(Const.BONE - normalizedWeight, swapFee); 
+        uint zaz = Num.bmul(Const.BONE - normalizedWeight, swapFee);
         tokenAmountOut = Num.bmul(tokenAmountOutBeforeSwapFee, Const.BONE - zaz);
         return tokenAmountOut;
     }
 
     function calcSingleOutGivenPoolInMMM(
-        uint poolSupply,
         Struct.TokenGlobal memory tokenGlobalOut,
         Struct.TokenGlobal[] memory remainingTokens,
-        Struct.SwapParameters memory swapParameters,
-        Struct.GBMParameters memory gbmParameters,
-        Struct.HistoricalPricesParameters memory hpParameters
-    )
-        public view
-        returns (uint tokenAmountOut)
-    {
-        // to get the total adjusted weight, we assume all the remaining tokens are in shortage
-        uint totalAdjustedWeight = getTotalWeightMMM(
-            false,
-            swapParameters.fallbackSpread,
-            tokenGlobalOut,
-            remainingTokens,
-            gbmParameters,
-            hpParameters
-        );
-
-        tokenAmountOut = calcSingleOutGivenPoolIn(
-            tokenGlobalOut.info.balance,
-            tokenGlobalOut.info.weight,
-            poolSupply,
-            totalAdjustedWeight,
-            swapParameters.amount,
-            swapParameters.fee
-        );
-
-        return tokenAmountOut;
-    }
-
-    /**********************************************************************************************
-    // calcPoolInGivenSingleOut                                                                  //
-    // pAi = poolAmountIn               // /               tAo             \\     / wO \     \   //
-    // bO = tokenBalanceOut            // | bO - -------------------------- |\   | ---- |     \  //
-    // tAo = tokenAmountOut      pS - ||   \     1 - ((1 - (tO / tW)) * sF)/  | ^ \ tW /  * pS | //
-    // ps = poolSupply                 \\ -----------------------------------/                /  //
-    // wO = tokenWeightOut  pAi =       \\               bO                 /                /   //
-    // tW = totalWeight           -------------------------------------------------------------  //
-    // sF = swapFee                                        ( 1 - eF )                            //
-    // eF = exitFee                                                                              //
-    **********************************************************************************************/
-    function calcPoolInGivenSingleOut(
-        uint tokenBalanceOut,
-        uint tokenWeightOut,
-        uint poolSupply,
-        uint totalWeight,
-        uint tokenAmountOut,
-        uint swapFee
-    )
-        public pure
-        returns (uint poolAmountIn)
-    {
-
-        // charge swap fee on the output token side 
-        uint normalizedWeight = Num.bdiv(tokenWeightOut, totalWeight);
-        //uint tAoBeforeSwapFee = tAo / (1 - (1-weightTo) * swapFee) ;
-        uint zoo = Const.BONE - normalizedWeight;
-        uint zar = Num.bmul(zoo, swapFee); 
-        uint tokenAmountOutBeforeSwapFee = Num.bdiv(tokenAmountOut, Const.BONE - zar);
-
-        uint newTokenBalanceOut = tokenBalanceOut - tokenAmountOutBeforeSwapFee;
-        uint tokenOutRatio = Num.bdiv(newTokenBalanceOut, tokenBalanceOut);
-
-        //uint newPoolSupply = (ratioTo ^ weightTo) * poolSupply;
-        uint poolRatio = Num.bpow(tokenOutRatio, normalizedWeight);
-        uint newPoolSupply = Num.bmul(poolRatio, poolSupply);
-        uint poolAmountInAfterExitFee = poolSupply - newPoolSupply;
-
-        // charge exit fee on the pool token side
-        // pAi = pAiAfterExitFee/(1-exitFee)
-        poolAmountIn = Num.bdiv(poolAmountInAfterExitFee, Const.BONE - Const.EXIT_FEE);
-        return poolAmountIn;
-    }
-
-    function calcPoolInGivenSingleOutMMM(
-        uint poolSupply,
-        Struct.TokenGlobal memory tokenGlobalOut,
-        Struct.TokenGlobal[] memory remainingTokens,
-        Struct.SwapParameters memory swapParameters,
-        Struct.GBMParameters memory gbmParameters,
-        Struct.HistoricalPricesParameters memory hpParameters
-    )
-        public view
-        returns (uint tokenAmountOut)
-    {
-        // to get the total adjusted weight, we assume all the remaining tokens are in shortage
-        uint totalAdjustedWeight = getTotalWeightMMM(
-            false,
-            swapParameters.fallbackSpread,
-            tokenGlobalOut,
-            remainingTokens,
-            gbmParameters,
-            hpParameters
-        );
-
-        tokenAmountOut = calcPoolInGivenSingleOut(
-            tokenGlobalOut.info.balance,
-            tokenGlobalOut.info.weight,
-            poolSupply,
-            totalAdjustedWeight,
-            swapParameters.amount,
-            swapParameters.fee
-        );
-
-        return tokenAmountOut;
-    }
-
-    /**
-    * @notice Computes the spot price of tokenOut in tokenIn terms
-    * @dev Two cases to consider:
-    * 1) the pool is in shortage of tokenOut ==> the pool charges a spread
-    * 2) the pool is in abundance of tokenOut ==> the pool doesn't charge any spread
-    * The spread is charged through an increase in weightOut proportional to the GBM forecast of
-    * the tokenOut_tokenIn price process, that directly translates into an increase in the spot price,
-    * which is defined as such: price = (balance_in / weight_in) / (balance_out / weight_out)
-    * cf whitepaper: https://www.swaap.finance/whitepaper.pdf
-    * @param tokenGlobalIn The pool global information on tokenIn
-    * @param tokenGlobalOut The pool global information on tokenOut
-    * @param relativePrice The price of tokenOut in tokenIn terms
-    * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
-    * @param gbmParameters The GBM forecast parameters (Z, horizon)
-    * @param hpParameters The parameters for historical prices retrieval
-    * @return spotPriceMMM The spot price of tokenOut in tokenIn terms
-    */
-    function calcSpotPriceMMM(
-        Struct.TokenGlobal memory tokenGlobalIn,
-        Struct.TokenGlobal memory tokenGlobalOut,
-        uint256 relativePrice,
-        uint256 swapFee,
-        uint256 fallbackSpread,
+        Struct.JoinExitSwapParameters memory joinexitswapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
     public view
-    returns (uint256 spotPriceMMM)
+    returns (uint tokenAmountOut)
     {
+        // to get the total adjusted weight, we assume all the remaining tokens are in shortage
+        uint totalAdjustedWeight = getTotalWeightMMM(
+            false,
+            joinexitswapParameters.fallbackSpread,
+            tokenGlobalOut,
+            remainingTokens,
+            gbmParameters,
+            hpParameters
+        );
+
+        uint256 fee = joinexitswapParameters.fee;
+
+        bool blockHasPriceUpdate = block.timestamp == tokenGlobalOut.latestRound.timestamp;
         {
-
-            // if tokenOut is in shortage --> apply spread
-            if (tokenGlobalIn.info.balance >= getTokenBalanceAtEquilibrium(
-                tokenGlobalIn.info.balance,
-                tokenGlobalIn.info.weight,
-                tokenGlobalOut.info.balance,
-                tokenGlobalOut.info.weight,
-                relativePrice
-            )) {
-
-                Struct.GBMEstimation memory gbmEstimation = GeometricBrownianMotionOracle.getParametersEstimation(
-                    tokenGlobalIn.latestRound,
-                    tokenGlobalOut.latestRound,
-                    hpParameters
-                );
-
-                (uint256 adjustedWeightOut, ) = getMMMWeight(true, fallbackSpread, tokenGlobalOut.info.weight, gbmEstimation, gbmParameters);
-                return (
-                    spotPriceMMM = calcSpotPrice(
-                        tokenGlobalIn.info.balance,
-                        tokenGlobalIn.info.weight,
-                        tokenGlobalOut.info.balance,
-                        adjustedWeightOut,
-                        swapFee
-                    )
-                );
+            uint8 i;
+            while ((!blockHasPriceUpdate) && (i < remainingTokens.length)) {
+                if (block.timestamp == remainingTokens[i].latestRound.timestamp) {
+                    blockHasPriceUpdate = true;
+                }
+                unchecked { ++i; }
             }
         }
-
-        // if tokenOut is in abundance --> no spread
-        return (
-            spotPriceMMM = calcSpotPrice(
-                tokenGlobalIn.info.balance,
-                tokenGlobalIn.info.weight,
+        if (blockHasPriceUpdate) {
+            uint256 poolValueInTokenOut = tokenGlobalOut.info.balance + getBasesTotalValue(tokenGlobalOut.latestRound, remainingTokens);
+            fee += calcSingleOutGivenPoolInAdaptiveFees(
+                poolValueInTokenOut,
                 tokenGlobalOut.info.balance,
-                tokenGlobalOut.info.weight,
-                swapFee
-            )
+                Num.bdiv(tokenGlobalOut.info.weight, totalAdjustedWeight),
+                Num.bdiv(joinexitswapParameters.amount, joinexitswapParameters.poolSupply)
+            );
+        }
+
+        tokenAmountOut = calcSingleOutGivenPoolIn(
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
+            joinexitswapParameters.poolSupply,
+            totalAdjustedWeight,
+            joinexitswapParameters.amount,
+            fee
         );
+
+        return tokenAmountOut;
     }
 
     /**
@@ -564,7 +385,7 @@ library Math {
                 return (Num.bdiv(tokenWeight, Const.BONE + fallbackSpread), fallbackSpread);
             }
         }
-        
+
         if (gbmParameters.horizon == 0) {
             return (tokenWeight, 0);
         }
@@ -583,7 +404,7 @@ library Math {
         }
 
         uint256 spread = spreadFactor - Const.BONE;
-        
+
         if (shortage) {
             return (Num.bmul(tokenWeight, spreadFactor), spread);
         } else {
@@ -1207,6 +1028,76 @@ library Math {
             )
         );
 
+    }
+
+    function calcPoolOutGivenSingleInAdaptiveFees(
+        uint256 poolValueInTokenIn,
+        uint256 tokenBalanceIn,
+        uint256 normalizedTokenWeightIn,
+        uint256 tokenAmountIn
+    ) internal pure returns (uint256) {
+        uint256 foo = Num.bmul(
+            Num.bdiv(tokenBalanceIn, tokenAmountIn),
+            Num.bpow(
+                Num.bdiv(
+                    poolValueInTokenIn + tokenAmountIn,
+                    poolValueInTokenIn
+                ),
+                Num.bdiv(Const.BONE, normalizedTokenWeightIn)
+            ) - Const.BONE
+        );
+        if (foo >= Const.BONE) {
+            return 0;
+        }
+        return (
+            Num.bdiv(
+                Const.BONE - foo,
+                Const.BONE - normalizedTokenWeightIn
+            )
+        );
+    }
+
+    function calcSingleOutGivenPoolInAdaptiveFees(
+        uint256 poolValueInTokenOut,
+        uint256 tokenBalanceOut,
+        uint256 normalizedTokenWeightOut,
+        uint256 normalizedPoolAmountOut
+    ) internal pure returns (uint256) {
+        uint256 foo = Num.bdiv(
+            Num.bmul(poolValueInTokenOut, normalizedPoolAmountOut),
+            Num.bmul(
+                tokenBalanceOut,
+                    Const.BONE -
+                    Num.bpow(
+                        Const.BONE - normalizedPoolAmountOut,
+                        Num.bdiv(Const.BONE, normalizedTokenWeightOut)
+                    )
+            )
+        );
+        if (foo >= Const.BONE) {
+            return 0;
+        }
+        return (
+        Num.bdiv(
+            Const.BONE - foo,
+            Const.BONE - normalizedTokenWeightOut
+        )
+        );
+    }
+
+    function getBasesTotalValue(Struct.LatestRound memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
+    internal view returns (uint256 basesTotalValue){
+        for (uint i; i < baseTokens.length;) {
+            basesTotalValue += Num.bmul(
+                baseTokens[i].info.balance,
+                ChainlinkUtils.getTokenRelativePrice(
+                    quoteToken,
+                    baseTokens[i].latestRound
+                )
+            );
+            unchecked { ++i; }
+        }
+        return basesTotalValue;
     }
 
 }
