@@ -491,15 +491,15 @@ library Math {
 
     /**
     * @notice Computes the log spread factor
-    * @dev We define it as the quantile of a GBM process (log-normal distribution)
-    * which represents the traded pair process.
-    * given by the following: exponential(mean * horizon + z * sqrt(variance * 2 * horizon)
-    * where z is the complementary error function (erfc)
+    * @dev We define it as the log of the p-quantile of a GBM process (log-normal distribution),
+    * which is given by the following:
+    * mean * horizon + z * sqrt(2 * variance * horizon)
+    * where z = ierf(2p - 1), with ierf being the inverse error function.
     * GBM: https://en.wikipedia.org/wiki/Geometric_Brownian_motion
-    * log normal: https://en.wikipedia.org/wiki/Log-normal_distribution
-    * erfc: https://en.wikipedia.org/wiki/Complementary_error_function
-    * @param mean The GBM's mean
-    * @param variance The GBM's variance
+    * Log-normal distribution: https://en.wikipedia.org/wiki/Log-normal_distribution
+    * erf: https://en.wikipedia.org/wiki/Error_function
+    * @param mean The percentage drift
+    * @param variance The percentage volatility
     * @param horizon The GBM forecast horizon parameter
     * @param z The GBM forecast z parameter
     * @return x The log spread factor
