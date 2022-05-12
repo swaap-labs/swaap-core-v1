@@ -723,6 +723,7 @@ library Math {
                         swapParameters.fee,
                         swapParameters.fallbackSpread
                     ),
+                    0,
                     0
                 );
             }
@@ -753,23 +754,26 @@ library Math {
                             swapParameters.amount,
                             swapParameters.fee
                         ),
-                        spread
+                        spread,
+                        swapParameters.amount
                     )
                 );
             }
             else {
                 // abundance to shortage
+                (uint256 amount, uint256 taxBaseIn) = _calcOutGivenInMMMMixed(
+                    tokenGlobalIn,
+                    tokenGlobalOut,
+                    swapParameters,
+                    relativePrice,
+                    adjustedTokenOutWeight,
+                    balanceInAtEquilibrium
+                );
                 return (
                     Struct.SwapResult(
-                        _calcOutGivenInMMMMixed(
-                            tokenGlobalIn,
-                            tokenGlobalOut,
-                            swapParameters,
-                            relativePrice,
-                            adjustedTokenOutWeight,
-                            balanceInAtEquilibrium
-                        ),
-                        spread // TODO: broadcast necessary data to compute accurate fee revenue
+                        amount,
+                        spread,
+                        taxBaseIn
                     )
                 );
             }
@@ -837,11 +841,13 @@ library Math {
         uint256 balanceInAtEquilibrium
     )
     internal view
-    returns (uint256 tokenAmountOut)
+    returns (uint256, uint256)
     {
 
         uint256 tokenInSellAmountForEquilibrium = balanceInAtEquilibrium - tokenGlobalIn.info.balance;
+        uint256 taxBaseIn = swapParameters.amount - tokenInSellAmountForEquilibrium;
 
+        // 'abundance of tokenOut' phase --> no spread
         uint256 tokenAmountOutPart1 = _calcOutGivenInMMMAbundance(
             tokenGlobalIn,
             tokenGlobalOut,
@@ -852,16 +858,16 @@ library Math {
         );
 
         // 'shortage of tokenOut phase' --> apply spread
-        return (
-            tokenAmountOut = tokenAmountOutPart1 + calcOutGivenIn(
-                tokenGlobalIn.info.balance + tokenInSellAmountForEquilibrium,
-                tokenGlobalIn.info.weight,
-                tokenGlobalOut.info.balance - tokenAmountOutPart1,
-                adjustedTokenWeightOut,
-                swapParameters.amount - tokenInSellAmountForEquilibrium, // tokenAmountIn > tokenInSellAmountForEquilibrium
-                swapParameters.fee
-            )
+        uint256 tokenAmountOutPart2 = calcOutGivenIn(
+            tokenGlobalIn.info.balance + tokenInSellAmountForEquilibrium,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance - tokenAmountOutPart1,
+            adjustedTokenWeightOut,
+            taxBaseIn, // tokenAmountIn > tokenInSellAmountForEquilibrium
+            swapParameters.fee
         );
+
+        return (tokenAmountOutPart1 + tokenAmountOutPart2, taxBaseIn);
 
     }
 
@@ -909,6 +915,7 @@ library Math {
                         swapParameters.fee,
                         swapParameters.fallbackSpread
                     ),
+                    0,
                     0
                 )
             );
@@ -939,23 +946,26 @@ library Math {
                             swapParameters.amount,
                             swapParameters.fee
                         ),
-                        spread
+                        spread,
+                        swapParameters.amount
                     )
                 );
             }
             else {
                 // abundance to shortage
+                (uint256 amount, uint256 taxBaseIn) = _calcInGivenOutMMMMixed(
+                    tokenGlobalIn,
+                    tokenGlobalOut,
+                    swapParameters,
+                    relativePrice,
+                    adjustedTokenOutWeight,
+                    balanceOutAtEquilibrium
+                );
                 return (
                     Struct.SwapResult(
-                        _calcInGivenOutMMMMixed(
-                            tokenGlobalIn,
-                            tokenGlobalOut,
-                            swapParameters,
-                            relativePrice,
-                            adjustedTokenOutWeight,
-                            balanceOutAtEquilibrium
-                        ),
-                        spread // TODO: broadcast necessary data to compute accurate fee revenue
+                        amount,
+                        spread,
+                        taxBaseIn
                     )
                 );
             }
@@ -1026,7 +1036,7 @@ library Math {
         uint256 balanceOutAtEquilibrium
     )
     internal view
-    returns (uint256 tokenAmountIn)
+    returns (uint256, uint256)
     {
         
         uint256 tokenOutBuyAmountForEquilibrium =  tokenGlobalOut.info.balance - balanceOutAtEquilibrium;
@@ -1051,7 +1061,7 @@ library Math {
             swapParameters.fee
         );
 
-        return (tokenAmountIn = tokenAmountInPart1 + tokenAmountInPart2);
+        return (tokenAmountInPart1 + tokenAmountInPart2, tokenAmountInPart2);
     }
 
     /**

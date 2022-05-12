@@ -44,7 +44,8 @@ contract Pool is PoolToken {
         address indexed tokenOut,
         uint256         tokenAmountIn,
         uint256         tokenAmountOut,
-        uint256         spread
+        uint256         spread,
+        uint256         taxBaseIn
     );
 
     event LOG_JOIN(
@@ -884,7 +885,10 @@ contract Pool is PoolToken {
         _records[tokenIn].balance += tokenAmountIn;
         _records[tokenOut].balance -= swapResult.amount;
 
-        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, tokenAmountIn, swapResult.amount, swapResult.spread);
+        emit LOG_SWAP(
+            msg.sender, tokenIn, tokenOut, tokenAmountIn,
+            swapResult.amount, swapResult.spread, swapResult.taxBaseIn
+        );
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
@@ -1027,7 +1031,10 @@ contract Pool is PoolToken {
         _records[tokenIn].balance += swapResult.amount;
         _records[tokenOut].balance -= tokenAmountOut;
 
-        emit LOG_SWAP(msg.sender, tokenIn, tokenOut, swapResult.amount, tokenAmountOut, swapResult.spread);
+        emit LOG_SWAP(
+            msg.sender, tokenIn, tokenOut, swapResult.amount,
+            tokenAmountOut, swapResult.spread, swapResult.taxBaseIn
+        );
 
         _pullUnderlying(tokenIn, msg.sender, swapResult.amount);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);

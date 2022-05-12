@@ -43,6 +43,7 @@ contract Struct {
     struct SwapResult {
         uint256 amount;
         uint256 spread;
+        uint256 taxBaseIn;
     }
 
     struct GBMEstimation {
