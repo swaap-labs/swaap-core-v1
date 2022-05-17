@@ -17,8 +17,6 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 
 contract('Pool', async (accounts) => {
 
-	const now = 1641893000;
-
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
     const admin = accounts[0];
@@ -114,14 +112,15 @@ contract('Pool', async (accounts) => {
         await dai.approve(POOL, MAX);
 
         // 1 weth = 3000 dai
-		wethOracle = await TConstantOracle.new(300000000000, now);
-		daiOracle = await TConstantOracle.new(100000000, now);
+        wethOracle = await TConstantOracle.new(300000000000);
+        daiOracle = await TConstantOracle.new(100000000);
 
         await pool.bindMMM(WETH, toWei(wethBalance), toWei(wethDenorm), wethOracle.address);
         await pool.bindMMM(DAI, toWei(daiBalance), toWei(daiDenorm), daiOracle.address);
 
         await pool.setPublicSwap(true);
         await pool.setSwapFee(toWei(String(swapFee)));
+        await pool.setPriceStatisticsLookbackInRound(1); // spread is now 0
     });
 
     describe('With fees', () => {
@@ -345,9 +344,9 @@ contract('Pool', async (accounts) => {
 
             if (verbose) {
                 console.log('tAo');
-                console.log(`expected: ${expected})`);
-                console.log(`actual  : ${actual})`);
-                console.log(`relDif  : ${relDif})`);
+                console.log(`expected: ${expected}`);
+                console.log(`actual  : ${actual}`);
+                console.log(`relDif  : ${relDif}`);
             }
 
             assert.isAtMost(relDif.toNumber(), errorDelta);

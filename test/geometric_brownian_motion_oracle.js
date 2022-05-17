@@ -42,11 +42,12 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 
 	async function loadTestOracleData() {
 
-		now = 1641893000;
+		wethOracle = await TWETHOracle.new();
+		wbtcOracle = await TWBTCOracle.new();
+		daiOracle = await TDAIOracle.new();
 
-		wethOracle = await TWETHOracle.new(now);
-		wbtcOracle = await TWBTCOracle.new(now);
-		daiOracle = await TDAIOracle.new(now);
+		const lastBlock = await web3.eth.getBlock("latest")
+		now = lastBlock.timestamp
 
 		wethOracleAddress = wethOracle.address;
 		wbtcOracleAddress = wbtcOracle.address;

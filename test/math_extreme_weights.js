@@ -14,8 +14,6 @@ const verbose = process.env.VERBOSE;
 
 contract('Pool', async (accounts) => {
 
-	const now = 1641893000;
-
     const admin = accounts[0];
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
@@ -109,8 +107,8 @@ contract('Pool', async (accounts) => {
         await weth.approve(POOL, MAX);
         await dai.approve(POOL, MAX);
 
-		wethOracle = await TConstantOracle.new(toWei("1000"), now);
-        daiOracle = await TConstantOracle.new(toWei("49000"), now);
+        wethOracle = await TConstantOracle.new(toWei("1000"));
+        daiOracle = await TConstantOracle.new(toWei("49000"));
 
         await pool.bindMMM(WETH, toWei(wethBalance), toWei(wethDenorm), wethOracle.address);
         await pool.bindMMM(DAI, toWei(daiBalance), toWei(daiDenorm), daiOracle.address);
@@ -118,6 +116,9 @@ contract('Pool', async (accounts) => {
         await pool.setPublicSwap(true);
 
         await pool.setSwapFee(toWei(String(swapFee)));
+
+        await pool.setPriceStatisticsLookbackInRound(1); // spread is now 0
+
     });
 
     describe('Extreme weights', () => {

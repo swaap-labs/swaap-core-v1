@@ -10,8 +10,6 @@ const TConstantOracle = artifacts.require('TConstantOracle');
 
 contract('Pool', async (accounts) => {
 
-	const now = 1641893000;
-
     const admin = accounts[0];
     const user1 = accounts[1];
     const user2 = accounts[2];
@@ -19,11 +17,6 @@ contract('Pool', async (accounts) => {
     const { fromWei } = web3.utils;
     const errorDelta = 10 ** -8;
     const MAX = web3.utils.toTwosComplement(-1);
-
-    const z = 1.29;
-    const horizon = 3600;
-	const priceStatisticsLookbackInRound = 10;
-	const priceStatisticsLookbackInSec = 10000;
 
     let WETH; let MKR; let DAI; let
         XXX; // addresses
@@ -60,10 +53,10 @@ contract('Pool', async (accounts) => {
         DAI = dai.address;
         XXX = xxx.address;
 
-		wethOracle = await TConstantOracle.new(200000000000, now);
-		mkrOracle = await TConstantOracle.new(50000000000, now);
-		daiOracle = await TConstantOracle.new(100000000, now);
-		xxxOracle = await TConstantOracle.new(1, now);
+        wethOracle = await TConstantOracle.new(200000000000);
+        mkrOracle = await TConstantOracle.new(50000000000);
+        daiOracle = await TConstantOracle.new(100000000);
+        xxxOracle = await TConstantOracle.new(1);
 
         WETHOracleAddress = wethOracle.address;
         MKROracleAddress = mkrOracle.address;
@@ -337,7 +330,7 @@ contract('Pool', async (accounts) => {
 
         it('Fails nonadmin sets fees or controller', async () => {
             await truffleAssert.reverts(
-                pool.setSwapFee(toWei('0.003'), { from: user1 }),
+                pool.setSwapFee(toWei('0.0015'), { from: user1 }),
                 '3',
             );
             await truffleAssert.reverts(
@@ -347,21 +340,13 @@ contract('Pool', async (accounts) => {
         });
 
         it('Admin sets swap fees', async () => {
-            await pool.setSwapFee(toWei('0.003'));
+            await pool.setSwapFee(toWei('0.0015'));
             const swapFee = await pool.getSwapFee();
-            assert.equal(0.003, fromWei(swapFee));
+            assert.equal(0.0015, fromWei(swapFee));
         });
 
         it('Admin sets dynamic spread parameters', async () => {
-            await pool.setDynamicCoverageFeesZ(toWei(z.toString()));
-            await pool.setDynamicCoverageFeesHorizon(toWei(horizon.toString()));
-            await pool.setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
-            await pool.setPriceStatisticsLookbackInSec(priceStatisticsLookbackInSec);
-            const expectedCoverageParameters = await pool.getCoverageParameters();
-            assert.equal(fromWei(expectedCoverageParameters[0]), z);
-            assert.equal(fromWei(expectedCoverageParameters[1]), horizon);
-            assert.equal(expectedCoverageParameters[2], priceStatisticsLookbackInRound);
-            assert.equal(expectedCoverageParameters[3], priceStatisticsLookbackInSec);
+        	await pool.setPriceStatisticsLookbackInRound(1); // spread is now 0
         });
 
         it('Fails nonadmin finalizes pool', async () => {
@@ -509,7 +494,7 @@ contract('Pool', async (accounts) => {
 
         it('swapExactAmountInMMM', async () => {
             // 0.025 WETH -> DAI
-            const expected = calcOutGivenIn(52.5, 5, 105000, 5, 0.025, 0.003);
+            const expected = calcOutGivenIn(52.5, 5, 105000, 5, 0.025, 0.0015);
             const txr = await pool.swapExactAmountInMMM(
                 WETH,
                 toWei('0.025'),
@@ -537,7 +522,7 @@ contract('Pool', async (accounts) => {
 
             // 182.804672101083406128
             const wethPriceSansFee = await pool.getSpotPriceSansFee(DAI, WETH);
-            const wethPriceSansFeeCheck = (104950.173656 / 5) / (52.525 / 5);
+            const wethPriceSansFeeCheck = (104950.098727 / 5) / (52.525 / 5);
             assert.approximately(Number(fromWei(wethPriceSansFee)), Number(wethPriceSansFeeCheck), errorDelta);
 
             const daiNormWeight = await pool.getDenormalizedWeight(DAI);
@@ -549,8 +534,8 @@ contract('Pool', async (accounts) => {
 
         it('swapExactAmountOut', async () => {
             // WETH -> 1 MKR
-            // const amountIn = (52.525 * (((2100 / (2100 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
-            const expected = calcInGivenOut(52.525, 5, 2100, 5, 1, 0.003);
+            // const amountIn = (52.525 * (((2100 / (2100 - 1)) ** (5 / 5)) - 1)) / (1 - 0.0015);
+            const expected = calcInGivenOut(52.525, 5, 2100, 5, 1, 0.0015);
             const txr = await pool.swapExactAmountOutMMM(
                 WETH,
                 toWei('0.026'),

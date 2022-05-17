@@ -15,7 +15,7 @@ const TDAIOracle = artifacts.require('TDAIOracle');
 
 contract('Pool', async (accounts) => {
 
-	let now = 1641893000;
+	let now;
 
     const admin = accounts[0];
     const user1 = accounts[1];
@@ -66,8 +66,6 @@ contract('Pool', async (accounts) => {
 	let expectedMeanWBTCWETH; let expectedVarianceWBTCWETH;
 
     before(async () => {
-    	const lastBlock = await web3.eth.getBlock("latest")
-    	let now = lastBlock.timestamp
 
     	factory = await Factory.deployed();
 
@@ -83,9 +81,12 @@ contract('Pool', async (accounts) => {
         WBTC = wbtc.address;
         DAI = dai.address;
 
-		wethOracle = await TWETHOracle.new(now);
-		wbtcOracle = await TWBTCOracle.new(now);
-		daiOracle = await TDAIOracle.new(now);
+        wethOracle = await TWETHOracle.new();
+        wbtcOracle = await TWBTCOracle.new();
+        daiOracle = await TDAIOracle.new();
+
+    	const lastBlock = await web3.eth.getBlock("latest")
+    	now = lastBlock.timestamp
 
         WETHOracleAddress = wethOracle.address;
         WBTCOracleAddress = wbtcOracle.address;

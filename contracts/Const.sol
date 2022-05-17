@@ -53,4 +53,6 @@ library Const {
     uint64 public constant PAUSE_WINDOW           = 86400 * 60;
 
     uint256 public constant FALLBACK_SPREAD       = 3 * BONE / 1000;
+
+    uint256 public constant ORACLE_TIMEOUT        = 2 * 60;
 }

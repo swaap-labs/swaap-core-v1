@@ -16,39 +16,39 @@ contract TWBTCOracle is IAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(uint256 timestamp_) {
+    constructor() {
 
-        timestamp = timestamp_;
+        timestamp = block.timestamp;
 
         prices[latestRoundId] = 4201340255103;
-        timestamps[latestRoundId] = timestamp - 1953;
+        timestamps[latestRoundId] = timestamp;
 
         prices[latestRoundId - 1] = 4245514000000;
-        timestamps[latestRoundId - 1] = timestamp - 3423;
+        timestamps[latestRoundId - 1] = timestamp - 1953;
 
         prices[latestRoundId - 2] = 4197967571800;
-        timestamps[latestRoundId - 2] = timestamp - 28080;
+        timestamps[latestRoundId - 2] = timestamp - 3423;
 
         prices[latestRoundId - 3] = 4155911000000;
-        timestamps[latestRoundId - 3] = timestamp - 52928;
+        timestamps[latestRoundId - 3] = timestamp - 28080;
 
         prices[latestRoundId - 4] = 4114025628407;
-        timestamps[latestRoundId - 4] = timestamp - 55930;
+        timestamps[latestRoundId - 4] = timestamp - 52928;
 
         prices[latestRoundId - 5] = 4072208879420;
-        timestamps[latestRoundId - 5] = timestamp - 56666;
+        timestamps[latestRoundId - 5] = timestamp - 55930;
 
         prices[latestRoundId - 6] = 4126856799512;
-        timestamps[latestRoundId - 6] = timestamp - 57101;
+        timestamps[latestRoundId - 6] = timestamp - 56666;
 
         prices[latestRoundId - 7] = 4172855909572;
-        timestamps[latestRoundId - 7] = timestamp - 61302;
+        timestamps[latestRoundId - 7] = timestamp - 57101;
 
         prices[latestRoundId - 8] = 4100152514691;
-        timestamps[latestRoundId - 8] = timestamp - 66583;
+        timestamps[latestRoundId - 8] = timestamp - 61302;
 
         prices[latestRoundId - 9] = 4059125000000;
-        timestamps[latestRoundId - 9] = timestamp - 66928;
+        timestamps[latestRoundId - 9] = timestamp - 66583;
 
     }
 

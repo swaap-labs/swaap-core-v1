@@ -14,12 +14,12 @@ contract TOracle is TIAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(int256[] memory prices_, uint256[] memory timestamps_, uint8 decimals_, uint80 roundId_) {
+    constructor(int256[] memory prices_, uint256[] memory avjc_, uint8 decimals_, uint80 roundId_) {
         _decimals = decimals_;
         latestRoundId = roundId_;
-        for (uint8 i=0; i < timestamps_.length; i++) {
+        for (uint8 i=0; i < avjc_.length; i++) {
             prices[latestRoundId - i] = prices_[i];
-            timestamps[latestRoundId - i] = timestamps_[i];
+            timestamps[latestRoundId - i] = avjc_[i];
         }
     }
 

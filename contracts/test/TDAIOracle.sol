@@ -16,39 +16,39 @@ contract TDAIOracle is IAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(uint256 timestamp_) {
+    constructor() {
 
-        timestamp = timestamp_;
+        timestamp = block.timestamp;
 
         prices[latestRoundId] = 99990575;
-        timestamps[latestRoundId] = timestamp - 404;
+        timestamps[latestRoundId] = timestamp;
 
         prices[latestRoundId - 1] = 100000000;
-        timestamps[latestRoundId - 1] = timestamp - 86839;
+        timestamps[latestRoundId - 1] = timestamp - 404;
 
         prices[latestRoundId - 2] = 100054178;
-        timestamps[latestRoundId - 2] = timestamp - 173265;
+        timestamps[latestRoundId - 2] = timestamp - 86839;
 
         prices[latestRoundId - 3] = 100034433;
-        timestamps[latestRoundId - 3] = timestamp - 259699;
+        timestamps[latestRoundId - 3] = timestamp - 173265;
 
         prices[latestRoundId - 4] = 100044915;
-        timestamps[latestRoundId - 4] = timestamp - 346123;
+        timestamps[latestRoundId - 4] = timestamp - 259699;
 
         prices[latestRoundId - 5] = 100008103;
-        timestamps[latestRoundId - 5] = timestamp - 432567;
+        timestamps[latestRoundId - 5] = timestamp - 346123;
 
         prices[latestRoundId - 6] = 99986759;
-        timestamps[latestRoundId - 6] = timestamp - 518982;
+        timestamps[latestRoundId - 6] = timestamp - 432567;
 
         prices[latestRoundId - 7] = 100000000;
-        timestamps[latestRoundId - 7] = timestamp - 605412;
+        timestamps[latestRoundId - 7] = timestamp - 518982;
 
         prices[latestRoundId - 8] = 100000000;
-        timestamps[latestRoundId - 8] = timestamp - 705324;
+        timestamps[latestRoundId - 8] = timestamp - 605412;
 
         prices[latestRoundId - 9] = 100006444;
-        timestamps[latestRoundId - 9] = timestamp - 791742;
+        timestamps[latestRoundId - 9] = timestamp - 705324;
 
     }
 

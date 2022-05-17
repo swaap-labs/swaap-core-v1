@@ -7,7 +7,7 @@ import "../interfaces/IAggregatorV3.sol";
 
 contract TWETHOracle is IAggregatorV3 {
 
-    uint256 timestamp = 2018;
+    uint256 timestamp;
 
     uint80 latestRoundId = 2018;
     uint8 _decimals = 8;
@@ -16,39 +16,39 @@ contract TWETHOracle is IAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(uint256 timestamp_) {
+    constructor() {
 
-        timestamp = timestamp_;
+        timestamp = block.timestamp;
 
         prices[latestRoundId] = 312882040500;
-        timestamps[latestRoundId] = timestamp - 3063;
+        timestamps[latestRoundId] = timestamp;
 
         prices[latestRoundId - 1] = 311613433829;
-        timestamps[latestRoundId - 1] = timestamp - 6695;
+        timestamps[latestRoundId - 1] = timestamp - 3063;
 
         prices[latestRoundId - 2] = 311445000000;
-        timestamps[latestRoundId - 2] = timestamp - 10329;
+        timestamps[latestRoundId - 2] = timestamp - 6695;
 
         prices[latestRoundId - 3] = 310672718218;
-        timestamps[latestRoundId - 3] = timestamp - 13960;
+        timestamps[latestRoundId - 3] = timestamp - 10329;
 
         prices[latestRoundId - 4] = 311461368677;
-        timestamps[latestRoundId - 4] = timestamp - 17591;
+        timestamps[latestRoundId - 4] = timestamp - 13960;
 
         prices[latestRoundId - 5] = 311394849384;
-        timestamps[latestRoundId - 5] = timestamp - 21222;
+        timestamps[latestRoundId - 5] = timestamp - 17591;
 
         prices[latestRoundId - 6] = 311964523049;
-        timestamps[latestRoundId - 6] = timestamp - 24854;
+        timestamps[latestRoundId - 6] = timestamp - 21222;
 
         prices[latestRoundId - 7] = 308857000000;
-        timestamps[latestRoundId - 7] = timestamp - 26639;
+        timestamps[latestRoundId - 7] = timestamp - 24854;
 
         prices[latestRoundId - 8] = 306919151091;
-        timestamps[latestRoundId - 8] = timestamp - 30271;
+        timestamps[latestRoundId - 8] = timestamp - 26639;
 
         prices[latestRoundId - 9] = 308571414036;
-        timestamps[latestRoundId - 9] = timestamp - 33903;
+        timestamps[latestRoundId - 9] = timestamp - 30271;
 
     }
 

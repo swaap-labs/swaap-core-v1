@@ -29,13 +29,17 @@ library ChainlinkUtils {
     * @return The latest price
     */
     function getTokenLatestPrice(address oracle) internal view returns (uint256) {
-        (, int256 latestPrice, , ,) = IAggregatorV3(oracle).latestRoundData();
+        (, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+        // we assume that block.timestamp >= latestTimestamp, else => revert
+        require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, "48");
         require(latestPrice > 0, "16");
         return uint256(latestPrice); // we consider the token price to be > 0
     }
 
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
         (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+        // we assume that block.timestamp >= latestTimestamp, else => revert
+        require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, "48");
         require(latestPrice > 0, "16");
         return Struct.LatestRound(
             oracle,

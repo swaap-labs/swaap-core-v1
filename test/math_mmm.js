@@ -27,8 +27,6 @@ const nullAddress = "0x0000000000000000000000000000000000000000"
 
 contract('MMM Math', async (accounts) => {
 
-	const now = 42;
-
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
     const MAX = web3.utils.toTwosComplement(-1);
@@ -45,9 +43,9 @@ contract('MMM Math', async (accounts) => {
 
 		math = await TMathMMM.deployed();
 
-		wethOracle = await TConstantOracle.new(wethOraclePrice, now);
-		mkrOracle = await TConstantOracle.new(mkrOraclePrice, now);
-		daiOracle = await TConstantOracle.new(daiOraclePrice, now);
+		wethOracle = await TConstantOracle.new(wethOraclePrice);
+		mkrOracle = await TConstantOracle.new(mkrOraclePrice);
+		daiOracle = await TConstantOracle.new(daiOraclePrice);
 
     });
 

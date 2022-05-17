@@ -16,11 +16,10 @@ contract TConstantOracle is TIAggregatorV3 {
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;
 
-    constructor(int256 value_, uint256 timestamp_) {
-        timestamp = timestamp_;
+    constructor(int256 value_) {
+        timestamp = block.timestamp;
         prices[latestRoundId] = value_;
         timestamps[latestRoundId] = timestamp;
-
     }
 
     function decimals() public view override returns (uint8) {
