@@ -753,11 +753,13 @@ contract Pool is PoolToken {
     returns (uint256 spotPrice)
     {
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
-        return Math.calcSpotPrice(
-            _records[tokenIn].balance,
-            _records[tokenIn].denorm,
-            _records[tokenOut].balance,
-            _records[tokenOut].denorm,
+        Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
+        Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
+        return spotPrice = Math.calcSpotPrice(
+            tokenGlobalIn.info.balance,
+            tokenGlobalIn.info.weight,
+            tokenGlobalOut.info.balance,
+            tokenGlobalOut.info.weight,
             0
         );
     }
