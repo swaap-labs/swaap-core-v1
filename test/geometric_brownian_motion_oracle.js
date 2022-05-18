@@ -13,6 +13,7 @@ const TGeometricBrownianMotionOracle = artifacts.require('TGeometricBrownianMoti
 const TWETHOracle = artifacts.require('TWETHOracle');
 const TWBTCOracle = artifacts.require('TWBTCOracle');
 const TDAIOracle = artifacts.require('TDAIOracle');
+const TConstantOracle = artifacts.require('TConstantOracle');
 
 const errorDelta = 10 ** -8;
 const varianceErrorDelta = 2 * 10 ** -6;
@@ -31,8 +32,12 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 	let testData;
 	let now;
 
+	const latestRoundIdConstantOracle = 1
+
 	const horizon = 120
 	const z = 0.75
+	const priceStatisticsLookbackInRound = 6;
+	const priceStatisticsLookbackInSec = 3600 * 2;
 
     let gbmOracle;
 
@@ -102,6 +107,9 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 			testData[outCurrency]["oracle"], outRoundId, outPrices[0], outTimestamps[0],
 			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
 		);
+		const success = result[2];
+		assert.equal(success, true);
+
 		const mean = result[0];
 		const variance = result[1];
 
@@ -175,6 +183,50 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		}
 
 	}
+
+	async function assertSuccessCondition(inCurrency, outCurrency) {
+		const lastBlock = await web3.eth.getBlock("latest")
+		now = lastBlock.timestamp
+
+		wethOracle = await TConstantOracle.new(300000000000);
+		wbtcOracle = await TConstantOracle.new(4000000000000);
+
+		const priceStatisticsLookbackInRound = 1;
+		const priceStatisticsLookbackInSec = 3600 * 2;
+
+		const [inRoundId, inPrices, inTimestamps, outRoundId, outPrices, outTimestamps] = getHistoricalData(
+			inCurrency, outCurrency
+		)
+		const result = await gbmOracle.getParametersEstimation.call(
+			wethOracle.address, latestRoundIdConstantOracle, inPrices[0], inTimestamps[0],
+			wbtcOracle.address, latestRoundIdConstantOracle, outPrices[0], outTimestamps[0],
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+		);
+		assert.equal(result[2], true);
+	}
+
+
+	async function assertFailCondition(inCurrency, outCurrency) {
+		const lastBlock = await web3.eth.getBlock("latest")
+		now = lastBlock.timestamp
+
+		wethOracle = await TConstantOracle.new(300000000000);
+		wbtcOracle = await TConstantOracle.new(4000000000000);
+
+		const priceStatisticsLookbackInRound = 2;
+		const priceStatisticsLookbackInSec = 3600 * 2;
+
+		const [inRoundId, inPrices, inTimestamps, outRoundId, outPrices, outTimestamps] = getHistoricalData(
+			inCurrency, outCurrency
+		)
+		const result = await gbmOracle.getParametersEstimation.call(
+			wethOracle.address, latestRoundIdConstantOracle, inPrices[0], inTimestamps[0],
+			wbtcOracle.address, latestRoundIdConstantOracle, outPrices[0], outTimestamps[0],
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+		);
+		assert.equal(result[2], false);
+	}
+
 
 	describe(`GBM Oracle)`, () => {
 
@@ -353,6 +405,13 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 
 			});
 
+			it('gbm estimation succeeds', async () => {
+				await assertSuccessCondition("ETH", "BTC")
+			});
+
+			it('gbm estimation fails', async () => {
+				await assertFailCondition("ETH", "BTC")
+			});
 		})
 	})
 

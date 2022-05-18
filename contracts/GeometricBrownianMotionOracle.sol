@@ -72,7 +72,7 @@ library GeometricBrownianMotionOracle {
         (uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn) = getHistoricalPrices(
             latestRoundIn, hpParameters
         );
-        if (!noMoreDataPointIn && startIndexIn < hpParameters.lookbackInRound) {
+        if (!noMoreDataPointIn && (startIndexIn < hpParameters.lookbackInRound - 1)) {
             return Struct.GBMEstimation(0, 0, false);
         }
 
@@ -85,7 +85,7 @@ library GeometricBrownianMotionOracle {
         (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
             latestRoundOut, hpParameters
         );
-        if (!noMoreDataPointOut && startIndexOut < hpParameters.lookbackInRound) {
+        if (!noMoreDataPointOut && (startIndexOut < hpParameters.lookbackInRound - 1)) {
             return Struct.GBMEstimation(0, 0, false);
         }
 
