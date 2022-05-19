@@ -29,11 +29,11 @@ library TChainlinkUtils {
         return ChainlinkUtils.getMaxRelativePriceInLastBlock(
             oracleAddress_1,
             roundId_1,
-            price_1,
+            uint256(price_1),
             timestamp_1,
             oracleAddress_2,
             roundId_2,
-            price_2,
+            uint256(price_2),
             timestamp_2
         );
     }

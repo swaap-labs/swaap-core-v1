@@ -23,19 +23,25 @@ contract Struct {
 
     struct LatestRound {
         address oracle;
-        uint80 roundId;
-        int256 price;
+        uint80  roundId;
+        uint256 price;
         uint256 timestamp;
     }
 
+    struct OracleState {
+        address oracle;
+        uint256 price;
+        uint8   decimals;
+    }
+
     struct HistoricalPricesParameters {
-        uint8 lookbackInRound;
+        uint8   lookbackInRound;
         uint256 lookbackInSec;
         uint256 timestamp;
     }
     
     struct HistoricalPricesData {
-        uint256 startIndex;
+        uint256   startIndex;
         uint256[] timestamps;
         uint256[] prices;
     }
@@ -46,10 +52,17 @@ contract Struct {
         uint256 taxBaseIn;
     }
 
+    struct PriceResult {
+        uint256 spotPriceBefore;
+        uint256 spotPriceAfter;
+        uint256 priceIn;
+        uint256 priceOut;
+    }
+
     struct GBMEstimation {
-        int256 mean;
+        int256  mean;
         uint256 variance;
-        bool success;
+        bool    success;
     }
 
     struct TokenRecord {

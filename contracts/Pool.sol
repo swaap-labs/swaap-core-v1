@@ -45,7 +45,9 @@ contract Pool is PoolToken {
         uint256         tokenAmountIn,
         uint256         tokenAmountOut,
         uint256         spread,
-        uint256         taxBaseIn
+        uint256         taxBaseIn,
+        uint256         priceIn,
+        uint256         priceOut
     );
 
     event LOG_JOIN(
@@ -69,6 +71,14 @@ contract Pool is PoolToken {
     event LOG_NEW_CONTROLLER(
         address indexed from,
         address indexed to
+    );
+
+    event LOG_NEW_ORACLE_STATE(
+        address token,
+        address oracle,
+        uint256 price,
+        uint8   decimals,
+        string  description
     );
 
     // putting modifier logic in functions enables contract size optimization
@@ -128,7 +138,7 @@ contract Pool is PoolToken {
     // `setSwapFee` and `finalize` require CONTROL
     uint256 private _swapFee;
         
-    mapping(address=>Price) private _prices;
+    mapping(address=>Struct.OracleState) private _oraclesInitialState;
 
     uint256 private dynamicCoverageFeesHorizon;
     uint256 private priceStatisticsLookbackInSec;
@@ -529,17 +539,6 @@ contract Pool is PoolToken {
         _burn(amount);
     }
 
-    struct Price {
-        address oracle;
-        uint256 initialPrice;
-    }
-
-    event LOG_PRICE(
-        address indexed token,
-        address oracle,
-        uint256 value
-    ) anonymous;
-
     function setDynamicCoverageFeesZ(uint64 _dynamicCoverageFeesZ)
     external
     _logs_
@@ -601,7 +600,7 @@ contract Pool is PoolToken {
     returns (uint256)
     {
         require(_records[token].bound, "2");
-        return _prices[token].initialPrice;
+        return _oraclesInitialState[token].price;
     }
 
     function getTokenPriceOracle(address token)
@@ -609,7 +608,7 @@ contract Pool is PoolToken {
     returns (address)
     {
         require(_records[token].bound, "2");
-        return _prices[token].oracle;
+        return _oraclesInitialState[token].oracle;
     }
 
     /**
@@ -690,14 +689,26 @@ contract Pool is PoolToken {
         }
 
         // Add token price
-        _prices[token] = Price(
+        _oraclesInitialState[token] = Struct.OracleState(
             {
                 oracle: _priceFeedAddress,
-                initialPrice: 0 // set right below
+                price: 0, // set right below
+                decimals: 0 // set right below
             }
         );
-        _prices[token].initialPrice = ChainlinkUtils.getTokenLatestPrice(_prices[token].oracle);
-        emit LOG_PRICE(token, _prices[token].oracle, _prices[token].initialPrice);
+        string memory description;
+        (
+            _oraclesInitialState[token].price,
+            _oraclesInitialState[token].decimals,
+            description
+        ) = ChainlinkUtils.getTokenLatestPrice(_oraclesInitialState[token].oracle);
+        emit LOG_NEW_ORACLE_STATE(
+            token,
+            _oraclesInitialState[token].oracle,
+            _oraclesInitialState[token].price,
+            _oraclesInitialState[token].decimals,
+            description
+        );
     }
 
 
@@ -728,7 +739,7 @@ contract Pool is PoolToken {
         _records[_tokens[index]].index = index;
         _tokens.pop();
         delete _records[token];
-        delete _prices[token];
+        delete _oraclesInitialState[token];
 
         _pushUnderlying(token, msg.sender, tokenBalance - tokenExitFee);
         _pushUnderlying(token, _factory, tokenExitFee);
@@ -763,8 +774,7 @@ contract Pool is PoolToken {
     _whenNotPaused_
     returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
-        Struct.SwapResult memory swapResult;
-        (swapResult, spotPriceAfter) = _getAmountOutGivenInMMM(
+        (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult) = _getAmountOutGivenInMMM(
             tokenIn,
             tokenAmountIn,
             tokenOut,
@@ -777,13 +787,14 @@ contract Pool is PoolToken {
 
         emit LOG_SWAP(
             msg.sender, tokenIn, tokenOut, tokenAmountIn,
-            swapResult.amount, swapResult.spread, swapResult.taxBaseIn
+            swapResult.amount, swapResult.spread, swapResult.taxBaseIn,
+            priceResult.priceIn, priceResult.priceOut
         );
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, swapResult.amount);
 
-        return (tokenAmountOut = swapResult.amount, spotPriceAfter);
+        return (tokenAmountOut = swapResult.amount, spotPriceAfter = priceResult.spotPriceAfter);
     }
 
     function getAmountOutGivenInMMM(
@@ -795,7 +806,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
+    returns (Struct.SwapResult memory, Struct.PriceResult memory)
     {
         return _getAmountOutGivenInMMM(
             tokenIn,
@@ -814,7 +825,7 @@ contract Pool is PoolToken {
         uint256 maxPrice
     )
     internal view
-    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
+    returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
 
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
@@ -823,7 +834,7 @@ contract Pool is PoolToken {
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
 
-        uint256 spotPriceBefore = Math.calcSpotPrice(
+        priceResult.spotPriceBefore = Math.calcSpotPrice(
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
             tokenGlobalOut.info.balance,
@@ -831,7 +842,7 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(spotPriceBefore <= maxPrice, "11");
+        require(priceResult.spotPriceBefore <= maxPrice, "11");
 
         swapResult = _getAmountOutGivenInMMMWithTimestamp(
             tokenGlobalIn,
@@ -841,7 +852,7 @@ contract Pool is PoolToken {
         );
         require(swapResult.amount >= minAmountOut, "9");
 
-        spotPriceAfter = Math.calcSpotPrice(
+        priceResult.spotPriceAfter = Math.calcSpotPrice(
             tokenGlobalIn.info.balance + tokenAmountIn,
             tokenGlobalIn.info.weight,
             tokenGlobalOut.info.balance - swapResult.amount,
@@ -849,17 +860,20 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(spotPriceAfter >= spotPriceBefore, "5");
-        require(spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
+        require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, "5");
+        require(priceResult.spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
         require(
             Num.bdiv(
-                Num.bmul(spotPriceAfter, Const.BONE - _swapFee),
+                Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
 
-        return (swapResult, spotPriceAfter);
+        priceResult.priceIn = tokenGlobalIn.latestRound.price;
+        priceResult.priceOut = tokenGlobalOut.latestRound.price;
+
+        return (swapResult, priceResult);
     }
 
     function _getAmountOutGivenInMMMWithTimestamp(
@@ -909,8 +923,7 @@ contract Pool is PoolToken {
     returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
     {
 
-        Struct.SwapResult memory swapResult;
-        (swapResult, spotPriceAfter)= _getAmountInGivenOutMMM(
+        (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult) = _getAmountInGivenOutMMM(
             tokenIn,
             maxAmountIn,
             tokenOut,
@@ -923,13 +936,14 @@ contract Pool is PoolToken {
 
         emit LOG_SWAP(
             msg.sender, tokenIn, tokenOut, swapResult.amount,
-            tokenAmountOut, swapResult.spread, swapResult.taxBaseIn
+            tokenAmountOut, swapResult.spread, swapResult.taxBaseIn,
+            priceResult.priceIn, priceResult.priceOut
         );
 
         _pullUnderlying(tokenIn, msg.sender, swapResult.amount);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
-        return (tokenAmountIn = swapResult.amount, spotPriceAfter);
+        return (tokenAmountIn = swapResult.amount, spotPriceAfter = priceResult.spotPriceAfter);
     }
 
     function getAmountInGivenOutMMM(
@@ -941,7 +955,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
+    returns (Struct.SwapResult memory, Struct.PriceResult memory)
     {
         return _getAmountInGivenOutMMM(
             tokenIn,
@@ -960,7 +974,7 @@ contract Pool is PoolToken {
         uint256 maxPrice
     )
     internal view
-    returns (Struct.SwapResult memory swapResult, uint256 spotPriceAfter)
+    returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
 
         require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
@@ -969,7 +983,7 @@ contract Pool is PoolToken {
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
 
-        uint256 spotPriceBefore = Math.calcSpotPrice(
+        priceResult.spotPriceBefore = Math.calcSpotPrice(
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
             tokenGlobalOut.info.balance,
@@ -977,7 +991,7 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(spotPriceBefore <= maxPrice, "11");
+        require(priceResult.spotPriceBefore <= maxPrice, "11");
 
         swapResult = _getAmountInGivenOutMMMWithTimestamp(
             tokenGlobalIn,
@@ -988,7 +1002,7 @@ contract Pool is PoolToken {
 
         require(swapResult.amount <= maxAmountIn, "8");
 
-        spotPriceAfter = Math.calcSpotPrice(
+        priceResult.spotPriceAfter = Math.calcSpotPrice(
             tokenGlobalIn.info.balance + swapResult.amount,
             tokenGlobalIn.info.weight,
             tokenGlobalOut.info.balance - tokenAmountOut,
@@ -996,17 +1010,20 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(spotPriceAfter >= spotPriceBefore, "5");
-        require(spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
+        require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, "5");
+        require(priceResult.spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
         require(
             Num.bdiv(
-                Num.bmul(spotPriceAfter, Const.BONE - _swapFee),
+                Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
 
-        return (swapResult, spotPriceAfter);
+        priceResult.priceIn = tokenGlobalIn.latestRound.price;
+        priceResult.priceOut = tokenGlobalOut.latestRound.price;
+
+        return (swapResult, priceResult);
     }
 
     function _getAmountInGivenOutMMMWithTimestamp(
@@ -1069,16 +1086,16 @@ contract Pool is PoolToken {
     function getTokenLatestInfo(address token)
     internal view returns (Struct.TokenGlobal memory tokenGlobal) {
         Record memory record = _records[token];
-        Price memory price = _prices[token];
-        Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(price.oracle);
+        Struct.OracleState memory initialOracleState = _oraclesInitialState[token];
+        Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(initialOracleState.oracle);
         Struct.TokenRecord memory info = Struct.TokenRecord(
             record.balance,
             // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
             Num.bmul(
                 record.denorm,
                 _getTokenPerformance(
-                    price.initialPrice,
-                    uint256(latestRound.price) // we consider the token price to be > 0
+                    initialOracleState.price,
+                    latestRound.price
                 )
             )
         );

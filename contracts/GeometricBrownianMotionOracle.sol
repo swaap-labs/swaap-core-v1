@@ -236,7 +236,7 @@ library GeometricBrownianMotionOracle {
         }
         variance = Num.bdivInt256(variance, int256(n * Const.BONE));
 
-        return (mean, uint256(Num.positivePart(variance)));
+        return (mean, Num.positivePart(variance));
     }
 
     /**
@@ -338,7 +338,7 @@ library GeometricBrownianMotionOracle {
 
         {
 
-            prices[0] = uint256(latestRound.price); // is supposed to be well valid
+            prices[0] = latestRound.price; // is supposed to be well valid
             timestamps[0] = latestTimestamp; // is supposed to be well valid
 
             if (latestTimestamp < timeLimit) {
@@ -353,11 +353,11 @@ library GeometricBrownianMotionOracle {
             while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
 
                 _roundId--;
-                (int256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(latestRound.oracle, _roundId);
+                (uint256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(latestRound.oracle, _roundId);
 
                 if (_price > 0 && _timestamp > 0) {
 
-                    prices[idx] = uint256(_price);
+                    prices[idx] = _price;
                     timestamps[idx] = _timestamp;
                     idx += 1;
 

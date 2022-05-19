@@ -23,17 +23,20 @@ import "./Num.sol";
 library ChainlinkUtils {
 
     /**
-    * @notice Retrieves the latest price from the given oracle price feed
+    * @notice Retrieves the oracle latest price, its decimals and description
     * @dev We consider the token price to be > 0
-    * @param oracle The price feed oracle
-    * @return The latest price
+    * @param oracle The price feed oracle's address
+    * @return The latest price's value
+    * @return The latest price's number of decimals
+    * @return The oracle description
     */
-    function getTokenLatestPrice(address oracle) internal view returns (uint256) {
-        (, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+    function getTokenLatestPrice(address oracle) internal view returns (uint256, uint8, string memory) {
+        IAggregatorV3 feed = IAggregatorV3(oracle);
+        (, int256 latestPrice, , uint256 latestTimestamp,) = feed.latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
         require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, "48");
         require(latestPrice > 0, "16");
-        return uint256(latestPrice); // we consider the token price to be > 0
+        return (uint256(latestPrice), feed.decimals(), feed.description()); // we consider the token price to be > 0
     }
 
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
@@ -44,20 +47,22 @@ library ChainlinkUtils {
         return Struct.LatestRound(
             oracle,
             latestRoundId,
-            latestPrice,
+            uint256(latestPrice),
             latestTimestamp
         );
     }
 
     /**
     * @notice Retrieves historical data from round id.
-    * @dev Will not fail and return (0, 0) if no data can be found.
+    * @dev Special cases:
+    * - if retrieved price is negative --> fails
+    * - if no data can be found --> returns (0,0)
     * @param oracle The price feed oracle
     * @param _roundId The the round of interest ID
     * @return The round price
     * @return The round timestamp
     */
-    function getRoundData(address oracle, uint80 _roundId) internal view returns (int256, uint256) {
+    function getRoundData(address oracle, uint80 _roundId) internal view returns (uint256, uint256) {
         try IAggregatorV3(oracle).getRoundData(_roundId) returns (
             uint80 ,
             int256 _price,
@@ -65,7 +70,8 @@ library ChainlinkUtils {
             uint256 _timestamp,
             uint80
         ) {
-            return (_price, _timestamp);
+            require(_price >= 0, "49");
+            return (Num.positivePart(_price), _timestamp);
         } catch {}
         return (0, 0);
     }
@@ -90,14 +96,14 @@ library ChainlinkUtils {
     }
 
     function _getTokenRelativePrice(
-        int256 price_1, uint8 decimal_1,
-        int256 price_2, uint8 decimal_2
+        uint256 price_1, uint8 decimal_1,
+        uint256 price_2, uint8 decimal_2
     )
     internal
     pure
     returns (uint256) {
         // we consider tokens price to be > 0
-        uint256 rawDiv = Num.bdiv(Num.positivePart(price_2), Num.positivePart(price_1));
+        uint256 rawDiv = Num.bdiv(price_2, price_1);
         if (decimal_1 == decimal_2) {
             return rawDiv;
         } else if (decimal_1 > decimal_2) {
@@ -128,15 +134,15 @@ library ChainlinkUtils {
     function getMaxRelativePriceInLastBlock(
         address oracle_1,
         uint80 roundId_1,
-        int256 price_1,
+        uint256 price_1,
         uint256 timestamp_1,
         address oracle_2,
         uint80 roundId_2,
-        int256 price_2,
+        uint256 price_2,
         uint256 timestamp_2
     ) internal view returns (uint256) {
         {
-            int256 temp_price_1 = price_1;
+            uint256 temp_price_1 = price_1;
             while (timestamp_1 == block.timestamp) {
                 --roundId_1;
                 (temp_price_1, timestamp_1) = ChainlinkUtils.getRoundData(
@@ -151,7 +157,7 @@ library ChainlinkUtils {
             }
         }
         {
-            int256 temp_price_2 = price_2;
+            uint256 temp_price_2 = price_2;
             while (timestamp_2 == block.timestamp) {
                 --roundId_2;
                 (temp_price_2, timestamp_2) = ChainlinkUtils.getRoundData(
