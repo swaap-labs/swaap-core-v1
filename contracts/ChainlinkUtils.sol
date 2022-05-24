@@ -71,7 +71,7 @@ library ChainlinkUtils {
             uint80
         ) {
             require(_price >= 0, "49");
-            return (Num.positivePart(_price), _timestamp);
+            return (uint256(_price), _timestamp);
         } catch {}
         return (0, 0);
     }
