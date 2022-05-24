@@ -616,9 +616,9 @@ contract Pool is PoolToken {
     * @param token The token's address
     * @param balance The token's balance
     * @param denorm The token's weight
-    * @param _priceFeedAddress The token's Chainlink price feed
+    * @param priceFeedAddress The token's Chainlink price feed
     */
-    function bindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
+    function bindMMM(address token, uint256 balance, uint80 denorm, address priceFeedAddress)
     external
     {
         require(!_records[token].bound, "28");
@@ -634,7 +634,7 @@ contract Pool is PoolToken {
             }
         );
         _tokens.push(token);
-        _rebindMMM(token, balance, denorm, _priceFeedAddress);
+        _rebindMMM(token, balance, denorm, priceFeedAddress);
     }
 
     /**
@@ -642,17 +642,17 @@ contract Pool is PoolToken {
     * @param token The token's address
     * @param balance The token's balance
     * @param denorm The token's weight
-    * @param _priceFeedAddress The token's Chainlink price feed
+    * @param priceFeedAddress The token's Chainlink price feed
     */
-    function rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
+    function rebindMMM(address token, uint256 balance, uint80 denorm, address priceFeedAddress)
     external
     {
         require(_records[token].bound, "2");
 
-        _rebindMMM(token, balance, denorm, _priceFeedAddress);
+        _rebindMMM(token, balance, denorm, priceFeedAddress);
     }
 
-    function _rebindMMM(address token, uint256 balance, uint80 denorm, address _priceFeedAddress)
+    function _rebindMMM(address token, uint256 balance, uint80 denorm, address priceFeedAddress)
     internal 
     _logs_
     _lock_
@@ -688,25 +688,26 @@ contract Pool is PoolToken {
             _pushUnderlying(token, _factory, tokenExitFee);
         }
 
-        // Add token price
+        (
+            uint256 price,
+            uint8 decimals,
+            string memory description
+        ) = ChainlinkUtils.getTokenLatestPrice(_oraclesInitialState[token].oracle);
+
+        // Updating oracle state
         _oraclesInitialState[token] = Struct.OracleState(
             {
-                oracle: _priceFeedAddress,
-                price: 0, // set right below
-                decimals: 0 // set right below
+                oracle: priceFeedAddress,
+                price: price, // set right below
+                decimals: decimals // set right below
             }
         );
-        string memory description;
-        (
-            _oraclesInitialState[token].price,
-            _oraclesInitialState[token].decimals,
-            description
-        ) = ChainlinkUtils.getTokenLatestPrice(_oraclesInitialState[token].oracle);
+
         emit LOG_NEW_ORACLE_STATE(
             token,
-            _oraclesInitialState[token].oracle,
-            _oraclesInitialState[token].price,
-            _oraclesInitialState[token].decimals,
+            priceFeedAddress,
+            price,
+            decimals,
             description
         );
     }
