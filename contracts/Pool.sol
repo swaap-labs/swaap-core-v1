@@ -74,7 +74,7 @@ contract Pool is PoolToken {
     );
 
     event LOG_NEW_ORACLE_STATE(
-        address token,
+        address indexed token,
         address oracle,
         uint256 price,
         uint8   decimals,
