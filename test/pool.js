@@ -4,6 +4,8 @@ const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/cal
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');
 const TToken = artifacts.require('TToken');
+const TTokenWithFees = artifacts.require('TTokenWithFees');
+
 const verbose = process.env.VERBOSE;
 
 const TConstantOracle = artifacts.require('TConstantOracle');
@@ -19,9 +21,9 @@ contract('Pool', async (accounts) => {
     const MAX = web3.utils.toTwosComplement(-1);
 
     let WETH; let MKR; let DAI; let
-        XXX; // addresses
+        XXX; let XXXWITHFEES // addresses
     let weth; let mkr; let dai; let
-        xxx; // TTokens
+        xxx; let xxxWithFees; // TTokens
     let factory; // Pool factory
     let pool; // first pool w/ defaults
     let POOL; //   pool address
@@ -47,11 +49,13 @@ contract('Pool', async (accounts) => {
         mkr = await TToken.new('Maker', 'MKR', 18);
         dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
         xxx = await TToken.new('XXX', 'XXX', 18);
+        xxxWithFees = await TTokenWithFees.new('XXX', 'XXX', 18);
 
         WETH = weth.address;
         MKR = mkr.address;
         DAI = dai.address;
         XXX = xxx.address;
+        XXXWITHFEES = xxxWithFees.address;
 
         wethOracle = await TConstantOracle.new(200000000000);
         mkrOracle = await TConstantOracle.new(50000000000);
@@ -76,6 +80,7 @@ contract('Pool', async (accounts) => {
         await mkr.mint(admin, toWei('2000'));
         await dai.mint(admin, toWei('100000'));
         await xxx.mint(admin, toWei('10'));
+        await xxxWithFees.mint(admin, toWei('10'));
 
         // User1 balances
         await weth.mint(user1, toWei('25'), { from: admin });
@@ -123,6 +128,17 @@ contract('Pool', async (accounts) => {
             await mkr.approve(POOL, MAX);
             await dai.approve(POOL, MAX);
             await xxx.approve(POOL, MAX);
+            await xxxWithFees.approve(POOL, MAX);
+        });
+
+        it('Fails binding token with fees', async () => {
+            try {
+                await pool.bindMMM(XXXWITHFEES, toWei('5'), toWei('1'), XXXOracleAddress);
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert.equal(e.reason, '52');
+            }            
         });
 
         it('Fails binding weights and balances outside MIX MAX', async () => {

@@ -120,6 +120,14 @@ contract Pool is PoolToken {
         _;
     }
 
+    // prevents token transfers with fees
+    modifier _checkBalanceAfterTransfer_(address erc20, uint amount) {
+        uint expectedBalance = IERC20(erc20).balanceOf(address(this)) + amount;
+        _;
+        uint currentBalance = IERC20(erc20).balanceOf(address(this));
+        require(expectedBalance == currentBalance, "52");
+    }
+
     address[] private _tokens;
     mapping(address=>Record) private _records;
 
@@ -505,6 +513,7 @@ contract Pool is PoolToken {
 
     function _pullUnderlying(address erc20, address from, uint256 amount)
     internal
+    _checkBalanceAfterTransfer_(erc20, amount)
     {
         IERC20(erc20).safeTransferFrom(from, address(this), amount);
     }
