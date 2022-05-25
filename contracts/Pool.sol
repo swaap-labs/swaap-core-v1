@@ -692,7 +692,7 @@ contract Pool is PoolToken {
             uint256 price,
             uint8 decimals,
             string memory description
-        ) = ChainlinkUtils.getTokenLatestPrice(_oraclesInitialState[token].oracle);
+        ) = ChainlinkUtils.getTokenLatestPrice(priceFeedAddress);
 
         // Updating oracle state
         _oraclesInitialState[token] = Struct.OracleState(
