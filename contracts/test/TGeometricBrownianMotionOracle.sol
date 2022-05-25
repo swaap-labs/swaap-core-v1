@@ -25,7 +25,7 @@ library TGeometricBrownianMotionOracle {
         address oracleIn, uint80 roundIdIn, uint256 priceIn, uint256 timestampIn,
         address oracleOut, uint80 roundIdOut, uint256 priceOut, uint256 timestampOut,
         uint8 priceStatisticsLookbackInRound, uint256 priceStatisticsLookbackInSec,
-        uint256 timestamp
+        uint256 timestamp, uint8 priceStatisticsLookbackStepInRound
     ) public view returns (Struct.GBMEstimation memory results) {
 
         Struct.LatestRound memory inputIn = Struct.LatestRound(
@@ -39,7 +39,8 @@ library TGeometricBrownianMotionOracle {
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,
             priceStatisticsLookbackInSec,
-            timestamp
+            timestamp,
+            priceStatisticsLookbackStepInRound
         );
 
         return results = GeometricBrownianMotionOracle.getParametersEstimation(

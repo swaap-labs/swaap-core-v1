@@ -350,9 +350,9 @@ library GeometricBrownianMotionOracle {
             // buffer variables
             uint80 _roundId = latestRound.roundId;
 
-            while ((_roundId > 0) && (count < hpParameters.lookbackInRound)) {
+            while ((_roundId >= hpParameters.lookbackStepInRound) && (count < hpParameters.lookbackInRound)) {
 
-                _roundId--;
+                _roundId -= hpParameters.lookbackStepInRound;
                 (uint256 _price, uint256 _timestamp) = ChainlinkUtils.getRoundData(latestRound.oracle, _roundId);
 
                 if (_price > 0 && _timestamp > 0) {

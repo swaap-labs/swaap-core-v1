@@ -30,6 +30,7 @@ contract('Pool', async (accounts) => {
     const z = 1;
     const horizon = 600;
     const priceStatisticsLookbackInRound = 6;
+    const priceStatisticsLookbackStepInRound = 3;
     const priceStatisticsLookbackInSec = 3600 * 2;
 
     const baseSwapFee = toWei('0.003');
@@ -108,9 +109,9 @@ contract('Pool', async (accounts) => {
 
         const valuePerAsset = 10000000
 
-        const [wethOraclePrices, wethOracleTimestamps] = await getOracleDataHistory(wethOracle, 10);
-        const [wbtcOraclePrices, wbtcOracleTimestamps] = await getOracleDataHistory(wbtcOracle, 10);
-        const [daiOraclePrices, daiOracleTimestamps] = await getOracleDataHistory(daiOracle, 10);
+        const [wethOraclePrices, wethOracleTimestamps] = await getOracleDataHistory(wethOracle, 10, priceStatisticsLookbackStepInRound);
+        const [wbtcOraclePrices, wbtcOracleTimestamps] = await getOracleDataHistory(wbtcOracle, 10, priceStatisticsLookbackStepInRound);
+        const [daiOraclePrices, daiOracleTimestamps] = await getOracleDataHistory(daiOracle, 10, priceStatisticsLookbackStepInRound);
 
         _wethOraclePrices = [...wethOraclePrices]
         _wethOracleTimestamps = [...wethOracleTimestamps]
@@ -160,7 +161,7 @@ contract('Pool', async (accounts) => {
 			const [_expectedMeanWETHDAI, _expectedVarianceWETHDAI] = getParametersEstimation(
 				[..._wethOraclePrices], wethOracleTimestamps, wethOracleStartIndexWETHDAI,
 				[..._daiOraclePrices], daiOracleTimestamps, daiOracleStartIndexWETHDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWETHDAI = _expectedMeanWETHDAI;
 			expectedVarianceWETHDAI = _expectedVarianceWETHDAI;
@@ -174,7 +175,7 @@ contract('Pool', async (accounts) => {
 			const [_expectedMeanWBTCDAI, _expectedVarianceWBTCDAI] = getParametersEstimation(
 				[..._wbtcOraclePrices], wbtcOracleTimestamps, wbtcOracleStartIndexWBTCDAI,
 				[..._daiOraclePrices], _daiOracleTimestamps, daiOracleStartIndexWBTCDAI,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWBTCDAI = _expectedMeanWBTCDAI;
 			expectedVarianceWBTCDAI = _expectedVarianceWBTCDAI;
@@ -188,7 +189,7 @@ contract('Pool', async (accounts) => {
 			const [_expectedMeanWBTCWETH, _expectedVarianceWBTCWETH] = getParametersEstimation(
 				[..._wbtcOraclePrices], wbtcOracleTimestamps, wbtcOracleStartIndexWBTCWETH,
 				[..._wethOraclePrices], [..._wethOracleTimestamps], wethOracleStartIndexWBTCWETH,
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInSec, now
 			);
 			expectedMeanWBTCWETH = _expectedMeanWBTCWETH;
 			expectedVarianceWBTCWETH = _expectedVarianceWBTCWETH;
@@ -255,6 +256,7 @@ contract('Pool', async (accounts) => {
             assert.equal(fromWei(expectedCoverageParameters[1]), horizon);
             assert.equal(expectedCoverageParameters[2], priceStatisticsLookbackInRound);
             assert.equal(expectedCoverageParameters[3], priceStatisticsLookbackInSec);
+            assert.equal(expectedCoverageParameters[4], priceStatisticsLookbackStepInRound);
         });
 
         it('Admin finalizes pool', async () => {

@@ -55,4 +55,6 @@ library Const {
     uint256 public constant FALLBACK_SPREAD       = 3 * BONE / 1000;
 
     uint256 public constant ORACLE_TIMEOUT        = 2 * 60;
+
+    uint8 public constant LOOKBACK_STEP_IN_ROUND  = 3;
 }

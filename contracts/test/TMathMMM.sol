@@ -254,7 +254,7 @@ library TMathMMM {
             0
         );
         formattedInput.hpParameters = Struct.HistoricalPricesParameters(
-            10, 1000, block.timestamp
+            10, 1000, block.timestamp, 1
         );
         return formattedInput;
     }

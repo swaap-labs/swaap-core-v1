@@ -143,16 +143,18 @@ contract Pool is PoolToken {
     
     bool private _finalized;
     address immutable private _factory;    // Factory address to push token exitFee to
-    uint8 private priceStatisticsLookbackInRound;
+
     uint64 private dynamicCoverageFeesZ;
+    uint256 private dynamicCoverageFeesHorizon;
+    uint8 private priceStatisticsLookbackInRound;
+    uint256 private priceStatisticsLookbackInSec;
+    uint8 private priceStatisticsLookbackStepInRound;
 
     // `setSwapFee` and `finalize` require CONTROL
     uint256 private _swapFee;
         
     mapping(address=>Struct.OracleState) private _oraclesInitialState;
 
-    uint256 private dynamicCoverageFeesHorizon;
-    uint256 private priceStatisticsLookbackInSec;
 
     constructor() {
         _controller = msg.sender;
@@ -162,6 +164,7 @@ contract Pool is PoolToken {
         priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
         dynamicCoverageFeesZ = Const.BASE_Z;
         dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
+        priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
     }
 
     function isPublicSwap()
@@ -411,7 +414,8 @@ contract Pool is PoolToken {
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
                 priceStatisticsLookbackInSec,
-                block.timestamp
+                block.timestamp,
+                priceStatisticsLookbackStepInRound
             );
 
             poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
@@ -480,7 +484,8 @@ contract Pool is PoolToken {
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 priceStatisticsLookbackInRound,
                 priceStatisticsLookbackInSec,
-                block.timestamp
+                block.timestamp,
+                priceStatisticsLookbackStepInRound
             );
 
             tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
@@ -595,15 +600,27 @@ contract Pool is PoolToken {
         priceStatisticsLookbackInSec = _priceStatisticsLookbackInSec;
     }
 
+    function setPriceStatisticsLookbackStepInRound(uint8 _priceStatisticsLookbackStepInRound)
+    external
+    _logs_
+    _lock_
+    {
+        require(!_finalized, "4");
+        require(msg.sender == _controller, "3");
+        require(_priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_IN_ROUND, "53");
+        priceStatisticsLookbackStepInRound = _priceStatisticsLookbackStepInRound;
+    }
+
     function getCoverageParameters()
     external view
-    returns (uint64, uint256, uint8, uint256)
+    returns (uint64, uint256, uint8, uint256, uint8)
     {
         return (
             dynamicCoverageFeesZ,
             dynamicCoverageFeesHorizon,
             priceStatisticsLookbackInRound,
-            priceStatisticsLookbackInSec
+            priceStatisticsLookbackInSec,
+            priceStatisticsLookbackStepInRound
         );
     }
 
@@ -916,7 +933,8 @@ contract Pool is PoolToken {
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,
             priceStatisticsLookbackInSec,
-            timestamp
+            timestamp,
+            priceStatisticsLookbackStepInRound
         );
 
         return Math.calcOutGivenInMMM(
@@ -1076,7 +1094,8 @@ contract Pool is PoolToken {
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             priceStatisticsLookbackInRound,
             priceStatisticsLookbackInSec,
-            timestamp
+            timestamp,
+            priceStatisticsLookbackStepInRound
         );
 
         return Math.calcInGivenOutMMM(

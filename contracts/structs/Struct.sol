@@ -37,6 +37,7 @@ contract Struct {
         uint8   lookbackInRound;
         uint256 lookbackInSec;
         uint256 timestamp;
+        uint8   lookbackStepInRound;
     }
     
     struct HistoricalPricesData {

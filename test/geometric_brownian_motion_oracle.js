@@ -20,7 +20,6 @@ const varianceErrorDelta = 2 * 10 ** -6;
 const negligibleValue = 10 ** -25;
 
 const verbose = process.env.VERBOSE;
-const useMainnetData = process.env.MAINNETDATA;
 
 
 contract('GeometricBrownianMotionOracle', async (accounts) => {
@@ -38,6 +37,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 	const z = 0.75
 	const priceStatisticsLookbackInRound = 6;
 	const priceStatisticsLookbackInSec = 3600 * 2;
+	const priceStatisticsLookbackStepInRound = 3;
 
     let gbmOracle;
 
@@ -59,22 +59,10 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		daiOracleAddress = daiOracle.address;
 
 		testData = {
-			'ETH': {'oracle': wethOracleAddress, 'data': await getOracleDataHistoryAsList(wethOracle, 10)},
-			'BTC': {'oracle': wbtcOracleAddress, 'data': await getOracleDataHistoryAsList(wbtcOracle, 10)},
-			'DAI': {'oracle': daiOracleAddress, 'data': await getOracleDataHistoryAsList(daiOracle, 10)}
+			'ETH': {'oracle': wethOracleAddress, 'data': await getOracleDataHistoryAsList(wethOracle, 10, priceStatisticsLookbackStepInRound)},
+			'BTC': {'oracle': wbtcOracleAddress, 'data': await getOracleDataHistoryAsList(wbtcOracle, 10, priceStatisticsLookbackStepInRound)},
+			'DAI': {'oracle': daiOracleAddress, 'data': await getOracleDataHistoryAsList(daiOracle, 10, priceStatisticsLookbackStepInRound)}
 		}
-		if (verbose) {
-			console.log("now:", now)
-		}
-	}
-
-	async function loadMainnetData() {
-		testData = require('./data.json')
-		now = Math.max(...[
-			parseInt(testData["ETH"]["data"][0]["timestamp"]),
-			parseInt(testData["BTC"]["data"][0]["timestamp"]),
-			parseInt(testData["DAI"]["data"][0]["timestamp"])
-		]);
 		if (verbose) {
 			console.log("now:", now)
 		}
@@ -105,7 +93,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		const result = await gbmOracle.getParametersEstimation.call(
 			testData[inCurrency]["oracle"], inRoundId, inPrices[0], inTimestamps[0],
 			testData[outCurrency]["oracle"], outRoundId, outPrices[0], outTimestamps[0],
-			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, priceStatisticsLookbackStepInRound
 		);
 		const success = result[2];
 		assert.equal(success, true);
@@ -122,7 +110,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		const [expectedMean, expectedVariance] = getParametersEstimation(
 			inPrices, inTimestamps, inStartIndex,
 			outPrices, outTimestamps, outStartIndex,
-			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now,
+			now, priceStatisticsLookbackStepInRound
 		);
 
 
@@ -172,7 +160,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 			const resultBis = await gbmOracle.getParametersEstimation.call(
 				testData[outCurrency]["oracle"], outRoundIdBis, outPricesBis[0], outTimestampsBis[0],
 				testData[inCurrency]["oracle"], inRoundIdBis, inPricesBis[0], inTimestampsBis[0],
-				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+				priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, priceStatisticsLookbackStepInRound
 			);
 			console.log(
 				"spread out/in:",
@@ -200,7 +188,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		const result = await gbmOracle.getParametersEstimation.call(
 			wethOracle.address, latestRoundIdConstantOracle, inPrices[0], inTimestamps[0],
 			wbtcOracle.address, latestRoundIdConstantOracle, outPrices[0], outTimestamps[0],
-			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, priceStatisticsLookbackStepInRound
 		);
 		assert.equal(result[2], true);
 	}
@@ -222,7 +210,7 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 		const result = await gbmOracle.getParametersEstimation.call(
 			wethOracle.address, latestRoundIdConstantOracle, inPrices[0], inTimestamps[0],
 			wbtcOracle.address, latestRoundIdConstantOracle, outPrices[0], outTimestamps[0],
-			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now
+			priceStatisticsLookbackInRound, priceStatisticsLookbackInSec, now, priceStatisticsLookbackStepInRound
 		);
 		assert.equal(result[2], false);
 	}
@@ -230,14 +218,8 @@ contract('GeometricBrownianMotionOracle', async (accounts) => {
 
 	describe(`GBM Oracle)`, () => {
 
-		(
-			useMainnetData ?
-			[
-				["Mainnet", loadMainnetData],
-				["Test Oracle", loadTestOracleData],
-			] :
-			[["Test Oracle", loadTestOracleData]]
-		).forEach(loader => {
+		[["Test Oracle", loadTestOracleData]]
+		.forEach(loader => {
 
 			it(`Loading ${loader[0]} Data`, async () => {
 				await loader[1]()
