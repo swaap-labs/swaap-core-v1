@@ -706,9 +706,9 @@ contract Pool is PoolToken {
         // Updating oracle state
         _oraclesInitialState[token] = Struct.OracleState(
             {
+                decimals: decimals, // set right below
                 oracle: priceFeedAddress,
-                price: price, // set right below
-                decimals: decimals // set right below
+                price: price // set right below
             }
         );
 

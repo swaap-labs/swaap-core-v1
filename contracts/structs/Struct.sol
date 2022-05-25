@@ -29,9 +29,9 @@ contract Struct {
     }
 
     struct OracleState {
+        uint8   decimals;
         address oracle;
         uint256 price;
-        uint8   decimals;
     }
 
     struct HistoricalPricesParameters {
