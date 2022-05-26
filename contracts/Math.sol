@@ -193,7 +193,7 @@ library Math {
             }
         }
         if (blockHasPriceUpdate) {
-            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn.latestRound, tokensGlobalOut);
+            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn, tokensGlobalOut);
             fee += calcPoolOutGivenSingleInAdaptiveFees(
                 poolValueInTokenIn,
                 tokenGlobalIn.info.balance,
@@ -289,7 +289,7 @@ library Math {
             }
         }
         if (blockHasPriceUpdate) {
-            uint256 poolValueInTokenOut = tokenGlobalOut.info.balance + getBasesTotalValue(tokenGlobalOut.latestRound, remainingTokens);
+            uint256 poolValueInTokenOut = tokenGlobalOut.info.balance + getBasesTotalValue(tokenGlobalOut, remainingTokens);
             fee += calcSingleOutGivenPoolInAdaptiveFees(
                 poolValueInTokenOut,
                 tokenGlobalOut.info.balance,
@@ -999,14 +999,10 @@ library Math {
             return alpha = baseFee;
         }
         uint256 recentPriceUpperBound = ChainlinkUtils.getMaxRelativePriceInLastBlock(
-            tokenGlobalIn.latestRound.oracle,
-            tokenGlobalIn.latestRound.roundId,
-            tokenGlobalIn.latestRound.price,
-            tokenGlobalIn.latestRound.timestamp,
-            tokenGlobalOut.latestRound.oracle,
-            tokenGlobalOut.latestRound.roundId,
-            tokenGlobalOut.latestRound.price,
-            tokenGlobalOut.latestRound.timestamp
+            tokenGlobalIn.latestRound,
+            tokenGlobalIn.info.decimals,
+            tokenGlobalOut.latestRound,
+            tokenGlobalOut.info.decimals
         );
         if (recentPriceUpperBound == 0) {
             // we were not able to retrieve the previous price
@@ -1085,14 +1081,16 @@ library Math {
         );
     }
 
-    function getBasesTotalValue(Struct.LatestRound memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
-    internal view returns (uint256 basesTotalValue){
+    function getBasesTotalValue(Struct.TokenGlobal memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
+    internal pure returns (uint256 basesTotalValue){
         for (uint i; i < baseTokens.length;) {
             basesTotalValue += Num.bmul(
                 baseTokens[i].info.balance,
                 ChainlinkUtils.getTokenRelativePrice(
-                    quoteToken,
-                    baseTokens[i].latestRound
+                    quoteToken.latestRound.price,
+                    quoteToken.info.decimals,
+                    baseTokens[i].latestRound.price,
+                    baseTokens[i].info.decimals
                 )
             );
             unchecked { ++i; }

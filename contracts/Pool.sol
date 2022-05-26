@@ -25,6 +25,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
 
+import "./interfaces/IToken.sol";
+
 import "./ChainlinkUtils.sol";
 
 contract Pool is PoolToken {
@@ -34,6 +36,7 @@ contract Pool is PoolToken {
     struct Record {
         bool bound;   // is token bound to pool
         uint8 index;   // private
+        uint8 decimals; // token decimals + oracle decimals
         uint80 denorm;  // denormalized weight
         uint256 balance;
     }
@@ -638,6 +641,7 @@ contract Pool is PoolToken {
             {
                 bound: true,
                 index: uint8(_tokens.length),
+                decimals: 0,
                 denorm: 0,    // balance and denorm will be validated
                 balance: 0   // and set by `rebind`
             }
@@ -703,10 +707,12 @@ contract Pool is PoolToken {
             string memory description
         ) = ChainlinkUtils.getTokenLatestPrice(priceFeedAddress);
 
+        decimals += IToken(token).decimals();
+        _records[token].decimals = decimals;
+
         // Updating oracle state
         _oraclesInitialState[token] = Struct.OracleState(
             {
-                decimals: decimals, // set right below
                 oracle: priceFeedAddress,
                 price: price // set right below
             }
@@ -877,7 +883,12 @@ contract Pool is PoolToken {
         require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
-                ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
+                ChainlinkUtils.getTokenRelativePrice(
+                    tokenGlobalIn.latestRound.price,
+                    tokenGlobalIn.info.decimals,
+                    tokenGlobalOut.latestRound.price,
+                    tokenGlobalOut.info.decimals
+                )
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
@@ -913,7 +924,12 @@ contract Pool is PoolToken {
         return Math.calcOutGivenInMMM(
             tokenGlobalIn,
             tokenGlobalOut,
-            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            ChainlinkUtils.getTokenRelativePrice(
+                tokenGlobalIn.latestRound.price,
+                tokenGlobalIn.info.decimals,
+                tokenGlobalOut.latestRound.price,
+                tokenGlobalOut.info.decimals
+            ),
             swapParameters,
             gbmParameters,
             hpParameters
@@ -1027,7 +1043,12 @@ contract Pool is PoolToken {
         require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
-                ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound)
+                ChainlinkUtils.getTokenRelativePrice(
+                    tokenGlobalIn.latestRound.price,
+                    tokenGlobalIn.info.decimals,
+                    tokenGlobalOut.latestRound.price,
+                    tokenGlobalOut.info.decimals
+                )
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
             "44"
         );
@@ -1063,7 +1084,12 @@ contract Pool is PoolToken {
         return Math.calcInGivenOutMMM(
             tokenGlobalIn,
             tokenGlobalOut,
-            ChainlinkUtils.getTokenRelativePrice(tokenGlobalIn.latestRound, tokenGlobalOut.latestRound),
+            ChainlinkUtils.getTokenRelativePrice(
+                        tokenGlobalIn.latestRound.price,
+                        tokenGlobalIn.info.decimals,
+                        tokenGlobalOut.latestRound.price,
+                        tokenGlobalOut.info.decimals
+            ),
             swapParameters,
             gbmParameters,
             hpParameters
@@ -1101,6 +1127,7 @@ contract Pool is PoolToken {
         Struct.OracleState memory initialOracleState = _oraclesInitialState[token];
         Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(initialOracleState.oracle);
         Struct.TokenRecord memory info = Struct.TokenRecord(
+            record.decimals,
             record.balance,
             // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
             Num.bmul(
@@ -1159,7 +1186,7 @@ contract Pool is PoolToken {
     function _checkJoinSwapPrices (
         Struct.TokenGlobal memory tokenInInfo,
         Struct.TokenGlobal[] memory remainingTokensInfo
-    ) internal view {
+    ) internal pure {
         
         uint256 spotPriceAfter;
 
@@ -1176,7 +1203,12 @@ contract Pool is PoolToken {
             require(
                 Num.bdiv(
                     spotPriceAfter,
-                    ChainlinkUtils.getTokenRelativePrice(tokenInInfo.latestRound, remainingTokensInfo[i].latestRound)
+                    ChainlinkUtils.getTokenRelativePrice(
+                        tokenInInfo.latestRound.price,
+                        tokenInInfo.info.decimals,
+                        remainingTokensInfo[i].latestRound.price,
+                        remainingTokensInfo[i].info.decimals
+                    )
                 ) <= Const.MAX_PRICE_UNPEG_RATIO,
                 "44"
             );
@@ -1195,7 +1227,7 @@ contract Pool is PoolToken {
     function _checkExitSwapPrices (
         Struct.TokenGlobal memory tokenOutInfo,
         Struct.TokenGlobal[] memory remainingTokensInfo
-    ) internal view {
+    ) internal pure {
         
         uint256 spotPriceAfter;
 
@@ -1212,7 +1244,12 @@ contract Pool is PoolToken {
             require(
                 Num.bdiv(
                     spotPriceAfter,
-                    ChainlinkUtils.getTokenRelativePrice(remainingTokensInfo[i].latestRound, tokenOutInfo.latestRound)
+                    ChainlinkUtils.getTokenRelativePrice(
+                        remainingTokensInfo[i].latestRound.price,
+                        remainingTokensInfo[i].info.decimals,
+                        tokenOutInfo.latestRound.price,
+                        tokenOutInfo.info.decimals
+                    )    
                 ) <= Const.MAX_PRICE_UNPEG_RATIO,
                 "44"
             );

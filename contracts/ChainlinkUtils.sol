@@ -79,70 +79,58 @@ library ChainlinkUtils {
 
     /**
     * @notice Computes the price of token 2 in terms of token 1
-    * @param latestRound_1 The latest oracle data for token 1
-    * @param latestRound_2 The latest oracle data for token 2
+    * @param price_1 The latest price data for token 1
+    * @param decimals_1 The sum of the decimals of token 1 its oracle
+    * @param price_2 The latest price data for token 2
+    * @param decimals_2 The sum of the decimals of token 2 its oracle
     * @return The last price of token 2 divded by the last price of token 1
     */
     function getTokenRelativePrice(
-        Struct.LatestRound memory latestRound_1, Struct.LatestRound memory latestRound_2
-    )
-    internal
-    view
-    returns (uint256) {
-        return _getTokenRelativePrice(
-            latestRound_1.price, IAggregatorV3(latestRound_1.oracle).decimals(),
-            latestRound_2.price, IAggregatorV3(latestRound_2.oracle).decimals()
-        );
-    }
-
-    function _getTokenRelativePrice(
-        uint256 price_1, uint8 decimal_1,
-        uint256 price_2, uint8 decimal_2
+        uint256 price_1, uint8 decimals_1,
+        uint256 price_2, uint8 decimals_2
     )
     internal
     pure
     returns (uint256) {
         // we consider tokens price to be > 0
         uint256 rawDiv = Num.bdiv(price_2, price_1);
-        if (decimal_1 == decimal_2) {
+        if (decimals_1 == decimals_2) {
             return rawDiv;
-        } else if (decimal_1 > decimal_2) {
+        } else if (decimals_1 > decimals_2) {
             return Num.bmul(
                 rawDiv,
-                10**(decimal_1 - decimal_2)*Const.BONE
+                10**(decimals_1 - decimals_2)*Const.BONE
             );
         } else {
             return Num.bdiv(
                 rawDiv,
-                10**(decimal_2 - decimal_1)*Const.BONE
+                10**(decimals_2 - decimals_1)*Const.BONE
             );
         }
     }
 
     /**
     * @notice Computes the previous price of tokenIn in terms of tokenOut 's upper bound
-    * @param oracle_1 The token_1 oracle's address
-    * @param roundId_1 The latest token_1 oracle update's roundId
-    * @param price_1 The latest token_1 oracle update's price
-    * @param timestamp_1 The latest token_1 oracle update's timestamp
-    * @param oracle_2 The token_2 oracle's address
-    * @param roundId_2 The latest token_2 oracle update's roundId
-    * @param price_2 The latest token_2 oracle update's price
-    * @param timestamp_2 The latest token_2 oracle update's timestamp
+    * @param latestRound_1 The token_1's latest round
+    * @param decimals_1 The sum of the decimals of token 1 its oracle 
+    * @param latestRound_2 The token_2's latest round
+    * @param decimals_2 The sum of the decimals of token 2 its oracle
     * @return The ratio of token 2 and token 1 values if well defined, else 0
     */
     function getMaxRelativePriceInLastBlock(
-        address oracle_1,
-        uint80 roundId_1,
-        uint256 price_1,
-        uint256 timestamp_1,
-        address oracle_2,
-        uint80 roundId_2,
-        uint256 price_2,
-        uint256 timestamp_2
+        Struct.LatestRound memory latestRound_1,
+        uint8 decimals_1,
+        Struct.LatestRound memory latestRound_2,
+        uint8 decimals_2
     ) internal view returns (uint256) {
+        
+        uint256 minPrice_1;
         {
-            uint256 temp_price_1 = price_1;
+            uint256 temp_price_1 = latestRound_1.price;
+            uint256 timestamp_1  = latestRound_1.timestamp;
+            uint80  roundId_1    = latestRound_1.roundId;
+            address oracle_1     = latestRound_1.oracle;
+
             while (timestamp_1 == block.timestamp) {
                 --roundId_1;
                 (temp_price_1, timestamp_1) = ChainlinkUtils.getRoundData(
@@ -151,13 +139,19 @@ library ChainlinkUtils {
                 if (temp_price_1 == 0) {
                     return 0;
                 }
-                if (temp_price_1 < price_1) {
-                    price_1 = temp_price_1;
+                if (temp_price_1 < minPrice_1) {
+                    minPrice_1 = temp_price_1;
                 }
             }
         }
+
+        uint maxPrice_2;
         {
-            uint256 temp_price_2 = price_2;
+            uint256 temp_price_2 = latestRound_2.price;
+            uint256 timestamp_2  = latestRound_2.timestamp;
+            uint80  roundId_2    = latestRound_2.roundId;
+            address oracle_2     = latestRound_2.oracle;
+   
             while (timestamp_2 == block.timestamp) {
                 --roundId_2;
                 (temp_price_2, timestamp_2) = ChainlinkUtils.getRoundData(
@@ -166,15 +160,15 @@ library ChainlinkUtils {
                 if (temp_price_2 == 0) {
                     return 0;
                 }
-                if (temp_price_2 > price_2) {
-                    price_2 = temp_price_2;
+                if (temp_price_2 > maxPrice_2) {
+                    maxPrice_2 = temp_price_2;
                 }
             }
         }
 
-        return _getTokenRelativePrice(
-            price_1, IAggregatorV3(oracle_1).decimals(),
-            price_2, IAggregatorV3(oracle_2).decimals()
+        return getTokenRelativePrice(
+            minPrice_1, decimals_1,
+            maxPrice_2, decimals_2
         );
     }
 

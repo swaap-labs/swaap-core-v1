@@ -124,14 +124,18 @@ library TMathMMM {
 
     function getBasesTotalValue(
         address quoteAddress,
+        uint8 quoteDecimals, // sum of the decimals of the token and its oracle
         address[] memory basesAddress,
-        uint256[] memory basesBalance
+        uint256[] memory basesBalance,
+        uint8[] memory basesDecimals // sum of the decimals of the token and its oracle
     ) public view returns (uint256) {
-        Struct.LatestRound memory quote = ChainlinkUtils.getLatestRound(quoteAddress);
+        Struct.TokenRecord memory quoteRecord = Struct.TokenRecord(quoteDecimals, 0, 0); // balance and weight are not used in getTotalValue
+        Struct.LatestRound memory quoteLatestRound = ChainlinkUtils.getLatestRound(quoteAddress);
+        Struct.TokenGlobal memory quote = Struct.TokenGlobal(quoteRecord, quoteLatestRound);
         Struct.TokenGlobal[] memory bases = new Struct.TokenGlobal[](basesAddress.length);
         for (uint i=0; i < basesAddress.length;) {
             Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(basesAddress[i]);
-            Struct.TokenRecord memory info = Struct.TokenRecord(basesBalance[i], 0); // weight is not used in getTotalValue
+            Struct.TokenRecord memory info = Struct.TokenRecord(basesDecimals[0], basesBalance[i], 0); // weight is not used in getTotalValue
             Struct.TokenGlobal memory token = Struct.TokenGlobal(info, latestRound);
             bases[i] = token;
             unchecked { ++i; }
@@ -142,9 +146,11 @@ library TMathMMM {
     function calcSingleOutGivenPoolInMMM(
         address pivotOracleAddress,
         uint256 pivotBalance,
+        uint8 pivotDecimals, // sum of the decimals of the token and its oracle
         uint256 pivotWeight,
         address[] memory otherOracleAddresses,
         uint256[] memory otherBalances,
+        uint8[]   memory otherDecimals, // sum of the decimals of the token and its oracle
         uint256[] memory otherWeights,
         uint256 amount,
         uint256 fee,
@@ -154,9 +160,11 @@ library TMathMMM {
         FormattedInput memory forrmattedInput = _formatInput(
             pivotOracleAddress,
             pivotBalance,
+            pivotDecimals,
             pivotWeight,
             otherOracleAddresses,
             otherBalances,
+            otherDecimals,
             otherWeights,
             amount,
             fee,
@@ -175,9 +183,11 @@ library TMathMMM {
     function calcPoolOutGivenSingleInMMM(
         address pivotOracleAddress,
         uint256 pivotBalance,
+        uint8 pivotDecimals, // sum of the decimals of the token and its oracle
         uint256 pivotWeight,
         address[] memory otherOracleAddresses,
         uint256[] memory otherBalances,
+        uint8[]   memory otherDecimals, // sum of the decimals of the token and its oracle
         uint256[] memory otherWeights,
         uint256 amount,
         uint256 fee,
@@ -187,9 +197,11 @@ library TMathMMM {
         FormattedInput memory forrmattedInput = _formatInput(
             pivotOracleAddress,
             pivotBalance,
+            pivotDecimals,
             pivotWeight,
             otherOracleAddresses,
             otherBalances,
+            otherDecimals,
             otherWeights,
             amount,
             fee,
@@ -208,9 +220,11 @@ library TMathMMM {
     function _formatInput(
         address pivotOracleAddress,
         uint256 pivotBalance,
+        uint8 pivotDecimals, // sum of the decimals of the token and its oracle
         uint256 pivotWeight,
         address[] memory otherOracleAddresses,
         uint256[] memory otherBalances,
+        uint8[]   memory otherDecimals, // sum of the decimals of the token and its oracle
         uint256[] memory otherWeights,
         uint256 amount,
         uint256 fee,
@@ -218,12 +232,12 @@ library TMathMMM {
         uint256 poolSupply
     ) public view returns (FormattedInput memory formattedInput) {
         Struct.LatestRound memory pivotLatestRound = ChainlinkUtils.getLatestRound(pivotOracleAddress);
-        Struct.TokenRecord memory pivotInfo = Struct.TokenRecord(pivotBalance, pivotWeight);
+        Struct.TokenRecord memory pivotInfo = Struct.TokenRecord(pivotDecimals, pivotBalance, pivotWeight);
         formattedInput.pivot = Struct.TokenGlobal(pivotInfo, pivotLatestRound);
         formattedInput.others = new Struct.TokenGlobal[](otherOracleAddresses.length);
         for (uint i=0; i < otherOracleAddresses.length;) {
             Struct.LatestRound memory latestRound = ChainlinkUtils.getLatestRound(otherOracleAddresses[i]);
-            Struct.TokenRecord memory info = Struct.TokenRecord(otherBalances[i], otherWeights[i]);
+            Struct.TokenRecord memory info = Struct.TokenRecord(otherDecimals[i], otherBalances[i], otherWeights[i]);
             Struct.TokenGlobal memory other = Struct.TokenGlobal(info, latestRound);
             formattedInput.others[i] = other;
             unchecked { ++i; }

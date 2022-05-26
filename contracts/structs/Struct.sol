@@ -29,7 +29,6 @@ contract Struct {
     }
 
     struct OracleState {
-        uint8   decimals;
         address oracle;
         uint256 price;
     }
@@ -66,6 +65,7 @@ contract Struct {
     }
 
     struct TokenRecord {
+        uint8 decimals; // token decimals + oracle decimals
         uint256 balance;
         uint256 weight;
     }

@@ -20,21 +20,19 @@ library TChainlinkUtils {
 
     function getMaxRelativePriceInLastBlock(
         address oracleAddress_1,
-        address oracleAddress_2
+        uint8 decimals_1, // sum of the decimals of the token and its oracle
+        address oracleAddress_2,
+        uint8 decimals_2 // sum of the decimals of the token and its oracle
     ) public view returns (uint256) {
 
-        (uint80 roundId_1, int256 price_1, , uint256 timestamp_1, ) = IAggregatorV3(oracleAddress_1).latestRoundData();
-        (uint80 roundId_2, int256 price_2, , uint256 timestamp_2, ) = IAggregatorV3(oracleAddress_2).latestRoundData();
+        Struct.LatestRound memory latestRound_1 = ChainlinkUtils.getLatestRound(oracleAddress_1);
+        Struct.LatestRound memory latestRound_2 = ChainlinkUtils.getLatestRound(oracleAddress_2);
 
         return ChainlinkUtils.getMaxRelativePriceInLastBlock(
-            oracleAddress_1,
-            roundId_1,
-            uint256(price_1),
-            timestamp_1,
-            oracleAddress_2,
-            roundId_2,
-            uint256(price_2),
-            timestamp_2
+            latestRound_1,
+            decimals_1,
+            latestRound_2,
+            decimals_2
         );
     }
 
