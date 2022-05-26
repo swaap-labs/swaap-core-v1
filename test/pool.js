@@ -33,6 +33,15 @@ contract('Pool', async (accounts) => {
     let daiOracle;
     let xxxOracle;
 
+    const wethDecimals = 18
+    const mkdrDecimals = 8
+    const daiDecimals = 6
+    const xxxDecimals = 18
+    const xxxWithFeesDecimals = 18
+
+    const daiDecimalsDiffFactor = 10**(daiDecimals - wethDecimals)
+    const mkrDecimalsDiffFactor = 10**(mkdrDecimals - wethDecimals)
+
     let WETHOracleAddress;
 	let MKROracleAddress;
 	let DAIOracleAddress;
@@ -45,11 +54,11 @@ contract('Pool', async (accounts) => {
         await factory.newPool();
         pool = await Pool.at(POOL);
 
-        weth = await TToken.new('Wrapped Ether', 'WETH', 18);
-        mkr = await TToken.new('Maker', 'MKR', 18);
-        dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
-        xxx = await TToken.new('XXX', 'XXX', 18);
-        xxxWithFees = await TTokenWithFees.new('XXX', 'XXX', 18);
+        weth = await TToken.new('Wrapped Ether', 'WETH', wethDecimals);
+        mkr = await TToken.new('Maker', 'MKR', mkdrDecimals);
+        dai = await TToken.new('Dai Stablecoin', 'DAI', daiDecimals);
+        xxx = await TToken.new('XXX', 'XXX', xxxDecimals);
+        xxxWithFees = await TTokenWithFees.new('XXX', 'XXX', xxxWithFeesDecimals);
 
         WETH = weth.address;
         MKR = mkr.address;
@@ -57,10 +66,10 @@ contract('Pool', async (accounts) => {
         XXX = xxx.address;
         XXXWITHFEES = xxxWithFees.address;
 
-        wethOracle = await TConstantOracle.new(200000000000);
-        mkrOracle = await TConstantOracle.new(50000000000);
-        daiOracle = await TConstantOracle.new(100000000);
-        xxxOracle = await TConstantOracle.new(1);
+        wethOracle = await TConstantOracle.new((2000 * 10**8).toString());
+        mkrOracle = await TConstantOracle.new((50 * 10**8).toString());
+        daiOracle = await TConstantOracle.new((1 * 10**8).toString());
+        xxxOracle = await TConstantOracle.new((1 * 10**8).toString());
 
         WETHOracleAddress = wethOracle.address;
         MKROracleAddress = mkrOracle.address;
@@ -201,9 +210,9 @@ contract('Pool', async (accounts) => {
 
         it('Admin binds tokens', async () => {
             // Equal weights WETH, MKR, DAI
-            await pool.bindMMM(WETH, toWei('50'), toWei('5'), WETHOracleAddress);
-            await pool.bindMMM(MKR, toWei('2000'), toWei('5'), MKROracleAddress);
-            await pool.bindMMM(DAI, toWei('100000'), toWei('5'), DAIOracleAddress);
+            await pool.bindMMM(WETH, (50*10**wethDecimals).toString(), toWei('5'), WETHOracleAddress);
+            await pool.bindMMM(MKR, (2000*10**mkdrDecimals).toString(), toWei('5'), MKROracleAddress);
+            await pool.bindMMM(DAI, (100000*10**daiDecimals).toString(), toWei('5'), DAIOracleAddress);
             const tokens = await pool.getTokens();
             const numTokens = tokens.length
             assert.equal(3, numTokens);
@@ -214,7 +223,8 @@ contract('Pool', async (accounts) => {
             assert.equal(5, fromWei(wethDenormWeight));
             assert.equal(0.333333333333333333, fromWei(wethDenormWeight) / totalDenormWeight);
             const mkrBalance = await pool.getBalance(MKR);
-            assert.equal(2000, fromWei(mkrBalance));
+            const relDif = calcRelativeDiff(2000*mkrDecimalsDiffFactor, fromWei(mkrBalance));
+            assert.isAtMost(relDif.toNumber(), errorDelta);
         });
 
         it('Admin unbinds token', async () => {
@@ -460,7 +470,8 @@ contract('Pool', async (accounts) => {
         it('User1 joins pool', async () => {
             await pool.joinPool(toWei('5'), [MAX, MAX, MAX], { from: user1 });
             const daiBalance = await pool.getBalance(DAI);
-            assert.equal(105000, fromWei(daiBalance));
+            const relDif = calcRelativeDiff(105000*daiDecimalsDiffFactor, fromWei(daiBalance));
+            assert.isAtMost(relDif.toNumber(), errorDelta);
             const userWethBalance = await weth.balanceOf(user1);
             assert.equal(22.5, fromWei(userWethBalance));
         });
@@ -479,50 +490,51 @@ contract('Pool', async (accounts) => {
 
         it('getSpotPriceSansFee', async () => {
             const wethPriceSansFee = await pool.getSpotPriceSansFee(DAI, WETH);
-            const wethPriceSansFeeCheck = (105000 / 5) / (52.5 / 5);
-            assert.equal(fromWei(wethPriceSansFee), wethPriceSansFeeCheck);
+            const wethPriceSansFeeCheck = (105000 * daiDecimalsDiffFactor / 5) / (52.5 / 5);
+            const relDif = calcRelativeDiff(wethPriceSansFeeCheck, fromWei(wethPriceSansFee));
+            assert.isAtMost(relDif.toNumber(), errorDelta);
         });
 
         it('Fail swapExactAmountInMMM unbound or over min max ratios', async () => {
             try {
-                await pool.swapExactAmountInMMM(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), { from: user2 });
+                await pool.swapExactAmountInMMM(WETH, toWei('2.5'), XXX, toWei('100'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 });
                 throw 'did not revert';
             }
             catch(e) {
                 assert(e.reason, '2');
             }
             /*await truffleAssert.reverts(
-                pool.swapExactAmountInMMM(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), { from: user2 }),
+                pool.swapExactAmountInMMM(WETH, toWei('2.5'), XXX, toWei('100'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 }),
                 '2',
             );*/
             try {
-                await pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), { from: user2 });
+                await pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 });
                 throw 'did not revert';
             }
             catch(e) {
                 assert(e.reason, '44');
             }
             /*await truffleAssert.reverts(
-                pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), { from: user2 }),
+                pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 }),
                 '44',
             );*/
         });
 
         it('swapExactAmountInMMM', async () => {
             // 0.025 WETH -> DAI
-            const expected = calcOutGivenIn(52.5, 5, 105000, 5, 0.025, 0.0015);
+            const expected = calcOutGivenIn(52.5/daiDecimalsDiffFactor, 5, 105000, 5, 0.025/daiDecimalsDiffFactor, 0.0015);
             const txr = await pool.swapExactAmountInMMM(
                 WETH,
                 toWei('0.025'),
                 DAI,
-                toWei('49'),
-                toWei('0.00051'),
+                (49*10**daiDecimals).toString(),
+                toWei((0.00051 / daiDecimalsDiffFactor).toString()),
                 { from: user2 },
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
 
-            const actual = fromWei(log.args[4]);
+            const actual = parseFloat(log.args[4]) / 10**daiDecimals;
             const relDif = calcRelativeDiff(expected, actual);
             if (verbose) {
                 console.log('swapExactAmountInMMM');
@@ -538,7 +550,7 @@ contract('Pool', async (accounts) => {
 
             // 182.804672101083406128
             const wethPriceSansFee = await pool.getSpotPriceSansFee(DAI, WETH);
-            const wethPriceSansFeeCheck = (104950.098727 / 5) / (52.525 / 5);
+            const wethPriceSansFeeCheck = (104950.098727 * daiDecimalsDiffFactor / 5) / (52.525 / 5);
             assert.approximately(Number(fromWei(wethPriceSansFee)), Number(wethPriceSansFeeCheck), errorDelta);
 
             const daiNormWeight = await pool.getDenormalizedWeight(DAI);
@@ -550,20 +562,19 @@ contract('Pool', async (accounts) => {
 
         it('swapExactAmountOut', async () => {
             // WETH -> 1 MKR
-            // const amountIn = (52.525 * (((2100 / (2100 - 1)) ** (5 / 5)) - 1)) / (1 - 0.0015);
-            const expected = calcInGivenOut(52.525, 5, 2100, 5, 1, 0.0015);
+            const expected = calcInGivenOut(52.525, 5, 2100*mkrDecimalsDiffFactor, 5, 1*mkrDecimalsDiffFactor, 0.0015);
             const txr = await pool.swapExactAmountOutMMM(
                 WETH,
                 toWei('0.026'),
                 MKR,
-                toWei('1.0'),
-                toWei('0.027'),
+                (1.0*10**mkdrDecimals).toString(),
+                toWei((0.027 / mkrDecimalsDiffFactor).toString()),
                 { from: user2 },
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
 
-            const actual = fromWei(log.args[3]);
+            const actual = parseFloat(log.args[3]) / 10**wethDecimals;
             const relDif = calcRelativeDiff(expected, actual);
             if (verbose) {
                 console.log('swapExactAmountOut');
@@ -587,7 +598,7 @@ contract('Pool', async (accounts) => {
             );
 
             try {
-                await pool.joinswapExternAmountInMMM(DAI, toWei('1000'), toWei('10'));
+                await pool.joinswapExternAmountInMMM(DAI, (1000*10**daiDecimals).toString(), toWei('10'));
                 throw 'did not revert';
             }
             catch(e) {
@@ -595,12 +606,12 @@ contract('Pool', async (accounts) => {
             }
 
             /*await truffleAssert.reverts(
-                pool.joinswapExternAmountInMMM(DAI, toWei('1000'), toWei('10')),
+                pool.joinswapExternAmountInMMM(DAI, (1000*10**daiDecimals).toString(), toWei('10')),
                 '9',
             );*/
 
             try {
-                await pool.exitswapPoolAmountInMMM(DAI, toWei('1'), toWei('10000'));
+                await pool.exitswapPoolAmountInMMM(DAI, (1*10**daiDecimals).toString(), toWei('10000'));
                 throw 'did not revert';
             }
             catch(e) {
@@ -608,7 +619,7 @@ contract('Pool', async (accounts) => {
             }
 
             /*await truffleAssert.reverts(
-                pool.exitswapPoolAmountInMMM(DAI, toWei('1'), toWei('10000')),
+                pool.exitswapPoolAmountInMMM(DAI, (1*10**daiDecimals).toString(), toWei('10000')),
                 '9',
             );*/
 

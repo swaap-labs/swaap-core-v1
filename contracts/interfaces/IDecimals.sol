@@ -14,6 +14,6 @@
 
 pragma solidity =0.8.12;
 
-interface IToken {
-    function decimals() external returns(uint8);   
+interface IDecimals {
+    function decimals() external returns(uint8);
 }

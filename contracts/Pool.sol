@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
 
-import "./interfaces/IToken.sol";
+import "./interfaces/IDecimals.sol";
 
 import "./ChainlinkUtils.sol";
 
@@ -707,8 +707,7 @@ contract Pool is PoolToken {
             string memory description
         ) = ChainlinkUtils.getTokenLatestPrice(priceFeedAddress);
 
-        decimals += IToken(token).decimals();
-        _records[token].decimals = decimals;
+        _records[token].decimals = decimals + _tryGetTokenDecimals(token);
 
         // Updating oracle state
         _oraclesInitialState[token] = Struct.OracleState(
@@ -726,7 +725,6 @@ contract Pool is PoolToken {
             description
         );
     }
-
 
     /**
     * @notice Remove a new token from the pool
@@ -1255,6 +1253,13 @@ contract Pool is PoolToken {
             );
             unchecked{++i;}
         }
+    }
+
+    function _tryGetTokenDecimals(address token) internal returns (uint8) {
+        try IDecimals(token).decimals() returns (uint8 d) {
+            return d;
+        } catch {}
+        return 0;
     }
 
 }
