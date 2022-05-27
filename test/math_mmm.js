@@ -392,7 +392,7 @@ contract('MMM Math', async (accounts) => {
         const allPrices = [wethOraclePrice, mkrOraclePrice, daiOraclePrice]
 
 		for (let quoteIdx = 0; quoteIdx < allAddresses.length; quoteIdx++) {
-			const baseAddress = allAddresses[quoteIdx]
+			const quoteAddress = allAddresses[quoteIdx]
 			const basesAddresses = allAddresses.filter((v, idx) => idx != quoteIdx)
 			const basesBalance = allBalances.filter((v, idx) => idx != quoteIdx)
 			const basesPrices = allPrices.filter((v, idx) => idx != quoteIdx)
@@ -402,10 +402,13 @@ contract('MMM Math', async (accounts) => {
 			}, 0)
 
 			// Actual value
+			const decimals = 0
 			const value = await math.getBasesTotalValue(
-				baseAddress,
+				quoteAddress,
+				decimals,
 				basesAddresses,
 				basesBalance.map(v => toWei(v.toString())),
+				basesBalance.map(v => decimals),
 			);
 
 			// Checking adaptiveFees
@@ -523,9 +526,11 @@ contract('MMM Math', async (accounts) => {
 		const actual = await math.calcSingleOutGivenPoolInMMM(
 			pivotOracleAddress,
 			pivotBalance,
+			pivotDecimals,
 			pivotWeight,
 			otherOracleAddresses,
 			otherBalances,
+			otherDecimals,
 			otherWeights,
 			joinexitswapParameters["amount"],
 			joinexitswapParameters["fee"],
@@ -608,9 +613,11 @@ contract('MMM Math', async (accounts) => {
 		const actual = await math.calcPoolOutGivenSingleInMMM(
 			pivotOracleAddress,
 			pivotBalance,
+			pivotDecimals,
 			pivotWeight,
 			otherOracleAddresses,
 			otherBalances,
+			otherDecimals,
 			otherWeights,
 			joinexitswapParameters["amount"],
 			joinexitswapParameters["fee"],
