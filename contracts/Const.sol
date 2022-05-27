@@ -56,5 +56,6 @@ library Const {
 
     uint256 public constant ORACLE_TIMEOUT        = 2 * 60;
 
-    uint8 public constant LOOKBACK_STEP_IN_ROUND  = 3;
+    uint8 public constant MIN_LOOKBACK_STEP_IN_ROUND = 1;
+    uint8 public constant LOOKBACK_STEP_IN_ROUND     = 3;
 }

@@ -607,7 +607,7 @@ contract Pool is PoolToken {
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_IN_ROUND, "53");
+        require(_priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, "53");
         priceStatisticsLookbackStepInRound = _priceStatisticsLookbackStepInRound;
     }
 
