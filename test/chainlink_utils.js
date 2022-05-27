@@ -44,7 +44,9 @@ contract('Chainlink Utils', async (accounts) => {
 
 		const actual = await chainlinkUtils.getMaxRelativePriceInLastBlock(
 			inOracle.address,
+			inDecimals,
 			outOracle.address,
+			outDecimals
 		)
 
 		// Checking

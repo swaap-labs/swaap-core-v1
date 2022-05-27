@@ -124,10 +124,10 @@ library ChainlinkUtils {
         uint8 decimals_2
     ) internal view returns (uint256) {
         
-        uint256 minPrice_1;
+        uint256 minPrice_1 = latestRound_1.price;
         {
-            uint256 temp_price_1 = latestRound_1.price;
             uint256 timestamp_1  = latestRound_1.timestamp;
+            uint256 temp_price_1;
             uint80  roundId_1    = latestRound_1.roundId;
             address oracle_1     = latestRound_1.oracle;
 
@@ -145,13 +145,13 @@ library ChainlinkUtils {
             }
         }
 
-        uint maxPrice_2;
+        uint maxPrice_2 = latestRound_2.price;
         {
-            uint256 temp_price_2 = latestRound_2.price;
             uint256 timestamp_2  = latestRound_2.timestamp;
+            uint256 temp_price_2;
             uint80  roundId_2    = latestRound_2.roundId;
             address oracle_2     = latestRound_2.oracle;
-   
+
             while (timestamp_2 == block.timestamp) {
                 --roundId_2;
                 (temp_price_2, timestamp_2) = ChainlinkUtils.getRoundData(
