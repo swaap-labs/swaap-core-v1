@@ -93,20 +93,19 @@ library ChainlinkUtils {
     pure
     returns (uint256) {
         // we consider tokens price to be > 0
-        uint256 rawDiv = Num.bdiv(price_2, price_1);
-        if (decimals_1 == decimals_2) {
-            return rawDiv;
-        } else if (decimals_1 > decimals_2) {
-            return Num.bmul(
-                rawDiv,
-                10**(decimals_1 - decimals_2)*Const.BONE
-            );
-        } else {
+        if (decimals_1 > decimals_2) {
             return Num.bdiv(
-                rawDiv,
-                10**(decimals_2 - decimals_1)*Const.BONE
+                Num.bmul(price_2, (10**(decimals_1 - decimals_2))*Const.BONE),
+                price_1
             );
-        }
+        } else if (decimals_1 < decimals_2) {
+            return Num.bdiv(
+                Num.bdiv(price_2, price_1),
+                (10**(decimals_2 - decimals_1))*Const.BONE
+            );
+        } else { // decimals_1 == decimals_2
+            return Num.bdiv(price_2, price_1);
+         }
     }
 
     /**
