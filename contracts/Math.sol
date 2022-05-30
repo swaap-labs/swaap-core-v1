@@ -120,13 +120,13 @@ library Math {
 
     /**********************************************************************************************
     // calcPoolOutGivenSingleIn                                                                  //
-    // pAo = poolAmountOut         /                                              \              //
-    // tAi = tokenAmountIn        ///      /     //    wI \      \\       \     wI \             //
-    // wI = tokenWeightIn        //| tAi *| 1 - || 1 - --  | * sF || + tBi \    --  \            //
-    // tW = totalWeight     pAo=||  \      \     \\    tW /      //         | ^ tW   | * pS - pS //
-    // tBi = tokenBalanceIn      \\  ------------------------------------- /        /            //
-    // pS = poolSupply            \\                    tBi               /        /             //
-    // sF = swapFee                \                                              /              //
+    // pAo = poolAmountOut                                                                       //
+    // tAi = tokenAmountIn        //                                      \    wI   \            //
+    // wI = tokenWeightIn        //                                        \  ----   \           //
+    // tW = totalWeight          ||   tAi * ( tW - ( tW - wI ) * sF )      | ^ tW    |           //
+    // tBi = tokenBalanceIn pAo= ||  --------------------------------- + 1 |         | * pS - pS //
+    // pS = poolSupply            \\             tBi * tW                  /         /           //
+    // sF = swapFee                \\                                     /         /            //
     **********************************************************************************************/
     function calcPoolOutGivenSingleIn(
         uint tokenBalanceIn,
@@ -143,18 +143,19 @@ library Math {
         //  which is implicitly traded to the other pool tokens.
         // That proportion is (1- weightTokenIn)
         // tokenAiAfterFee = tAi * (1 - (1-weightTi) * poolFee);
-        uint normalizedWeight = Num.bdiv(tokenWeightIn, totalWeight);
-        uint zaz = Num.bmul(Const.BONE - normalizedWeight, swapFee); 
-        uint tokenAmountInAfterFee = Num.bmul(tokenAmountIn, Const.BONE - zaz);
 
-        uint newTokenBalanceIn = tokenBalanceIn + tokenAmountInAfterFee;
-        uint tokenInRatio = Num.bdiv(newTokenBalanceIn, tokenBalanceIn);
+        uint256 innerNumer = Num.bmul(
+            tokenAmountIn,
+            totalWeight -  Num.bmul(
+                totalWeight - tokenWeightIn,
+                swapFee
+            )
+        );
+        uint256 innerDenom = Num.bmul(tokenBalanceIn, totalWeight);
 
-        // uint newPoolSupply = (ratioTi ^ weightTi) * poolSupply;
-        uint poolRatio = Num.bpow(tokenInRatio, normalizedWeight);
-        uint newPoolSupply = Num.bmul(poolRatio, poolSupply);
-        poolAmountOut = newPoolSupply - poolSupply;
-        return poolAmountOut;
+        uint256 inner = Num.bpow(Num.bdiv(innerNumer, innerDenom) + Const.BONE, Num.bdiv(tokenWeightIn, totalWeight));
+
+        return (poolAmountOut = Num.bmul(inner, poolSupply) - poolSupply);
     }
 
     /**
