@@ -540,7 +540,7 @@ contract('MMM Math', async (accounts) => {
 
 		const relDif = calcRelativeDiff(expected, fromWei(actual));
 		if (verbose) {
-			console.log('LogSpreadFactor');
+			console.log('calcSingleOutGivenPoolInMMM');
 			console.log(`expected: ${expected}`);
 			console.log(`actual: ${fromWei(actual)}`);
 			console.log(`relDif: ${relDif}`);
@@ -627,7 +627,7 @@ contract('MMM Math', async (accounts) => {
 
 		const relDif = calcRelativeDiff(expected, fromWei(actual));
 		if (verbose) {
-			console.log('LogSpreadFactor');
+			console.log('calcPoolOutGivenSingleIn');
 			console.log(`expected: ${expected}`);
 			console.log(`actual: ${fromWei(actual)}`);
 			console.log(`relDif: ${relDif}`);
