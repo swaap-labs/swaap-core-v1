@@ -144,11 +144,11 @@ contract Pool is PoolToken {
     bool private _finalized;
     address immutable private _factory;    // Factory address to push token exitFee to
 
-    uint64 private dynamicCoverageFeesZ;
-    uint256 private dynamicCoverageFeesHorizon;
-    uint8 private priceStatisticsLookbackInRound;
-    uint256 private priceStatisticsLookbackInSec;
-    uint8 private priceStatisticsLookbackStepInRound;
+    uint64 private _dynamicCoverageFeesZ;
+    uint256 private _dynamicCoverageFeesHorizon;
+    uint8 private _priceStatisticsLookbackInRound;
+    uint256 private _priceStatisticsLookbackInSec;
+    uint8 private _priceStatisticsLookbackStepInRound;
 
     // `setSwapFee` and `finalize` require CONTROL
     uint256 private _swapFee;
@@ -160,11 +160,11 @@ contract Pool is PoolToken {
         _controller = msg.sender;
         _factory = msg.sender;
         _swapFee = Const.MIN_FEE;
-        priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
-        priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
-        dynamicCoverageFeesZ = Const.BASE_Z;
-        dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
-        priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
+        _priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
+        _priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
+        _dynamicCoverageFeesZ = Const.BASE_Z;
+        _dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
+        _priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
     }
 
     function isPublicSwap()
@@ -420,12 +420,12 @@ contract Pool is PoolToken {
                 Const.FALLBACK_SPREAD,
                 _totalSupply
             );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-                priceStatisticsLookbackInRound,
-                priceStatisticsLookbackInSec,
+                _priceStatisticsLookbackInRound,
+                _priceStatisticsLookbackInSec,
                 block.timestamp,
-                priceStatisticsLookbackStepInRound
+                _priceStatisticsLookbackStepInRound
             );
 
             poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
@@ -506,12 +506,12 @@ contract Pool is PoolToken {
                 Const.FALLBACK_SPREAD,
                 _totalSupply
             );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-                priceStatisticsLookbackInRound,
-                priceStatisticsLookbackInSec,
+                _priceStatisticsLookbackInRound,
+                _priceStatisticsLookbackInSec,
                 block.timestamp,
-                priceStatisticsLookbackStepInRound
+                _priceStatisticsLookbackStepInRound
             );
 
             tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
@@ -582,59 +582,59 @@ contract Pool is PoolToken {
         _burn(amount);
     }
 
-    function setDynamicCoverageFeesZ(uint64 _dynamicCoverageFeesZ)
+    function setDynamicCoverageFeesZ(uint64 dynamicCoverageFeesZ)
     external
     _logs_
     _lock_
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        dynamicCoverageFeesZ = _dynamicCoverageFeesZ;
+        _dynamicCoverageFeesZ = dynamicCoverageFeesZ;
     }
 
-    function setDynamicCoverageFeesHorizon(uint256 _dynamicCoverageFeesHorizon)
+    function setDynamicCoverageFeesHorizon(uint256 dynamicCoverageFeesHorizon)
     external
     _logs_
     _lock_
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "22");
-        dynamicCoverageFeesHorizon = _dynamicCoverageFeesHorizon;
+        require(dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "22");
+        _dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon;
     }
 
-    function setPriceStatisticsLookbackInRound(uint8 _priceStatisticsLookbackInRound)
+    function setPriceStatisticsLookbackInRound(uint8 priceStatisticsLookbackInRound)
     external
     _logs_
     _lock_
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "24");
-        require(_priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "25");
-        priceStatisticsLookbackInRound = _priceStatisticsLookbackInRound;
+        require(priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "24");
+        require(priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "25");
+        _priceStatisticsLookbackInRound = priceStatisticsLookbackInRound;
     }
 
-    function setPriceStatisticsLookbackInSec(uint256 _priceStatisticsLookbackInSec)
+    function setPriceStatisticsLookbackInSec(uint256 priceStatisticsLookbackInSec)
     external
     _logs_
     _lock_
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "26");
-        priceStatisticsLookbackInSec = _priceStatisticsLookbackInSec;
+        require(priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "26");
+        _priceStatisticsLookbackInSec = priceStatisticsLookbackInSec;
     }
 
-    function setPriceStatisticsLookbackStepInRound(uint8 _priceStatisticsLookbackStepInRound)
+    function setPriceStatisticsLookbackStepInRound(uint8 priceStatisticsLookbackStepInRound)
     external
     _logs_
     _lock_
     {
         require(!_finalized, "4");
         require(msg.sender == _controller, "3");
-        require(_priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, "53");
-        priceStatisticsLookbackStepInRound = _priceStatisticsLookbackStepInRound;
+        require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, "53");
+        _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
 
     function getCoverageParameters()
@@ -642,11 +642,11 @@ contract Pool is PoolToken {
     returns (uint64, uint256, uint8, uint256, uint8)
     {
         return (
-            dynamicCoverageFeesZ,
-            dynamicCoverageFeesHorizon,
-            priceStatisticsLookbackInRound,
-            priceStatisticsLookbackInSec,
-            priceStatisticsLookbackStepInRound
+            _dynamicCoverageFeesZ,
+            _dynamicCoverageFeesHorizon,
+            _priceStatisticsLookbackInRound,
+            _priceStatisticsLookbackInSec,
+            _priceStatisticsLookbackStepInRound
         );
     }
 
@@ -971,12 +971,12 @@ contract Pool is PoolToken {
             _swapFee,
             Const.FALLBACK_SPREAD
         );
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-            priceStatisticsLookbackInRound,
-            priceStatisticsLookbackInSec,
+            _priceStatisticsLookbackInRound,
+            _priceStatisticsLookbackInSec,
             timestamp,
-            priceStatisticsLookbackStepInRound
+            _priceStatisticsLookbackStepInRound
         );
 
         return Math.calcOutGivenInMMM(
@@ -1148,12 +1148,12 @@ contract Pool is PoolToken {
             _swapFee,
             Const.FALLBACK_SPREAD
         );
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(dynamicCoverageFeesZ, dynamicCoverageFeesHorizon);
+        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
-            priceStatisticsLookbackInRound,
-            priceStatisticsLookbackInSec,
+            _priceStatisticsLookbackInRound,
+            _priceStatisticsLookbackInSec,
             timestamp,
-            priceStatisticsLookbackStepInRound
+            _priceStatisticsLookbackStepInRound
         );
 
         return Math.calcInGivenOutMMM(
