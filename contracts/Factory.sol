@@ -19,6 +19,7 @@ pragma solidity =0.8.12;
 import "./Pool.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPausedFactory.sol";
+import "./Errors.sol";
 
 contract Factory is IPausedFactory {
 
@@ -50,7 +51,7 @@ contract Factory is IPausedFactory {
     external
     returns (Pool)
     {
-        require(!_paused, "36");
+        _require(!_paused, Err.PAUSED_FACTORY);
         Pool pool = new Pool();
         _isPool[address(pool)] = true;
         emit LOG_NEW_POOL(msg.sender, address(pool));
@@ -82,7 +83,7 @@ contract Factory is IPausedFactory {
     function transferOwnership(address _to)
         external
     {
-        require(msg.sender == _swaaplabs, "34");
+        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         _pendingSwaaplabs = _to;
 
         emit LOG_TRANSFER_REQUESTED(msg.sender, _to);
@@ -94,7 +95,7 @@ contract Factory is IPausedFactory {
     function acceptOwnership()
         external
     {
-        require(msg.sender == _pendingSwaaplabs, "20");
+        _require(msg.sender == _pendingSwaaplabs, Err.NOT_PENDING_SWAAPLABS);
 
         address oldOwner = _swaaplabs;
         _swaaplabs = msg.sender;
@@ -106,19 +107,19 @@ contract Factory is IPausedFactory {
     function collect(address erc20)
         external
     {
-        require(msg.sender == _swaaplabs, "34");
+        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         uint256 collected = IERC20(erc20).balanceOf(address(this));
         IERC20(erc20).safeTransfer(msg.sender, collected);
     }
 
     function setPause(bool paused) external {
-        require(msg.sender == _swaaplabs, "34");
-        require(block.timestamp < _setPauseWindow, "45");
+        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
+        _require(block.timestamp < _setPauseWindow, Err.PAUSE_WINDOW_EXCEEDED);
         _paused = paused;
     }
 
     function whenNotPaused() external view {
-        require(!_paused, "36");
+        _require(!_paused, Err.PAUSED_FACTORY);
     }
 
 }

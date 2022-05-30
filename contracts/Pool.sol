@@ -29,6 +29,8 @@ import "./interfaces/IDecimals.sol";
 
 import "./ChainlinkUtils.sol";
 
+import "./Errors.sol";
+
 contract Pool is PoolToken {
 
     using SafeERC20 for IERC20; 
@@ -95,7 +97,7 @@ contract Pool is PoolToken {
     }
 
     function _lock() private {
-        require(!_mutex, "0");
+        _require(!_mutex, Err.REENTRY);
         _mutex = true;
     }
 
@@ -110,7 +112,7 @@ contract Pool is PoolToken {
     }
 
     modifier _viewlock_() {
-        require(!_mutex, "0");
+        _require(!_mutex, Err.REENTRY);
         _;
     }
 
@@ -128,7 +130,7 @@ contract Pool is PoolToken {
         uint expectedBalance = IERC20(erc20).balanceOf(address(this)) + amount;
         _;
         uint currentBalance = IERC20(erc20).balanceOf(address(this));
-        require(expectedBalance == currentBalance, "52");
+        _require(expectedBalance == currentBalance, Err.UNEXPECTED_BALANCE);
     }
 
     address[] private _tokens;
@@ -150,7 +152,7 @@ contract Pool is PoolToken {
     uint256 private _priceStatisticsLookbackInSec;
     uint8 private _priceStatisticsLookbackStepInRound;
 
-    // `setSwapFee` and `finalize` require CONTROL
+    // `setSwapFee` and `finalize` _require CONTROL
     uint256 private _swapFee;
         
     mapping(address=>Struct.OracleState) private _oraclesInitialState;
@@ -200,7 +202,7 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
         return _records[token].denorm;
     }
 
@@ -208,7 +210,7 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
         return _records[token].balance;
     }
 
@@ -231,10 +233,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(swapFee >= Const.MIN_FEE, "14");
-        require(swapFee <= Const.MAX_FEE, "15");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(swapFee >= Const.MIN_FEE, Err.MIN_FEE);
+        _require(swapFee <= Const.MAX_FEE, Err.MAX_FEE);
         _swapFee = swapFee;
     }
 
@@ -247,8 +249,8 @@ contract Pool is PoolToken {
     external
     _lock_
     {
-        require(msg.sender == _controller, "3");
-        require(manager != address(0), "13");
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(manager != address(0), Err.NULL_CONTROLLER);
         _controller = manager;
         _pendingController = address(0);
         emit LOG_NEW_CONTROLLER(msg.sender, manager);
@@ -262,7 +264,7 @@ contract Pool is PoolToken {
     external
     _logs_
     {
-        require(msg.sender == _controller, "3");
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _pendingController = _to;
     }
 
@@ -272,7 +274,7 @@ contract Pool is PoolToken {
     function acceptOwnership()
     external
     {
-        require(msg.sender == _pendingController, "47");
+        _require(msg.sender == _pendingController, Err.NOT_PENDING_CONTROLLER);
 
         address oldController = _controller;
         _controller = msg.sender;
@@ -286,8 +288,8 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _publicSwap = public_;
     }
 
@@ -299,9 +301,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(_tokens.length >= Const.MIN_BOUND_TOKENS, "18");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(_tokens.length >= Const.MIN_BOUND_TOKENS, Err.MIN_TOKENS);
 
         _finalized = true;
         _publicSwap = true;
@@ -319,7 +321,7 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
         _records[token].balance = IERC20(token).balanceOf(address(this));
     }
 
@@ -335,18 +337,18 @@ contract Pool is PoolToken {
     _whenNotPaused_
     external
     {
-        require(_finalized, "1");
+        _require(_finalized, Err.NOT_FINALIZED);
 
         uint256 poolTotal = totalSupply();
         uint256 ratio = Num.bdiv(poolAmountOut, poolTotal);
-        require(ratio != 0, "5");
+        _require(ratio != 0, Err.MATH_APPROX);
 
         for (uint256 i; i < _tokens.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
-            require(tokenAmountIn != 0, "5");
-            require(tokenAmountIn <= maxAmountsIn[i], "8");
+            _require(tokenAmountIn != 0, Err.MATH_APPROX);
+            _require(tokenAmountIn <= maxAmountsIn[i], Err.LIMIT_IN);
             _records[t].balance = bal + tokenAmountIn;
             emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
@@ -367,13 +369,13 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(_finalized, "1");
+        _require(_finalized, Err.NOT_FINALIZED);
 
         uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
         uint256 ratio = Num.bdiv(pAiAfterExitFee, poolTotal);
-        require(ratio != 0, "5");
+        _require(ratio != 0, Err.MATH_APPROX);
 
         _pullPoolShare(msg.sender, poolAmountIn);
         _pushPoolShare(_factory, exitFee);
@@ -383,8 +385,8 @@ contract Pool is PoolToken {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountOut = Num.bmul(ratio, bal);
-            require(tokenAmountOut != 0, "5");
-            require(tokenAmountOut >= minAmountsOut[i], "9");
+            _require(tokenAmountOut != 0, Err.MATH_APPROX);
+            _require(tokenAmountOut >= minAmountsOut[i], Err.LIMIT_OUT);
             _records[t].balance = _records[t].balance - tokenAmountOut;
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
@@ -406,8 +408,8 @@ contract Pool is PoolToken {
     returns (uint256 poolAmountOut)
     {
 
-        require(_finalized, "1");
-        require(_records[tokenIn].bound, "2");
+        _require(_finalized, Err.NOT_FINALIZED);
+        _require(_records[tokenIn].bound, Err.NOT_BOUND);
 
         Struct.TokenGlobal memory tokenInInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
@@ -463,7 +465,7 @@ contract Pool is PoolToken {
             tokenIn, tokenAmountIn
         );
 
-        require(poolAmountOut >= minPoolAmountOut, "9");
+        _require(poolAmountOut >= minPoolAmountOut, Err.LIMIT_OUT);
 
         _records[tokenIn].balance = _records[tokenIn].balance + tokenAmountIn;
 
@@ -491,8 +493,8 @@ contract Pool is PoolToken {
     _whenNotPaused_
     returns (uint tokenAmountOut)
     {
-        require(_finalized, "1");
-        require(_records[tokenOut].bound, "2");
+        _require(_finalized, Err.NOT_FINALIZED);
+        _require(_records[tokenOut].bound, Err.NOT_BOUND);
 
         Struct.TokenGlobal memory tokenOutInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
@@ -523,7 +525,7 @@ contract Pool is PoolToken {
             );
         }
 
-        require(tokenAmountOut >= minAmountOut, "9");
+        _require(tokenAmountOut >= minAmountOut, Err.LIMIT_OUT);
 
         tokenOutInfo.info.balance -= tokenAmountOut;
         _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
@@ -587,8 +589,8 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _dynamicCoverageFeesZ = dynamicCoverageFeesZ;
     }
 
@@ -597,9 +599,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, "22");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, Err.MIN_HORIZON);
         _dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon;
     }
 
@@ -608,10 +610,10 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, "24");
-        require(priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, "25");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, Err.MIN_LB_PERIODS);
+        _require(priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, Err.MAX_LB_PERIODS);
         _priceStatisticsLookbackInRound = priceStatisticsLookbackInRound;
     }
 
@@ -620,9 +622,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, "26");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, Err.MIN_LB_SECS);
         _priceStatisticsLookbackInSec = priceStatisticsLookbackInSec;
     }
 
@@ -631,9 +633,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        require(!_finalized, "4");
-        require(msg.sender == _controller, "3");
-        require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, "53");
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, Err.MAX_LB_STEP_PERIODS);
         _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
 
@@ -654,7 +656,7 @@ contract Pool is PoolToken {
     external view
     returns (uint256)
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
         return _oraclesInitialState[token].price;
     }
 
@@ -662,7 +664,7 @@ contract Pool is PoolToken {
     external view
     returns (address)
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
         return _oraclesInitialState[token].oracle;
     }
 
@@ -676,9 +678,9 @@ contract Pool is PoolToken {
     function bindMMM(address token, uint256 balance, uint80 denorm, address priceFeedAddress)
     external
     {
-        require(!_records[token].bound, "28");
+        _require(!_records[token].bound, Err.IS_BOUND);
 
-        require(_tokens.length < Const.MAX_BOUND_TOKENS, "29");
+        _require(_tokens.length < Const.MAX_BOUND_TOKENS, Err.MAX_TOKENS);
 
         _records[token] = Record(
             {
@@ -703,7 +705,7 @@ contract Pool is PoolToken {
     function rebindMMM(address token, uint256 balance, uint80 denorm, address priceFeedAddress)
     external
     {
-        require(_records[token].bound, "2");
+        _require(_records[token].bound, Err.NOT_BOUND);
 
         _rebindMMM(token, balance, denorm, priceFeedAddress);
     }
@@ -714,18 +716,18 @@ contract Pool is PoolToken {
     _lock_
     _whenNotPaused_
     {
-        require(msg.sender == _controller, "3");
-        require(!_finalized, "4");
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(!_finalized, Err.IS_FINALIZED);
 
-        require(denorm >= Const.MIN_WEIGHT, "30");
-        require(denorm <= Const.MAX_WEIGHT, "31");
-        require(balance >= Const.MIN_BALANCE, "32");
+        _require(denorm >= Const.MIN_WEIGHT, Err.MIN_WEIGHT);
+        _require(denorm <= Const.MAX_WEIGHT, Err.MAX_WEIGHT);
+        _require(balance >= Const.MIN_BALANCE, Err.MIN_BALANCE);
 
         // Adjust the denorm and totalWeight
         uint80 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
             _totalWeight = _totalWeight + (denorm - oldWeight);
-            require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, "33");
+            _require(_totalWeight <= Const.MAX_TOTAL_WEIGHT, Err.MAX_TOTAL_WEIGHT);
         } else if (denorm < oldWeight) {
             _totalWeight = (_totalWeight - oldWeight) + denorm;
         }
@@ -779,9 +781,9 @@ contract Pool is PoolToken {
     _lock_
     {
 
-        require(msg.sender == _controller, "3");
-        require(_records[token].bound, "2");
-        require(!_finalized, "4");
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(_records[token].bound, Err.NOT_BOUND);
+        _require(!_finalized, Err.IS_FINALIZED);
 
         uint256 tokenBalance = _records[token].balance;
         uint256 tokenExitFee = Num.bmul(tokenBalance, Const.EXIT_FEE);
@@ -808,7 +810,7 @@ contract Pool is PoolToken {
     _viewlock_
     returns (uint256 spotPrice)
     {
-        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
+        _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
         return spotPrice = Math.calcSpotPrice(
@@ -903,8 +905,8 @@ contract Pool is PoolToken {
     returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
 
-        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
-        require(_publicSwap, "10");
+        _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
+        _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -917,7 +919,7 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(priceResult.spotPriceBefore <= maxPrice, "11");
+        _require(priceResult.spotPriceBefore <= maxPrice, Err.BAD_LIMIT_PRICE);
 
         swapResult = _getAmountOutGivenInMMMWithTimestamp(
             tokenGlobalIn,
@@ -925,7 +927,7 @@ contract Pool is PoolToken {
             tokenAmountIn,
             block.timestamp
         );
-        require(swapResult.amount >= minAmountOut, "9");
+        _require(swapResult.amount >= minAmountOut, Err.LIMIT_OUT);
 
         priceResult.spotPriceAfter = Math.calcSpotPrice(
             tokenGlobalIn.info.balance + tokenAmountIn,
@@ -935,9 +937,9 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, "5");
-        require(priceResult.spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), "5");
-        require(
+        _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
+        _require(priceResult.spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), Err.MATH_APPROX);
+        _require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(
@@ -947,7 +949,7 @@ contract Pool is PoolToken {
                     tokenGlobalOut.info.decimals
                 )
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
-            "44"
+            Err.MAX_PRICE_UNPEG_RATIO
         );
 
         priceResult.priceIn = tokenGlobalIn.latestRound.price;
@@ -1079,8 +1081,8 @@ contract Pool is PoolToken {
     returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
 
-        require(_records[tokenIn].bound && _records[tokenOut].bound, "2");
-        require(_publicSwap, "10");
+        _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
+        _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -1093,7 +1095,7 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(priceResult.spotPriceBefore <= maxPrice, "11");
+        _require(priceResult.spotPriceBefore <= maxPrice, Err.BAD_LIMIT_PRICE);
 
         swapResult = _getAmountInGivenOutMMMWithTimestamp(
             tokenGlobalIn,
@@ -1102,7 +1104,7 @@ contract Pool is PoolToken {
             block.timestamp
         );
 
-        require(swapResult.amount <= maxAmountIn, "8");
+        _require(swapResult.amount <= maxAmountIn, Err.LIMIT_IN);
 
         priceResult.spotPriceAfter = Math.calcSpotPrice(
             tokenGlobalIn.info.balance + swapResult.amount,
@@ -1112,9 +1114,9 @@ contract Pool is PoolToken {
             _swapFee
         );
 
-        require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, "5");
-        require(priceResult.spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), "5");
-        require(
+        _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
+        _require(priceResult.spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), Err.MATH_APPROX);
+        _require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(
@@ -1124,7 +1126,7 @@ contract Pool is PoolToken {
                     tokenGlobalOut.info.decimals
                 )
             ) <= Const.MAX_PRICE_UNPEG_RATIO,
-            "44"
+            Err.MAX_PRICE_UNPEG_RATIO
         );
 
         priceResult.priceIn = tokenGlobalIn.latestRound.price;
@@ -1275,7 +1277,7 @@ contract Pool is PoolToken {
                 0
             );
 
-            require(
+            _require(
                 Num.bdiv(
                     spotPriceAfter,
                     ChainlinkUtils.getTokenRelativePrice(
@@ -1285,7 +1287,7 @@ contract Pool is PoolToken {
                         remainingTokensInfo[i].info.decimals
                     )
                 ) <= Const.MAX_PRICE_UNPEG_RATIO,
-                "44"
+                Err.MAX_PRICE_UNPEG_RATIO
             );
             unchecked{++i;}
         }
@@ -1316,7 +1318,7 @@ contract Pool is PoolToken {
                 0
             );
 
-            require(
+            _require(
                 Num.bdiv(
                     spotPriceAfter,
                     ChainlinkUtils.getTokenRelativePrice(
@@ -1326,7 +1328,7 @@ contract Pool is PoolToken {
                         tokenOutInfo.info.decimals
                     )    
                 ) <= Const.MAX_PRICE_UNPEG_RATIO,
-                "44"
+                Err.MAX_PRICE_UNPEG_RATIO
             );
             unchecked{++i;}
         }

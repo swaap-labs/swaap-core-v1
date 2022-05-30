@@ -69,7 +69,7 @@ contract('Factory', async (accounts) => {
         });
 
         it('fails nonAdmin calls collect', async () => {
-            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), '34');
+            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), 'SWAAP#34');
         });
 
         it('admin collects fees', async () => {
@@ -93,18 +93,18 @@ contract('Factory', async (accounts) => {
         });
 
         it('nonadmin cant set swaaplabs address', async () => {
-            await truffleAssert.reverts(factory.transferOwnership(nonAdmin, { from: nonAdmin }), '34');
-            await truffleAssert.reverts(factory.acceptOwnership({ from: nonAdmin }), '20');
+            await truffleAssert.reverts(factory.transferOwnership(nonAdmin, { from: nonAdmin }), 'SWAAP#34');
+            await truffleAssert.reverts(factory.acceptOwnership({ from: nonAdmin }), 'SWAAP#20');
         });
 
         it('fails to create new pool when paused', async () => {
             await factory.setPause(true, {from: admin});
-            await truffleAssert.reverts(factory.newPool.call(), '36');
+            await truffleAssert.reverts(factory.newPool.call(), 'SWAAP#36');
         });
 
         it('nonadmin cannot set/unset pause', async () => {
-            await truffleAssert.reverts(factory.setPause(false, { from: nonAdmin }), '34');
-            await truffleAssert.reverts(factory.setPause(true, { from: nonAdmin }), '34');
+            await truffleAssert.reverts(factory.setPause(false, { from: nonAdmin }), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPause(true, { from: nonAdmin }), 'SWAAP#34');
         });
         
         it('create pool after unpausing', async () => {
@@ -114,8 +114,8 @@ contract('Factory', async (accounts) => {
 
         it('admin cannot set/unset pause after time window', async () => {
             await advanceTimeAndBlock(86400 * 61);
-            await truffleAssert.reverts(factory.setPause(true, {from: admin}), '45');
-            await truffleAssert.reverts(factory.setPause(false, {from: admin}), '45');
+            await truffleAssert.reverts(factory.setPause(true, {from: admin}), 'SWAAP#45');
+            await truffleAssert.reverts(factory.setPause(false, {from: admin}), 'SWAAP#45');
         });
 
         it('admin changes swaaplabs address', async () => {

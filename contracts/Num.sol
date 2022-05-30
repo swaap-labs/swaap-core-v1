@@ -15,6 +15,7 @@
 pragma solidity =0.8.12;
 
 import "./Const.sol";
+import "./Errors.sol";
 
 library Num {
 
@@ -87,8 +88,8 @@ library Num {
         internal pure
         returns (uint256)
     {
-        require(base >= Const.MIN_BPOW_BASE, "39");
-        require(base <= Const.MAX_BPOW_BASE, "40");
+        _require(base >= Const.MIN_BPOW_BASE, Err.BPOW_BASE_TOO_LOW);
+        _require(base <= Const.MAX_BPOW_BASE, Err.BPOW_BASE_TOO_HIGH);
 
         uint256 whole  = bfloor(exp);
         uint256 remain = exp - whole;

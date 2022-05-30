@@ -273,7 +273,7 @@ contract('Pool', async (accounts) => {
                 await pool.joinswapExternAmountInMMM(WETH, toWei(String(tokenAmountIn)), toWei('0'))
             }
             catch(e) {
-                assert.equal(e.reason, '40');
+                assert.equal(e.reason, 'SWAAP#40');
             }
             /*
             await truffleAssert.reverts(
@@ -292,7 +292,7 @@ contract('Pool', async (accounts) => {
                 await pool.exitswapPoolAmountInMMM(WETH, toWei(String(poolAmountIn)), toWei('0'))
             }
             catch(e) {
-                assert.equal(e.reason, '44');
+                assert.equal(e.reason, 'SWAAP#44');
             }
             /*
             await truffleAssert.reverts(

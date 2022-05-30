@@ -15,6 +15,7 @@
 pragma solidity =0.8.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./Errors.sol";
 
 // Highly opinionated token implementation
 
@@ -37,7 +38,7 @@ contract PoolToken is IERC20 {
     }
 
     function _move(address src, address dst, uint256 amt) internal {
-        require(dst != address(0), "35");
+        _require(dst != address(0), Err.NULL_ADDRESS);
         _balance[src] = _balance[src] - amt;
         _balance[dst] = _balance[dst] + amt;
         emit Transfer(src, dst, amt);

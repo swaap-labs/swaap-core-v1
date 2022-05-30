@@ -18,7 +18,7 @@ import "./interfaces/IAggregatorV3.sol";
 import "./structs/Struct.sol";
 import "./Const.sol";
 import "./Num.sol";
-
+import "./Errors.sol";
 
 library ChainlinkUtils {
 
@@ -34,16 +34,16 @@ library ChainlinkUtils {
         IAggregatorV3 feed = IAggregatorV3(oracle);
         (, int256 latestPrice, , uint256 latestTimestamp,) = feed.latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
-        require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, "48");
-        require(latestPrice > 0, "16");
+        _require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, Err.EXCEEDED_ORACLE_TIMEOUT);
+        _require(latestPrice > 0, Err.NON_POSITIVE_PRICE);
         return (uint256(latestPrice), feed.decimals(), feed.description()); // we consider the token price to be > 0
     }
 
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
         (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
-        require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, "48");
-        require(latestPrice > 0, "16");
+        _require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, Err.EXCEEDED_ORACLE_TIMEOUT);
+        _require(latestPrice > 0, Err.NON_POSITIVE_PRICE);
         return Struct.LatestRound(
             oracle,
             latestRoundId,
@@ -70,7 +70,7 @@ library ChainlinkUtils {
             uint256 _timestamp,
             uint80
         ) {
-            require(_price >= 0, "49");
+            _require(_price >= 0, Err.NEGATIVE_PRICE);
             return (uint256(_price), _timestamp);
         } catch {}
         return (0, 0);

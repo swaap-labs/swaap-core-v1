@@ -108,7 +108,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fails binding more than 8 tokens', async () => {
-            await truffleAssert.reverts(pool.bindMMM(ZZZ, toWei('50'), toWei('2'), zzzOracleAddress), '29');
+            await truffleAssert.reverts(pool.bindMMM(ZZZ, toWei('50'), toWei('2'), zzzOracleAddress), 'SWAAP#29');
         });
 
         it('Rebind token at a smaller balance', async () => {
@@ -130,7 +130,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fails gulp on unbound token', async () => {
-            await truffleAssert.reverts(pool.gulp(ZZZ), '2');
+            await truffleAssert.reverts(pool.gulp(ZZZ), 'SWAAP#02');
         });
 
         it('Pool can gulp tokens', async () => {
@@ -154,7 +154,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e){
-                assert.equal(e.reason, '11');
+                assert.equal(e.reason, 'SWAAP#11');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
@@ -177,7 +177,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '9');
+                assert.equal(e.reason, 'SWAAP#09');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(
@@ -203,7 +203,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '11');
+                assert.equal(e.reason, 'SWAAP#11');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(
@@ -228,7 +228,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch (e) {
-                assert.equal(e.reason, '8');
+                assert.equal(e.reason, 'SWAAP#08');
             } 
             
             /*

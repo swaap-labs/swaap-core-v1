@@ -320,7 +320,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '44');
+                assert(e.reason, 'SWAAP#44');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('320'), DAI, toWei('0'), toWei((4000 / daiDecimalsDiffFactor).toString()), { from: user2 }),

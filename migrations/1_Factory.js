@@ -1,4 +1,5 @@
 const TMath = artifacts.require('TMath');
+const TErr = artifacts.require("TErr");
 const Num = artifacts.require("Num");
 const Math = artifacts.require("Math");
 const TMathMMM = artifacts.require("TMathMMM");
@@ -30,6 +31,7 @@ module.exports = async function (deployer, network, accounts) {
 	}
 
 	if (network === 'dev' || network === 'coverage' || network === 'test') {
+		await deployer.deploy(TErr);
 		await deployer.link(Num, TMath);
 		await deployer.deploy(TMath);
 		await deployer.link(Num, TGeometricBrownianMotionOracle);

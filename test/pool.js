@@ -146,11 +146,11 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '52');
+                assert.equal(e.reason, 'SWAAP#52');
             }            
         });
 
-        it('Fails binding weights and balances outside MIX MAX', async () => {
+        it('Fails binding weights and balances outside MIN MAX', async () => {
             try {
                 await pool.bindMMM(WETH, toWei('51'), toWei('1'), WETHOracleAddress);
                 throw 'did not revert';
@@ -169,7 +169,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '32');
+                assert.equal(e.reason, 'SWAAP#32');
             }
             /*await truffleAssert.reverts(
                 pool.bindMMM(MKR, toWei('0.0000000000001'), toWei('1'), MKROracleAddress),
@@ -181,7 +181,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '30');
+                assert.equal(e.reason, 'SWAAP#30');
             }
             /*await truffleAssert.reverts(
                 pool.bindMMM(DAI, toWei('1000'), toWei('0.99'), DAIOracleAddress),
@@ -193,7 +193,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '31');
+                assert.equal(e.reason, 'SWAAP#31');
             }
             /*await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('5'), toWei('50.01'), XXXOracleAddress),
@@ -204,7 +204,7 @@ contract('Pool', async (accounts) => {
         it('Fails finalizing pool without 2 tokens', async () => {
             await truffleAssert.reverts(
                 pool.finalize(),
-                '18',
+                'SWAAP#18',
             );
         });
 
@@ -248,7 +248,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '33');
+                assert(e.reason, 'SWAAP#33');
             }
             /*await truffleAssert.reverts(
                 pool.bindMMM(XXX, toWei('1'), toWei('40'), XXXOracleAddress),
@@ -259,15 +259,15 @@ contract('Pool', async (accounts) => {
         it('Fails rebinding token or unbinding random token', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('0'), toWei('1'), WETHOracleAddress),
-                '28',
+                'SWAAP#28',
             );
             await truffleAssert.reverts(
                 pool.rebindMMM(XXX, toWei('0'), toWei('1'), XXXOracleAddress),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.unbindMMM(XXX),
-                '2',
+                'SWAAP#02',
             );
         });
 
@@ -283,53 +283,53 @@ contract('Pool', async (accounts) => {
         it('Fails when other users interact before finalizing', async () => {
             await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('5'), toWei('5'), WETHOracleAddress, { from: user1 }),
-                '2',
+                'SWAAP#28',
             );
             await truffleAssert.reverts(
                 pool.rebindMMM(WETH, toWei('5'), toWei('5'), WETHOracleAddress, { from: user1 }),
-                '3',
+                'SWAAP#03',
             );
             await truffleAssert.reverts(
                 pool.joinPool(toWei('1'), [MAX, MAX], { from: user1 }),
-                '1',
+                'SWAAP#01',
             );
             await truffleAssert.reverts(
                 pool.exitPool(toWei('1'), [toWei('0'), toWei('0')], { from: user1 }),
-                '1',
+                'SWAAP#01',
             );
             await truffleAssert.reverts(
                 pool.unbindMMM(DAI, { from: user1 }),
-                '3',
+                'SWAAP#03',
             );
         });
 
         it('Fails calling any swap before finalizing', async () => {
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')),
-                '10',
+                'SWAAP#10',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')),
-                '10',
+                'SWAAP#10',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')),
-                '10',
+                'SWAAP#10',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')),
-                '10',
+                'SWAAP#10',
             );
         });
 
         it('Fails calling any join exit swap before finalizing', async () => {
             await truffleAssert.reverts(
                 pool.joinswapExternAmountInMMM(WETH, toWei('2.5'), toWei('0')),
-                '1',
+                'SWAAP#01',
             );
             await truffleAssert.reverts(
                 pool.exitswapPoolAmountInMMM(WETH, toWei('2.5'), toWei('0')),
-                '1',
+                'SWAAP#01',
             );
         });
 
@@ -343,25 +343,25 @@ contract('Pool', async (accounts) => {
         it('Fails setting low swap fees', async () => {
             await truffleAssert.reverts(
                 pool.setSwapFee(toWei('0.0000001')),
-                '14',
+                'SWAAP#14',
             );
         });
 
         it('Fails setting high swap fees', async () => {
             await truffleAssert.reverts(
                 pool.setSwapFee(toWei('0.11')),
-                '15',
+                'SWAAP#15',
             );
         });
 
         it('Fails nonadmin sets fees or controller', async () => {
             await truffleAssert.reverts(
                 pool.setSwapFee(toWei('0.0015'), { from: user1 }),
-                '3',
+                'SWAAP#03',
             );
             await truffleAssert.reverts(
                 pool.setController(user1, { from: user1 }),
-                '3',
+                'SWAAP#03',
             );
         });
 
@@ -378,7 +378,7 @@ contract('Pool', async (accounts) => {
         it('Fails nonadmin finalizes pool', async () => {
             await truffleAssert.reverts(
                 pool.finalize({ from: user1 }),
-                '3',
+                'SWAAP#03',
             );
         });
 
@@ -394,7 +394,7 @@ contract('Pool', async (accounts) => {
         it('Fails finalizing pool after finalized', async () => {
             await truffleAssert.reverts(
                 pool.finalize(),
-                '4',
+                'SWAAP#04',
             );
         });
 
@@ -409,21 +409,21 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '4');
+                assert(e.reason, 'SWAAP#04');
             }
             try {
                 await pool.rebindMMM(DAI, toWei('10'), toWei('5'), DAIOracleAddress);
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '4');
+                assert(e.reason, 'SWAAP#04');
             }
         });
 
         it('Fails unbinding after finalized', async () => {
             await truffleAssert.reverts(
                 pool.unbindMMM(WETH),
-                '4',
+                'SWAAP#04',
             );
         });
 
@@ -450,17 +450,17 @@ contract('Pool', async (accounts) => {
             await factory.setPause(true, {from: admin});
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), { from: user2 }),
-                '36'
+                'SWAAP#36'
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), { from: user2 }),
-                 '36'
+                 'SWAAP#36'
             );               
         });
 
         it('Fail User1 join/joinswap when Factory is paused', async () => {
-            await truffleAssert.reverts(pool.joinPool(toWei('5'), [MAX, MAX, MAX], { from: user1 }), '36');
-            await truffleAssert.reverts(pool.joinswapExternAmountInMMM.call(WETH, toWei('0.1'), toWei('0')), '36');
+            await truffleAssert.reverts(pool.joinPool(toWei('5'), [MAX, MAX, MAX], { from: user1 }), 'SWAAP#36');
+            await truffleAssert.reverts(pool.joinswapExternAmountInMMM.call(WETH, toWei('0.1'), toWei('0')), 'SWAAP#36');
         });
 
         it('Admin unpauses pool', async () => {
@@ -485,7 +485,7 @@ contract('Pool', async (accounts) => {
         */
 
         it('Fails admin unbinding token after finalized and others joined', async () => {
-            await truffleAssert.reverts(pool.unbindMMM(DAI), '4');
+            await truffleAssert.reverts(pool.unbindMMM(DAI), 'SWAAP#04');
         });
 
         it('getSpotPriceSansFee', async () => {
@@ -501,7 +501,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '2');
+                assert(e.reason, 'SWAAP#02');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('2.5'), XXX, toWei('100'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 }),
@@ -512,7 +512,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, '44');
+                assert(e.reason, 'SWAAP#44');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 }),
@@ -589,12 +589,12 @@ contract('Pool', async (accounts) => {
         it('Fails joins exits with limits', async () => {
             await truffleAssert.reverts(
                 pool.joinPool(toWei('10'), [toWei('1'), toWei('1'), toWei('1')]),
-                '8',
+                'SWAAP#08',
             );
 
             await truffleAssert.reverts(
                 pool.exitPool(toWei('10'), [toWei('10'), toWei('1000'), toWei('10000')]),
-                '9',
+                'SWAAP#09',
             );
 
             try {
@@ -602,7 +602,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '9');
+                assert.equal(e.reason, 'SWAAP#09');
             }
 
             /*await truffleAssert.reverts(
@@ -615,7 +615,7 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, '9');
+                assert.equal(e.reason, 'SWAAP#09');
             }
 
             /*await truffleAssert.reverts(
@@ -628,42 +628,42 @@ contract('Pool', async (accounts) => {
         it('Fails calling any swap on unbound token', async () => {
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.swapExactAmountOutMMM(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                  pool.joinswapExternAmountInMMM(XXX, toWei('2.5'), toWei('0')),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.exitswapPoolAmountInMMM(XXX, toWei('2.5'), toWei('0')),
-                '2',
+                'SWAAP#02',
             );
         });
 
         it('Fails calling weights, balances, spot prices on unbound token', async () => {
             await truffleAssert.reverts(
                 pool.getDenormalizedWeight(XXX),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.getBalance(XXX),
-                '2',
+                'SWAAP#02',
             );
             await truffleAssert.reverts(
                 pool.getSpotPriceSansFee(DAI, XXX),
-                '2',
+                'SWAAP#02',
             );
         });
     });
