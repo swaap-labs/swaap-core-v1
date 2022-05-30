@@ -310,7 +310,10 @@ contract Pool is PoolToken {
         _pushPoolShare(msg.sender, Const.INIT_POOL_SUPPLY);
     }
 
-    // Absorb any tokens that have been sent to this contract into the pool
+    /**
+    * @notice Absorb any tokens that have been sent to this contract into the pool
+    * @param token token's address
+    */
     function gulp(address token)
     external
     _logs_
@@ -390,6 +393,13 @@ contract Pool is PoolToken {
 
     }
 
+    /**
+    * @notice Computes the amount of pool tokens received when joining a pool with a single asset of fixed amount in
+    * @dev The remaining tokens designate the tokens whose balances do not change during the joinswap
+    * @param tokenIn The address of tokenIn
+    * @param tokenAmountIn The amount of tokenIn to be added to the pool
+    * @return poolAmountOut The received pool token amount out
+    */
     function getJoinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn)
     public
     view
@@ -404,7 +414,7 @@ contract Pool is PoolToken {
         (tokenInInfo, remainingTokensInfo) = _getAllTokensInfo(tokenIn);
 
         {
-            Struct.JoinExitSwapParameters memory joinexitswapParameters = Struct.JoinExitSwapParameters(
+            Struct.JoinExitSwapParameters memory joinswapParameters = Struct.JoinExitSwapParameters(
                 tokenAmountIn,
                 _swapFee,
                 Const.FALLBACK_SPREAD,
@@ -421,7 +431,7 @@ contract Pool is PoolToken {
             poolAmountOut = Math.calcPoolOutGivenSingleInMMM(
                 tokenInInfo,
                 remainingTokensInfo,
-                joinexitswapParameters,
+                joinswapParameters,
                 gbmParameters,
                 hpParameters
             );
@@ -434,6 +444,14 @@ contract Pool is PoolToken {
 
     }
 
+    /**
+    * @notice Join a pool with a single asset with a fixed amount in
+    * @dev The remaining tokens designate the tokens whose balances do not change during the joinswap
+    * @param tokenIn The address of tokenIn
+    * @param tokenAmountIn The amount of tokenIn to be added to the pool
+    * @param minPoolAmountOut The minimum amount of pool tokens that can be received
+    * @return poolAmountOut The received pool amount out
+    */
     function joinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn, uint minPoolAmountOut)
     external
     _logs_
@@ -458,6 +476,14 @@ contract Pool is PoolToken {
         return poolAmountOut;
     }
 
+    /**
+    * @notice Exit a pool with a single asset given the pool token amount in
+    * @dev The remaining tokens designate the tokens whose balances do not change during the exitswap
+    * @param tokenOut The address of tokenOut
+    * @param poolAmountIn The fixed amount of pool tokens in
+    * @param minAmountOut The minimum amount of token out that can be receied
+    * @return tokenAmountOut The received token amount out
+    */
     function exitswapPoolAmountInMMM(address tokenOut, uint poolAmountIn, uint minAmountOut)
     external
     _logs_
@@ -474,7 +500,7 @@ contract Pool is PoolToken {
         (tokenOutInfo, remainingTokensInfo) = _getAllTokensInfo(tokenOut);
 
         {
-            Struct.JoinExitSwapParameters memory joinexitswapParameters = Struct.JoinExitSwapParameters(
+            Struct.JoinExitSwapParameters memory exitswapParameters = Struct.JoinExitSwapParameters(
                 poolAmountIn,
                 _swapFee,
                 Const.FALLBACK_SPREAD,
@@ -491,7 +517,7 @@ contract Pool is PoolToken {
             tokenAmountOut = Math.calcSingleOutGivenPoolInMMM(
                 tokenOutInfo,
                 remainingTokensInfo,
-                joinexitswapParameters,
+                exitswapParameters,
                 gbmParameters,
                 hpParameters
             );
@@ -794,6 +820,14 @@ contract Pool is PoolToken {
         );
     }
 
+    /**
+    * @notice Swap two tokens given the exact amount of token in
+    * @param tokenIn The address of the input token
+    * @param tokenAmountIn The exact amount of tokenIn to be swapped
+    * @param tokenOut The address of the received token
+    * @param minAmountOut The minimum accepted amount of tokenOut to be received
+    * @param maxPrice The maximum spot price accepted before the swap
+    */
     function swapExactAmountInMMM(
         address tokenIn,
         uint256 tokenAmountIn,
@@ -830,6 +864,14 @@ contract Pool is PoolToken {
         return (tokenAmountOut = swapResult.amount, spotPriceAfter = priceResult.spotPriceAfter);
     }
 
+    /**
+    * @notice Computes the amount of tokenOut received when swapping a fixed amount of tokenIn
+    * @param tokenIn The address of the input token
+    * @param tokenAmountIn The fixed amount of tokenIn to be swapped
+    * @param tokenOut The address of the received token
+    * @param minAmountOut The minimum amount of tokenOut that can be received
+    * @param maxPrice The maximum spot price accepted before the swap
+    */
     function getAmountOutGivenInMMM(
         address tokenIn,
         uint256 tokenAmountIn,
@@ -953,6 +995,14 @@ contract Pool is PoolToken {
 
     }
 
+    /**
+    * @notice Swap two tokens given the exact amount of token out
+    * @param tokenIn The address of the input token
+    * @param maxAmountIn The maximum amount of tokenIn that can be swapped
+    * @param tokenOut The address of the received token
+    * @param tokenAmountOut The exact amount of tokenOut to be received
+    * @param maxPrice The maximum spot price accepted before the swap
+    */
     function swapExactAmountOutMMM(
         address tokenIn,
         uint256 maxAmountIn,
@@ -990,6 +1040,14 @@ contract Pool is PoolToken {
         return (tokenAmountIn = swapResult.amount, spotPriceAfter = priceResult.spotPriceAfter);
     }
 
+    /**
+    * @notice Computes the amount of tokenIn needed to receive a fixed amount of tokenOut
+    * @param tokenIn The address of the input token
+    * @param maxAmountIn The maximum amount of tokenIn that can be swapped
+    * @param tokenOut The address of the received token
+    * @param tokenAmountOut The fixed accepted amount of tokenOut to be received
+    * @param maxPrice The maximum spot price accepted before the swap
+    */
     function getAmountInGivenOutMMM(
         address tokenIn,
         uint256 maxAmountIn,
@@ -1198,7 +1256,7 @@ contract Pool is PoolToken {
     * @dev tokenInInfo.info.balance should contain the balance after the trade
     * - spot prices of the remaining tokens are computed in terms of tokenIn
     * @param tokenInInfo swapped token's info
-    * @param remainingTokensInfo untraded tokens' info
+    * @param remainingTokensInfo remaining tokens' info
     */
     function _checkJoinSwapPrices (
         Struct.TokenGlobal memory tokenInInfo,
@@ -1239,7 +1297,7 @@ contract Pool is PoolToken {
     * @dev tokenOutInfo.info.balance should contain the balance after the trade
     * - spot price of tokenOut is computed in terms of the remaining tokens independently
     * @param tokenOutInfo swapped token's info
-    * @param remainingTokensInfo untraded tokens' info
+    * @param remainingTokensInfo remaining tokens' info
     */
     function _checkExitSwapPrices (
         Struct.TokenGlobal memory tokenOutInfo,

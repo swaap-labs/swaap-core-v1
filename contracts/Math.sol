@@ -159,10 +159,19 @@ library Math {
         return poolAmountOut;
     }
 
+    /**
+    * @notice Computes the pool token out when joining with a single asset
+    * @param tokenGlobalIn The pool global information on tokenIn
+    * @param remainingTokens The pool global information on the remaining tokens
+    * @param joinswapParameters The joinswap's parameters (amount in, fee, fallback-spread and pool supply)
+    * @param gbmParameters The GBM forecast parameters (Z, horizon)
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return poolAmountOut The amount of pool tokens to be received
+    */
     function calcPoolOutGivenSingleInMMM(
         Struct.TokenGlobal memory tokenGlobalIn,
-        Struct.TokenGlobal[] memory tokensGlobalOut,
-        Struct.JoinExitSwapParameters memory joinexitswapParameters,
+        Struct.TokenGlobal[] memory remainingTokens,
+        Struct.JoinExitSwapParameters memory joinswapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
@@ -173,41 +182,41 @@ library Math {
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             true,
-            joinexitswapParameters.fallbackSpread,
+            joinswapParameters.fallbackSpread,
             tokenGlobalIn,
-            tokensGlobalOut,
+            remainingTokens,
             gbmParameters,
             hpParameters
         );
 
-        uint256 fee = joinexitswapParameters.fee;
+        uint256 fee = joinswapParameters.fee;
 
         bool blockHasPriceUpdate = block.timestamp == tokenGlobalIn.latestRound.timestamp;
         {
             uint8 i;
-            while ((!blockHasPriceUpdate) && (i < tokensGlobalOut.length)) {
-                if (block.timestamp == tokensGlobalOut[i].latestRound.timestamp) {
+            while ((!blockHasPriceUpdate) && (i < remainingTokens.length)) {
+                if (block.timestamp == remainingTokens[i].latestRound.timestamp) {
                     blockHasPriceUpdate = true;
                 }
                 unchecked { ++i; }
             }
         }
         if (blockHasPriceUpdate) {
-            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn, tokensGlobalOut);
+            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn, remainingTokens);
             fee += calcPoolOutGivenSingleInAdaptiveFees(
                 poolValueInTokenIn,
                 tokenGlobalIn.info.balance,
                 Num.bdiv(tokenGlobalIn.info.weight, totalAdjustedWeight),
-                joinexitswapParameters.amount
+                joinswapParameters.amount
             );
         }
 
         poolAmountOut = calcPoolOutGivenSingleIn(
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
-            joinexitswapParameters.poolSupply,
+            joinswapParameters.poolSupply,
             totalAdjustedWeight,
-            joinexitswapParameters.amount,
+            joinswapParameters.amount,
             fee
         );
 
@@ -256,10 +265,19 @@ library Math {
         return tokenAmountOut;
     }
 
+    /**
+    * @notice Computes the token amount out to be received when exiting the pool with a single asset
+    * @param tokenGlobalOut The pool global information on tokenOut
+    * @param remainingTokens The pool global information on the remaining tokens
+    * @param exitswapParameters The exitswap's parameters (amount in, fee, fallback-spread and pool supply)
+    * @param gbmParameters The GBM forecast parameters (Z, horizon)
+    * @param hpParameters The parameters for historical prices retrieval
+    * @return tokenAmountOut The amount of tokenOut to be received
+    */
     function calcSingleOutGivenPoolInMMM(
         Struct.TokenGlobal memory tokenGlobalOut,
         Struct.TokenGlobal[] memory remainingTokens,
-        Struct.JoinExitSwapParameters memory joinexitswapParameters,
+        Struct.JoinExitSwapParameters memory exitswapParameters,
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
@@ -269,14 +287,14 @@ library Math {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
         uint totalAdjustedWeight = getTotalWeightMMM(
             false,
-            joinexitswapParameters.fallbackSpread,
+            exitswapParameters.fallbackSpread,
             tokenGlobalOut,
             remainingTokens,
             gbmParameters,
             hpParameters
         );
 
-        uint256 fee = joinexitswapParameters.fee;
+        uint256 fee = exitswapParameters.fee;
 
         bool blockHasPriceUpdate = block.timestamp == tokenGlobalOut.latestRound.timestamp;
         {
@@ -294,16 +312,16 @@ library Math {
                 poolValueInTokenOut,
                 tokenGlobalOut.info.balance,
                 Num.bdiv(tokenGlobalOut.info.weight, totalAdjustedWeight),
-                Num.bdiv(joinexitswapParameters.amount, joinexitswapParameters.poolSupply)
+                Num.bdiv(exitswapParameters.amount, exitswapParameters.poolSupply)
             );
         }
 
         tokenAmountOut = calcSingleOutGivenPoolIn(
             tokenGlobalOut.info.balance,
             tokenGlobalOut.info.weight,
-            joinexitswapParameters.poolSupply,
+            exitswapParameters.poolSupply,
             totalAdjustedWeight,
-            joinexitswapParameters.amount,
+            exitswapParameters.amount,
             fee
         );
 
