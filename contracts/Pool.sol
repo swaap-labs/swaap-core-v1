@@ -374,7 +374,7 @@ contract Pool is PoolToken {
         uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
-        uint256 ratio = Num.bdiv(pAiAfterExitFee, poolTotal);
+        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, poolTotal);
         _require(ratio != 0, Err.MATH_APPROX);
 
         _pullPoolShare(msg.sender, poolAmountIn);
@@ -384,9 +384,10 @@ contract Pool is PoolToken {
         for (uint256 i; i < _tokens.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountOut = Num.bmul(ratio, bal);
+            uint256 tokenAmountOut = Num.bmulTruncated(ratio, bal);
             _require(tokenAmountOut != 0, Err.MATH_APPROX);
             _require(tokenAmountOut >= minAmountsOut[i], Err.LIMIT_OUT);
+
             _records[t].balance = _records[t].balance - tokenAmountOut;
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
@@ -938,7 +939,10 @@ contract Pool is PoolToken {
         );
 
         _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
-        _require(priceResult.spotPriceBefore <= Num.bdiv(tokenAmountIn, swapResult.amount), Err.MATH_APPROX);
+        uint256 maxAmount = Num.bdivTruncated(tokenAmountIn, priceResult.spotPriceBefore);
+        if (swapResult.amount > maxAmount) {
+            swapResult.amount = maxAmount;
+        }
         _require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
@@ -1115,7 +1119,10 @@ contract Pool is PoolToken {
         );
 
         _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
-        _require(priceResult.spotPriceBefore <= Num.bdiv(swapResult.amount, tokenAmountOut), Err.MATH_APPROX);
+        uint256 minAmount = Num.bmul(priceResult.spotPriceBefore, tokenAmountOut) + 1;
+        if (swapResult.amount < minAmount) {
+            swapResult.amount = minAmount;
+        }
         _require(
             Num.bdiv(
                 Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),

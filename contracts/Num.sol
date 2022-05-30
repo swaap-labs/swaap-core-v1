@@ -54,6 +54,14 @@ library Num {
         return c2;
     }
 
+    function bmulTruncated(uint256 a, uint256 b)
+    internal pure
+    returns (uint256)
+    {
+        uint256 c0 = a * b;
+        return c0 / Const.BONE;
+    }
+
     function bdiv(uint256 a, uint256 b)
         internal pure
         returns (uint256)
@@ -62,6 +70,14 @@ library Num {
         uint256 c1 = c0 + (b / 2);
         uint256 c2 = c1 / b;
         return c2;
+    }
+
+    function bdivTruncated(uint256 a, uint256 b)
+    internal pure
+    returns (uint256)
+    {
+        uint256 c0 = a * Const.BONE;
+        return c0 / b;
     }
 
     // DSMath.wpow
