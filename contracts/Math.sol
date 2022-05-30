@@ -34,9 +34,9 @@ library Math {
     /**********************************************************************************************
     // calcSpotPrice                                                                             //
     // sP = spotPrice                                                                            //
-    // bI = tokenBalanceIn                ( bI / wI )         1                                  //
-    // bO = tokenBalanceOut         sP =  -----------  *  ----------                             //
-    // wI = tokenWeightIn                 ( bO / wO )     ( 1 - sF )                             //
+    // bI = tokenBalanceIn                      ( bI * w0 )                                      //
+    // bO = tokenBalanceOut         sP =  ------------------------                               //
+    // wI = tokenWeightIn                 ( bO * wI ) * ( 1 - sF )                               //
     // wO = tokenWeightOut                                                                       //
     // sF = swapFee                                                                              //
     **********************************************************************************************/
@@ -51,11 +51,9 @@ library Math {
     public pure
     returns (uint256 spotPrice)
     {
-        uint256 numer = Num.bdiv(tokenBalanceIn, tokenWeightIn);
-        uint256 denom = Num.bdiv(tokenBalanceOut, tokenWeightOut);
-        uint256 ratio = Num.bdiv(numer, denom);
-        uint256 scale = Num.bdiv(Const.BONE, Const.BONE - swapFee);
-        return  (spotPrice = Num.bmul(ratio, scale));
+        uint256 numer = Num.bmul(tokenBalanceIn, tokenWeightOut);
+        uint256 denom = Num.bmul(Num.bmul(tokenBalanceOut, tokenWeightIn), Const.BONE - swapFee);
+        return (spotPrice = Num.bdiv(numer, denom));
     }
 
     /**********************************************************************************************
