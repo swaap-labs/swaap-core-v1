@@ -224,11 +224,11 @@ library Math {
 
     /**********************************************************************************************
     // calcSingleOutGivenPoolIn                                                                  //
-    // tAo = tokenAmountOut            /      /                                             \\   //
-    // bO = tokenBalanceOut           /      // pS - (pAi * (1 - eF)) \     /    1    \      \\  //
-    // pAi = poolAmountIn            | bO - || ----------------------- | ^ | --------- | * b0 || //
-    // ps = poolSupply                \      \\          pS           /     \(wO / tW)/      //  //
-    // wI = tokenWeightIn      tAo =   \      \                                             //   //
+    // tAo = tokenAmountOut            /      /                                          \\      //
+    // bO = tokenBalanceOut           /      // pS - (pAi * (1 - eF)) \     /  tW  \      \\     //
+    // pAi = poolAmountIn            | bO - || ----------------------- | ^ | ------ | * b0 ||    //
+    // ps = poolSupply                \      \\          pS           /     \  wO  /      //     //
+    // wI = tokenWeightIn      tAo =   \      \                                          //      //
     // tW = totalWeight                    /     /      wO \       \                             //
     // sF = swapFee                    *  | 1 - |  1 - ---- | * sF  |                            //
     // eF = exitFee                        \     \      tW /       /                             //
@@ -244,7 +244,6 @@ library Math {
     public pure
     returns (uint tokenAmountOut)
     {
-        uint normalizedWeight = Num.bdiv(tokenWeightOut, totalWeight);
         // charge exit fee on the pool token side
         // pAiAfterExitFee = pAi*(1-exitFee)
         uint poolAmountInAfterExitFee = Num.bmul(poolAmountIn, Const.BONE - Const.EXIT_FEE);
@@ -252,14 +251,14 @@ library Math {
         uint poolRatio = Num.bdiv(newPoolSupply, poolSupply);
 
         // newBalTo = poolRatio^(1/weightTo) * balTo;
-        uint tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(Const.BONE, normalizedWeight));
+        uint tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(totalWeight, tokenWeightOut));
         uint newTokenBalanceOut = Num.bmul(tokenOutRatio, tokenBalanceOut);
 
         uint tokenAmountOutBeforeSwapFee = tokenBalanceOut - newTokenBalanceOut;
 
         // charge swap fee on the output token side
         //uint tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
-        uint zaz = Num.bmul(Const.BONE - normalizedWeight, swapFee);
+        uint zaz = Num.bmul(Const.BONE - Num.bdiv(tokenWeightOut, totalWeight), swapFee);
         tokenAmountOut = Num.bmul(tokenAmountOutBeforeSwapFee, Const.BONE - zaz);
         return tokenAmountOut;
     }
