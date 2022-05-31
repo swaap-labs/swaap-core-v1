@@ -314,7 +314,7 @@ contract Pool is PoolToken {
 
     /**
     * @notice Absorb any tokens that have been sent to this contract into the pool
-    * @param token token's address
+    * @param token The token's address
     */
     function gulp(address token)
     external
