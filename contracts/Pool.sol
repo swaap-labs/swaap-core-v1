@@ -151,6 +151,7 @@ contract Pool is PoolToken {
     uint8 private _priceStatisticsLookbackInRound;
     uint256 private _priceStatisticsLookbackInSec;
     uint8 private _priceStatisticsLookbackStepInRound;
+    uint256 private _maxPriceUnpegRatio;
 
     // `setSwapFee` and `finalize` _require CONTROL
     uint256 private _swapFee;
@@ -167,6 +168,7 @@ contract Pool is PoolToken {
         _dynamicCoverageFeesZ = Const.BASE_Z;
         _dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
         _priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
+        _maxPriceUnpegRatio = Const.BASE_MAX_PRICE_UNPEG_RATIO;
     }
 
     function isPublicSwap()
@@ -650,16 +652,27 @@ contract Pool is PoolToken {
         _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
 
+    function setMaxPriceUnpegRatio(uint256 maxPriceUnpegRatio)
+    external
+    _logs_
+    _lock_
+    {
+        _require(!_finalized, Err.IS_FINALIZED);
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _maxPriceUnpegRatio = maxPriceUnpegRatio;
+    }
+
     function getCoverageParameters()
     external view
-    returns (uint64, uint256, uint8, uint256, uint8)
+    returns (uint64, uint256, uint8, uint256, uint8, uint256)
     {
         return (
             _dynamicCoverageFeesZ,
             _dynamicCoverageFeesHorizon,
             _priceStatisticsLookbackInRound,
             _priceStatisticsLookbackInSec,
-            _priceStatisticsLookbackStepInRound
+            _priceStatisticsLookbackStepInRound,
+            _maxPriceUnpegRatio
         );
     }
 
@@ -963,7 +976,7 @@ contract Pool is PoolToken {
                     tokenGlobalOut.latestRound.price,
                     tokenGlobalOut.info.decimals
                 )
-            ) <= Const.MAX_PRICE_UNPEG_RATIO,
+            ) <= _maxPriceUnpegRatio,
             Err.MAX_PRICE_UNPEG_RATIO
         );
 
@@ -1143,7 +1156,7 @@ contract Pool is PoolToken {
                     tokenGlobalOut.latestRound.price,
                     tokenGlobalOut.info.decimals
                 )
-            ) <= Const.MAX_PRICE_UNPEG_RATIO,
+            ) <= _maxPriceUnpegRatio,
             Err.MAX_PRICE_UNPEG_RATIO
         );
 
@@ -1272,7 +1285,7 @@ contract Pool is PoolToken {
 
     /**
     * @notice Check if the spot prices falls within the limits of the oracle price
-    * - spot prices of the remaining tokens must be < oraclePrice * (Const.MAX_PRICE_UNPEG_RATIO)
+    * - spot prices of the remaining tokens must be < oraclePrice * _maxPriceUnpegRatio
     * @dev tokenInInfo.info.balance should contain the balance after the trade
     * - spot prices of the remaining tokens are computed in terms of tokenIn
     * @param tokenInInfo swapped token's info
@@ -1281,7 +1294,7 @@ contract Pool is PoolToken {
     function _checkJoinSwapPrices (
         Struct.TokenGlobal memory tokenInInfo,
         Struct.TokenGlobal[] memory remainingTokensInfo
-    ) internal pure {
+    ) internal view {
         
         uint256 spotPriceAfter;
 
@@ -1304,7 +1317,7 @@ contract Pool is PoolToken {
                         remainingTokensInfo[i].latestRound.price,
                         remainingTokensInfo[i].info.decimals
                     )
-                ) <= Const.MAX_PRICE_UNPEG_RATIO,
+                ) <= _maxPriceUnpegRatio,
                 Err.MAX_PRICE_UNPEG_RATIO
             );
             unchecked{++i;}
@@ -1313,7 +1326,7 @@ contract Pool is PoolToken {
 
     /**
     * @notice Check if the spot prices falls within the limits of the oracle price
-    * - spot price of tokenOut must be < oraclePrice * (Const.MAX_PRICE_UNPEG_RATIO)
+    * - spot price of tokenOut must be < oraclePrice * _maxPriceUnpegRatio
     * @dev tokenOutInfo.info.balance should contain the balance after the trade
     * - spot price of tokenOut is computed in terms of the remaining tokens independently
     * @param tokenOutInfo swapped token's info
@@ -1322,7 +1335,7 @@ contract Pool is PoolToken {
     function _checkExitSwapPrices (
         Struct.TokenGlobal memory tokenOutInfo,
         Struct.TokenGlobal[] memory remainingTokensInfo
-    ) internal pure {
+    ) internal view {
         
         uint256 spotPriceAfter;
 
@@ -1345,7 +1358,7 @@ contract Pool is PoolToken {
                         tokenOutInfo.latestRound.price,
                         tokenOutInfo.info.decimals
                     )    
-                ) <= Const.MAX_PRICE_UNPEG_RATIO,
+                ) <= _maxPriceUnpegRatio,
                 Err.MAX_PRICE_UNPEG_RATIO
             );
             unchecked{++i;}
