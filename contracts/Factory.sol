@@ -55,7 +55,7 @@ contract Factory is IPausedFactory {
         Pool pool = new Pool();
         _isPool[address(pool)] = true;
         emit LOG_NEW_POOL(msg.sender, address(pool));
-        pool.setController(msg.sender);
+        pool.setControllerAndTransfer(msg.sender);
         return pool;
     }
 

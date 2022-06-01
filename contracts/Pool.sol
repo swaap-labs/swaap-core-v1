@@ -243,9 +243,11 @@ contract Pool is PoolToken {
     /**
     * @notice Allows a controller to transfer ownership to a new address
     * @dev It is recommended to use transferOwnership/acceptOwnership logic for safer transfers
-    * This function is useful when creating pools using a proxy contract
-    */    
-    function setController(address manager)
+    * to avoid any faulty input
+    * This function is useful when creating pools using a proxy contract and transfer pool assets
+    * WARNING: Binded assets are also transferred to the new controller if the pool is not finalized
+    */  
+    function setControllerAndTransfer(address manager)
     external
     _lock_
     {
@@ -257,19 +259,25 @@ contract Pool is PoolToken {
     }
     
     /**
-    * @notice Allows a controller to begin transferring ownership to a new address,
-    * pending.
+    * @notice Allows a controller to begin transferring ownership to a new address
+    * @dev The function will revert if there are binded tokens in an un-finalized pool
+    * This prevents any accidental loss of funds for the current controller
     */
     function transferOwnership(address _to)
     external
     _logs_
     {
         _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        if(!_finalized){
+            // This condition prevents any accidental transfer of funds between the old and new controller
+            // when the pool is not finalized
+            _require(_tokens.length == 0 ,Err.BINDED_TOKENS);
+        }
         _pendingController = _to;
     }
 
     /**
-    * @notice Allows a controller transfer to be completed by the recipient.
+    * @notice Allows a controller transfer to be completed by the recipient
     */
     function acceptOwnership()
     external
@@ -721,6 +729,7 @@ contract Pool is PoolToken {
     {
         _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(!_finalized, Err.IS_FINALIZED);
+        _require(_pendingController == address(0), Err.PENDING_NEW_CONTROLLER);
 
         _require(denorm >= Const.MIN_WEIGHT, Err.MIN_WEIGHT);
         _require(denorm <= Const.MAX_WEIGHT, Err.MAX_WEIGHT);

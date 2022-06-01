@@ -208,6 +208,20 @@ contract('Pool', async (accounts) => {
             );
         });
 
+        it('Fails binding when there is a new pending controller', async () => {
+            await pool.transferOwnership(user1);
+            
+            try {
+                await pool.bindMMM(WETH, (50*10**wethDecimals).toString(), toWei('5'), WETHOracleAddress);
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert.equal(e.reason, 'SWAAP#51');
+            }
+
+            await pool.transferOwnership('0x0000000000000000000000000000000000000000');            
+        }); 
+
         it('Admin binds tokens', async () => {
             // Equal weights WETH, MKR, DAI
             await pool.bindMMM(WETH, (50*10**wethDecimals).toString(), toWei('5'), WETHOracleAddress);
@@ -226,6 +240,18 @@ contract('Pool', async (accounts) => {
             const relDif = calcRelativeDiff(2000*mkrDecimalsDiffFactor, fromWei(mkrBalance));
             assert.isAtMost(relDif.toNumber(), errorDelta);
         });
+
+        it('Fails transferring ownership when tokens are binded and pool not finalized', async () => {
+            
+
+            try {
+                await pool.transferOwnership(user1);
+                throw 'did not revert';
+            }
+            catch(e) {
+                assert.equal(e.reason, 'SWAAP#50');
+            }
+        }); 
 
         it('Admin unbinds token', async () => {
             await pool.bindMMM(XXX, toWei('10'), toWei('5'), XXXOracleAddress);
@@ -360,7 +386,7 @@ contract('Pool', async (accounts) => {
                 'SWAAP#03',
             );
             await truffleAssert.reverts(
-                pool.setController(user1, { from: user1 }),
+                pool.setControllerAndTransfer(user1, { from: user1 }),
                 'SWAAP#03',
             );
         });
