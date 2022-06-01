@@ -338,12 +338,13 @@ contract Pool is PoolToken {
     external
     {
         _require(_finalized, Err.NOT_FINALIZED);
+        _require(maxAmountsIn.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
         uint256 poolTotal = totalSupply();
         uint256 ratio = Num.bdiv(poolAmountOut, poolTotal);
         _require(ratio != 0, Err.MATH_APPROX);
 
-        for (uint256 i; i < _tokens.length;) {
+        for (uint256 i; i < maxAmountsIn.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountIn = Num.bmul(ratio, bal);
@@ -370,6 +371,7 @@ contract Pool is PoolToken {
     _lock_
     {
         _require(_finalized, Err.NOT_FINALIZED);
+        _require(minAmountsOut.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
         uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
@@ -381,7 +383,7 @@ contract Pool is PoolToken {
         _pushPoolShare(_factory, exitFee);
         _burnPoolShare(pAiAfterExitFee);
 
-        for (uint256 i; i < _tokens.length;) {
+        for (uint256 i; i < minAmountsOut.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
             uint256 tokenAmountOut = Num.bmulTruncated(ratio, bal);

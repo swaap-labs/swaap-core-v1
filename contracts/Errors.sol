@@ -132,5 +132,6 @@ library Err {
     // uint256 internal constant PENDING_NEW_CONTROLLER = 51;
     uint256 internal constant UNEXPECTED_BALANCE = 52;
     uint256 internal constant MAX_LB_STEP_PERIODS = 53;
+    uint256 internal constant INPUT_LENGTH_MISMATCH = 54;
 
 }

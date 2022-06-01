@@ -476,6 +476,15 @@ contract('Pool', async (accounts) => {
             assert.equal(22.5, fromWei(userWethBalance));
         });
 
+        it('User1 fails to join or exit pool with wrong maxAmounts length', async () => {
+            truffleAssert.reverts(pool.joinPool(toWei('5'), [MAX, MAX, MAX, MAX], { from: user1 }),
+            'SWAAP#54'
+            );
+            truffleAssert.reverts(pool.exitPool(toWei('5'), [MAX, MAX], { from: user1 }),
+            'SWAAP#54'
+            );
+        });     
+
         /*
           Current pool balances
           WETH - 52.5
