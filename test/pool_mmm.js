@@ -252,14 +252,12 @@ contract('Pool', async (accounts) => {
             await pool.setDynamicCoverageFeesHorizon(toWei(horizon.toString()));
             await pool.setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
             await pool.setPriceStatisticsLookbackInSec(priceStatisticsLookbackInSec);
-            await pool.setMaxPriceUnpegRatio(toWei(maxPriceUnpegRatio.toString()));
             const expectedCoverageParameters = await pool.getCoverageParameters();
             assert.equal(fromWei(expectedCoverageParameters[0]), z);
             assert.equal(fromWei(expectedCoverageParameters[1]), horizon);
             assert.equal(expectedCoverageParameters[2], priceStatisticsLookbackInRound);
             assert.equal(expectedCoverageParameters[3], priceStatisticsLookbackInSec);
             assert.equal(expectedCoverageParameters[4], priceStatisticsLookbackStepInRound);
-            assert.equal(fromWei(expectedCoverageParameters[5]), maxPriceUnpegRatio);
         });
 
         it('Admin finalizes pool', async () => {

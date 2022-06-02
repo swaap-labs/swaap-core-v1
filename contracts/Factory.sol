@@ -41,6 +41,16 @@ contract Factory is IPausedFactory {
 
     mapping(address=>bool) private _isPool;
 
+    modifier _onlySwaapLabs_() {
+        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
+        _;
+    }
+
+    modifier _onlyPool_(address pool) {
+        _require(_isPool[address(pool)], Err.NOT_POOL);
+        _;
+    }
+
     function isPool(address b)
     external view returns (bool)
     {
@@ -81,9 +91,9 @@ contract Factory is IPausedFactory {
     * pending.
     */
     function transferOwnership(address _to)
-        external
+    external
+    _onlySwaapLabs_
     {
-        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         _pendingSwaaplabs = _to;
 
         emit LOG_TRANSFER_REQUESTED(msg.sender, _to);
@@ -93,7 +103,7 @@ contract Factory is IPausedFactory {
     * @notice Allows an ownership transfer to be completed by the recipient.
     */
     function acceptOwnership()
-        external
+    external
     {
         _require(msg.sender == _pendingSwaaplabs, Err.NOT_PENDING_SWAAPLABS);
 
@@ -105,21 +115,110 @@ contract Factory is IPausedFactory {
     }
    
     function collect(address erc20)
-        external
+    external
+    _onlySwaapLabs_
     {
-        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         uint256 collected = IERC20(erc20).balanceOf(address(this));
         IERC20(erc20).safeTransfer(msg.sender, collected);
     }
 
-    function setPause(bool paused) external {
-        _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
+    function setPause(bool paused) 
+    external 
+    _onlySwaapLabs_
+    {
         _require(block.timestamp < _setPauseWindow, Err.PAUSE_WINDOW_EXCEEDED);
         _paused = paused;
     }
 
     function whenNotPaused() external view {
         _require(!_paused, Err.PAUSED_FACTORY);
+    }
+
+    /**
+    * @notice Revoke factory control over a pool's parameters
+    */
+    function revokePoolFactoryControl(address pool)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).revokeFactoryControl();
+    }
+
+    /**
+    * @notice Sets a pool's swap fee
+    */
+    function setPoolSwapFee(address pool, uint256 swapFee) 
+    external
+    _onlySwaapLabs_
+    {
+        Pool(pool).setSwapFee(swapFee);
+    }
+    
+    /**
+    * @notice Sets a pool's dynamic coverage fees Z
+    */
+    function setPoolDynamicCoverageFeesZ(address pool, uint64 dynamicCoverageFeesZ)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setDynamicCoverageFeesZ(dynamicCoverageFeesZ);
+    }
+
+    /**
+    * @notice Sets a pool's dynamic coverage fees horizon
+    */
+    function setPoolDynamicCoverageFeesHorizon(address pool, uint256 dynamicCoverageFeesHorizon)
+    external 
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setDynamicCoverageFeesHorizon(dynamicCoverageFeesHorizon);
+    }
+
+    /**
+    * @notice Sets a pool's price statistics lookback in round
+    */    
+    function setPoolPriceStatisticsLookbackInRound(address pool, uint8 priceStatisticsLookbackInRound)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
+    }
+
+    /**
+    * @notice Sets a pool's price statistics lookback in seconds
+    */    
+    function setPoolPriceStatisticsLookbackInSec(address pool, uint64 priceStatisticsLookbackInSec)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setPriceStatisticsLookbackInSec(priceStatisticsLookbackInSec);
+    }
+
+    /**
+    * @notice Sets a pool's statistics lookback step in round
+    */
+    function setPoolPriceStatisticsLookbackStepInRound(address pool, uint8 priceStatisticsLookbackStepInRound)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setPriceStatisticsLookbackStepInRound(priceStatisticsLookbackStepInRound);
+    }
+
+    /**
+    * @notice Sets a pool's maximum price unpeg ratio
+    */
+    function setPoolMaxPriceUnpegRatio(address pool, uint256 maxPriceUnpegRatio)
+    external
+    _onlySwaapLabs_
+    _onlyPool_(pool)
+    {
+        Pool(pool).setMaxPriceUnpegRatio(maxPriceUnpegRatio);
     }
 
 }

@@ -92,6 +92,48 @@ contract('Factory', async (accounts) => {
             assert.equal(fromWei(adminBalance), '100');
         });
 
+        it('factory sets pool parameters', async () => {
+            await factory.setPoolSwapFee(POOL, toWei('0.01'));
+            await factory.setPoolDynamicCoverageFeesZ(POOL, toWei('0.2'));
+            await factory.setPoolDynamicCoverageFeesHorizon(POOL, toWei('3'));
+            await factory.setPoolPriceStatisticsLookbackInRound(POOL, '5');
+            await factory.setPoolPriceStatisticsLookbackInSec(POOL, '6000');
+            await factory.setPoolPriceStatisticsLookbackStepInRound(POOL, '3');
+            await factory.setPoolMaxPriceUnpegRatio(POOL, toWei('1.03'));
+
+            let swapFee = await pool.getSwapFee();
+            let coverageParams = await pool.getCoverageParameters();
+
+            assert.equal(swapFee, toWei('0.01'));
+            assert.equal(coverageParams[0], toWei('0.2'));
+            assert.equal(coverageParams[1], toWei('3'));
+            assert.equal(coverageParams[2], '5');
+            assert.equal(coverageParams[3], '6000');
+            assert.equal(coverageParams[4], '3');
+            assert.equal(coverageParams[5], toWei('1.03'));
+        });
+
+        it('nonadmin fails to set pool parameters', async () => {
+            await truffleAssert.reverts(factory.setPoolSwapFee(POOL, toWei('0.01'), {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolDynamicCoverageFeesZ(POOL, toWei('0.2'), {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolDynamicCoverageFeesHorizon(POOL, toWei('3'), {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackInRound(POOL, '5', {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackInSec(POOL, '6000', {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackStepInRound(POOL, '3', {from: user2}), 'SWAAP#34');
+            await truffleAssert.reverts(factory.setPoolMaxPriceUnpegRatio(POOL, toWei('1.03'), {from: user2}), 'SWAAP#34');
+        });
+
+        it('admin fails to set pool parameters when control is revoked', async () => {
+            await factory.revokePoolFactoryControl(POOL);
+            await truffleAssert.reverts(factory.setPoolSwapFee(POOL, toWei('0.01')), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolDynamicCoverageFeesZ(POOL, toWei('0.2')), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolDynamicCoverageFeesHorizon(POOL, toWei('3')), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackInRound(POOL, '5'), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackInSec(POOL, '6000'), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolPriceStatisticsLookbackStepInRound(POOL, '3'), 'SWAAP#07');
+            await truffleAssert.reverts(factory.setPoolMaxPriceUnpegRatio(POOL, toWei('1.03')), 'SWAAP#07');
+        });        
+
         it('nonadmin cant set swaaplabs address', async () => {
             await truffleAssert.reverts(factory.transferOwnership(nonAdmin, { from: nonAdmin }), 'SWAAP#34');
             await truffleAssert.reverts(factory.acceptOwnership({ from: nonAdmin }), 'SWAAP#20');

@@ -125,6 +125,23 @@ contract Pool is PoolToken {
         _;
     }
 
+    function _onlyAdmins() private view {
+        if (msg.sender == _controller) {
+            _require(!_finalized, Err.IS_FINALIZED);
+        }
+        else if (msg.sender == _factory) {
+            _require(!_revokedFactoryControl, Err.FACTORY_CONTROL_REVOKED);
+        }
+        else {
+            _revert(Err.NOT_ADMIN);
+        }
+    }
+
+    modifier _onlyAdmins_() {
+        _onlyAdmins();
+        _;
+    }
+
     // prevents token transfers with fees
     modifier _checkBalanceAfterTransfer_(address erc20, uint amount) {
         uint expectedBalance = IERC20(erc20).balanceOf(address(this)) + amount;
@@ -144,7 +161,8 @@ contract Pool is PoolToken {
     address private _pendingController;
     
     bool private _finalized;
-    address immutable private _factory;    // Factory address to push token exitFee to
+    bool private _revokedFactoryControl; // if true factory cannot change pool parameters
+    address immutable private _factory; // Factory address to push token exitFee to
 
     uint64 private _dynamicCoverageFeesZ;
     uint256 private _dynamicCoverageFeesHorizon;
@@ -234,9 +252,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(swapFee >= Const.MIN_FEE, Err.MIN_FEE);
         _require(swapFee <= Const.MAX_FEE, Err.MAX_FEE);
         _swapFee = swapFee;
@@ -293,6 +310,32 @@ contract Pool is PoolToken {
         emit LOG_NEW_CONTROLLER(oldController, msg.sender);
     }
 
+    /**
+    * @notice Revokes factory control over pool parameters
+    */
+    function revokeFactoryControl()
+    external
+    _logs_
+    {
+        _require(msg.sender == _factory, Err.NOT_FACTORY);
+        _revokedFactoryControl = true;
+    }
+
+    /**
+    * @notice Gives back factory control over pool parameters
+    */
+    function giveFactoryControl()
+    external
+    _logs_
+    {
+        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _revokedFactoryControl = false;
+    }
+
+    /**
+    * @notice Enables public swaps on the pool but does not finalize the parameters
+    * @dev Unfinalized pool enables exclusively the controller to add liquidity into the pool
+    */
     function setPublicSwap(bool public_)
     external
     _logs_
@@ -601,9 +644,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _dynamicCoverageFeesZ = dynamicCoverageFeesZ;
     }
 
@@ -611,9 +653,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(dynamicCoverageFeesHorizon >= Const.MIN_HORIZON, Err.MIN_HORIZON);
         _dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon;
     }
@@ -622,9 +663,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(priceStatisticsLookbackInRound >= Const.MIN_LOOKBACK_IN_ROUND, Err.MIN_LB_PERIODS);
         _require(priceStatisticsLookbackInRound <= Const.MAX_LOOKBACK_IN_ROUND, Err.MAX_LB_PERIODS);
         _priceStatisticsLookbackInRound = priceStatisticsLookbackInRound;
@@ -634,9 +674,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(priceStatisticsLookbackInSec >= Const.MIN_LOOKBACK_IN_SEC, Err.MIN_LB_SECS);
         _priceStatisticsLookbackInSec = priceStatisticsLookbackInSec;
     }
@@ -645,9 +684,8 @@ contract Pool is PoolToken {
     external
     _logs_
     _lock_
+    _onlyAdmins_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
         _require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, Err.MAX_LB_STEP_PERIODS);
         _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
@@ -657,8 +695,9 @@ contract Pool is PoolToken {
     _logs_
     _lock_
     {
-        _require(!_finalized, Err.IS_FINALIZED);
-        _require(msg.sender == _controller, Err.NOT_CONTROLLER);
+        _require(msg.sender == _factory, Err.NOT_FACTORY);
+        _require(!_revokedFactoryControl, Err.FACTORY_CONTROL_REVOKED);
+        
         _maxPriceUnpegRatio = maxPriceUnpegRatio;
     }
 

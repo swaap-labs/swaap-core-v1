@@ -383,7 +383,7 @@ contract('Pool', async (accounts) => {
         it('Fails nonadmin sets fees or controller', async () => {
             await truffleAssert.reverts(
                 pool.setSwapFee(toWei('0.0015'), { from: user1 }),
-                'SWAAP#03',
+                'SWAAP#12',
             );
             await truffleAssert.reverts(
                 pool.setControllerAndTransfer(user1, { from: user1 }),
