@@ -686,7 +686,7 @@ contract Pool is PoolToken {
     _lock_
     _onlyAdmins_
     {
-        _require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, Err.MAX_LB_STEP_PERIODS);
+        _require(priceStatisticsLookbackStepInRound >= Const.MIN_LOOKBACK_STEP_IN_ROUND, Err.MIN_LB_STEP_PERIODS);
         _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
 
@@ -697,7 +697,8 @@ contract Pool is PoolToken {
     {
         _require(msg.sender == _factory, Err.NOT_FACTORY);
         _require(!_revokedFactoryControl, Err.FACTORY_CONTROL_REVOKED);
-        
+        _require(maxPriceUnpegRatio >= Const.MIN_MAX_PRICE_UNPEG_RATIO, Err.MIN_MAX_PRICE_UNPEG_RATIO);
+        _require(maxPriceUnpegRatio <= Const.MAX_MAX_PRICE_UNPEG_RATIO, Err.MAX_MAX_PRICE_UNPEG_RATIO);
         _maxPriceUnpegRatio = maxPriceUnpegRatio;
     }
 

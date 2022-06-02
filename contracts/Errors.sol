@@ -131,7 +131,9 @@ library Err {
     uint256 internal constant BINDED_TOKENS = 50;
     uint256 internal constant PENDING_NEW_CONTROLLER = 51;
     uint256 internal constant UNEXPECTED_BALANCE = 52;
-    uint256 internal constant MAX_LB_STEP_PERIODS = 53;
+    uint256 internal constant MIN_LB_STEP_PERIODS = 53;
     uint256 internal constant INPUT_LENGTH_MISMATCH = 54;
+    uint256 internal constant MIN_MAX_PRICE_UNPEG_RATIO = 55;
+    uint256 internal constant MAX_MAX_PRICE_UNPEG_RATIO = 56;
 
 }
