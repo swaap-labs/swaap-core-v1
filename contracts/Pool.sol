@@ -466,6 +466,7 @@ contract Pool is PoolToken {
 
         _require(_finalized, Err.NOT_FINALIZED);
         _require(_records[tokenIn].bound, Err.NOT_BOUND);
+        _require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
 
         Struct.TokenGlobal memory tokenInInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
@@ -579,6 +580,7 @@ contract Pool is PoolToken {
                 gbmParameters,
                 hpParameters
             );
+            _require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
         }
 
         _require(tokenAmountOut >= minAmountOut, Err.LIMIT_OUT);
@@ -973,6 +975,8 @@ contract Pool is PoolToken {
         _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
         _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
 
+        _require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
+
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
 
@@ -1151,6 +1155,8 @@ contract Pool is PoolToken {
 
         _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
         _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
+
+        _require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);

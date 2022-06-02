@@ -547,11 +547,11 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert(e.reason, 'SWAAP#44');
+                assert(e.reason, 'SWAAP#57');
             }
             /*await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('26.5'), DAI, toWei('5000'), toWei((200 / daiDecimalsDiffFactor).toString()), { from: user2 }),
-                '44',
+                '57',
             );*/
         });
 

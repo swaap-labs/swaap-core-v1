@@ -135,5 +135,6 @@ library Err {
     uint256 internal constant INPUT_LENGTH_MISMATCH = 54;
     uint256 internal constant MIN_MAX_PRICE_UNPEG_RATIO = 55;
     uint256 internal constant MAX_MAX_PRICE_UNPEG_RATIO = 56;
-
+    uint256 internal constant MAX_IN_RATIO = 57;
+    uint256 internal constant MAX_OUT_RATIO = 58;
 }

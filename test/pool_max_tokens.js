@@ -193,6 +193,19 @@ contract('Pool', async (accounts) => {
 
         it('Fails swapExactAmountOutMMM with limits', async () => {
             try {
+            	await pool.swapExactAmountOutMMM(
+            		AAA,
+            		toWei('51'),
+            		BBB,
+            		toWei('40'),
+            		toWei('5'),
+            		);
+            	throw 'did not revert';
+           	}
+            catch(e){
+                assert.equal(e.reason, 'SWAAP#58');
+            }
+            try {
                 await pool.swapExactAmountOutMMM(
                     AAA,
                     toWei('5'),
