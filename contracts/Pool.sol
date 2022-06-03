@@ -607,9 +607,9 @@ contract Pool is PoolToken {
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _mintPoolShare(poolAmountOut);
         _pushPoolShare(msg.sender, poolAmountOut);
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         return poolAmountOut;
     }
