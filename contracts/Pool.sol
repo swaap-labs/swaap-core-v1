@@ -530,12 +530,20 @@ contract Pool is PoolToken {
     * @param tokenAmountIn The amount of tokenIn to be added to the pool
     * @return poolAmountOut The received pool token amount out
     */
-    function getJoinswapExternAmountInMMM(address tokenIn, uint tokenAmountIn)
-    public
+    function getJoinswapExternAmountInMMM(address tokenIn, uint256 tokenAmountIn)
+    external
+    view
+    _viewlock_
+    returns (uint256 poolAmountOut)
+    {
+        return (poolAmountOut = _getJoinswapExternAmountInMMM(tokenIn, tokenAmountIn));
+    }
+
+    function _getJoinswapExternAmountInMMM(address tokenIn, uint256 tokenAmountIn)
+    internal
     view
     returns (uint256 poolAmountOut)
     {
-
         _require(_finalized, Err.NOT_FINALIZED);
         _require(_records[tokenIn].bound, Err.NOT_BOUND);
         _require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
@@ -572,7 +580,6 @@ contract Pool is PoolToken {
 
             return poolAmountOut;
         }
-
     }
 
     /**
@@ -590,7 +597,7 @@ contract Pool is PoolToken {
     _whenNotPaused_
     returns (uint poolAmountOut)
     {        
-        poolAmountOut = getJoinswapExternAmountInMMM(
+        poolAmountOut = _getJoinswapExternAmountInMMM(
             tokenIn, tokenAmountIn
         );
 
