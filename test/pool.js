@@ -502,6 +502,64 @@ contract('Pool', async (accounts) => {
             assert.equal(22.5, fromWei(userWethBalance));
         });
 
+        it('Join a pool using getJoinPool returns', async () => {           
+            
+            await weth.mint(admin, (5*10**wethDecimals).toString());
+            await mkr.mint(admin, (5*10**mkdrDecimals).toString());
+            await dai.mint(admin, (5000*10**daiDecimals).toString());
+
+            let daiAmountIn = (5000*10**daiDecimals).toString();
+            const returns = await pool.getJoinPool.call(DAI, daiAmountIn);
+            const poolAmountOut = returns[0];
+            const tokenAmountsIn = returns[1];
+            const tokens = await pool.getTokens.call();
+            
+            let balancesBefore = [];
+            for (let i = 0; i < tokens.length; i++) {
+                let token = await TToken.at(tokens[i]);
+                balancesBefore.push(await token.balanceOf.call(admin));
+            }
+
+            await pool.joinPool(poolAmountOut, tokenAmountsIn);
+
+            for (let i = 0; i < tokens.length; i++) {
+                let token = await TToken.at(tokens[i]);
+                let balanceAfter = await token.balanceOf.call(admin);
+                
+                let relDif = balancesBefore[i].sub(tokenAmountsIn[i]);
+
+                assert.equal(relDif.toString(), balanceAfter.toString());
+            }
+            
+            let daiIndex = tokens.indexOf(DAI);
+            let calculatedDaiAmountIn = tokenAmountsIn[daiIndex];
+            let relDif = web3.utils.toBN(daiAmountIn).sub(calculatedDaiAmountIn);
+            assert.isAtMost(relDif.toNumber(), 0);
+        });
+
+        it('Exit a pool using getExitPool returns', async () => {
+            let poolAmoutIn = toWei('5');
+            let tokenAmountsOut = (await pool.getExitPool(poolAmoutIn)); 
+
+            const tokens = await pool.getTokens.call();
+            let balancesBefore = [];
+            for (let i = 0; i < tokens.length; i++) {
+                let token = await TToken.at(tokens[i]);
+                balancesBefore.push(await token.balanceOf.call(admin));
+            }
+
+            await pool.exitPool(poolAmoutIn, tokenAmountsOut);
+            
+            for (let i = 0; i < tokens.length; i++) {
+                let token = await TToken.at(tokens[i]);
+                let balanceAfter = await token.balanceOf.call(admin);
+
+                assert.equal((balanceAfter.sub(tokenAmountsOut[i])).toString(), balancesBefore[i].toString());
+            }
+                    
+        });
+
+        
         it('User1 fails to join or exit pool with wrong maxAmounts length', async () => {
             truffleAssert.reverts(pool.joinPool(toWei('5'), [MAX, MAX, MAX, MAX], { from: user1 }),
             'SWAAP#54'

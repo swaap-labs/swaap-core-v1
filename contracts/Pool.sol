@@ -379,6 +379,49 @@ contract Pool is PoolToken {
     }
 
     /**
+    * @notice Get the token amounts in required and pool shares received when joining
+    * the pool given an amount of tokenIn
+    * @dev The amountIn of the specified token as input may differ at the exit due to
+    * rounding discrepancies
+    * @param  tokenIn The address of tokenIn
+    * @param  tokenAmountIn The approximate amount of tokenIn to be swapped
+    * @return poolAmountOut The pool amount out received
+    * @return tokenAmountsIn The exact amounts of tokenIn needed
+    */
+    function getJoinPool(address tokenIn, uint256 tokenAmountIn)
+    external
+    view
+    _viewlock_
+    returns (uint256 poolAmountOut, uint256[] memory tokenAmountsIn)
+    {
+        _require(_finalized, Err.NOT_FINALIZED);
+        _require(_records[tokenIn].bound, Err.NOT_BOUND);
+
+        uint256 ratio = Num.bdivTruncated(tokenAmountIn, _records[tokenIn].balance);
+        
+        uint256 poolTotal = _totalSupply;
+        poolAmountOut = Num.bmul(ratio, poolTotal);
+        // ratio is re-evaluated to avoid any calculation discrepancies with joinPool
+        ratio = Num.bdiv(poolAmountOut, poolTotal);
+
+        uint256 tokensLength = _tokens.length;
+        tokenAmountsIn = new uint256[](tokensLength);
+
+        for (uint256 i; i < tokensLength;) {
+            address t     = _tokens[i];
+            uint256 bal   = _records[t].balance;
+            tokenAmountIn = Num.bmul(ratio, bal);
+            _require(tokenAmountIn != 0, Err.MATH_APPROX);
+            tokenAmountsIn[i] = tokenAmountIn;
+            unchecked{++i;}
+        }
+        
+        return (poolAmountOut, tokenAmountsIn);
+
+    }
+
+
+    /**
     * @notice Add liquidity to a pool and credit msg.sender
     * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool
     * @param poolAmountOut Amount of pool shares a LP wishes to receive
@@ -393,8 +436,7 @@ contract Pool is PoolToken {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(maxAmountsIn.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
-        uint256 poolTotal = totalSupply();
-        uint256 ratio = Num.bdiv(poolAmountOut, poolTotal);
+        uint256 ratio = Num.bdiv(poolAmountOut, _totalSupply);
         _require(ratio != 0, Err.MATH_APPROX);
 
         for (uint256 i; i < maxAmountsIn.length;) {
@@ -413,6 +455,37 @@ contract Pool is PoolToken {
     }
 
     /**
+    * @notice Get the token amounts received for a given pool shares in
+    * @param poolAmountIn The amount of pool shares a LP wishes to liquidate for tokens
+    * @return tokenAmountsOut The token amounts received
+    */
+    function getExitPool(uint256 poolAmountIn)
+    external
+    view
+    _viewlock_
+    returns (uint256[] memory tokenAmountsOut)
+    {
+
+        uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
+        uint256 pAiAfterExitFee = poolAmountIn - exitFee;
+        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, _totalSupply);
+
+        uint256 tokensLength = _tokens.length;
+        tokenAmountsOut = new uint256[](tokensLength);
+
+        for (uint256 i; i < tokensLength;) {
+            address t = _tokens[i];
+            uint256 bal = _records[t].balance;
+            uint256 tokenAmountOut = Num.bmulTruncated(ratio, bal);
+            _require(tokenAmountOut != 0, Err.MATH_APPROX);
+            tokenAmountsOut[i] = tokenAmountOut;
+            unchecked{++i;}
+        }
+
+        return tokenAmountsOut;
+    }
+
+    /**
     * @notice Remove liquidity from a pool
     * @dev The order of minAmount of each token must be the same as the _tokens' addresses stored in the pool
     * @param poolAmountIn Amount of pool shares a LP wishes to liquidate for tokens
@@ -426,10 +499,9 @@ contract Pool is PoolToken {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(minAmountsOut.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
-        uint256 poolTotal = totalSupply();
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
-        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, poolTotal);
+        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, _totalSupply);
         _require(ratio != 0, Err.MATH_APPROX);
 
         _pullPoolShare(msg.sender, poolAmountIn);
