@@ -153,23 +153,24 @@ contract Pool is PoolToken {
     address[] private _tokens;
     mapping(address=>Record) private _records;
 
-    bool private _mutex;
+    bool    private _mutex;
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
-    bool private _publicSwap; // true if PUBLIC can call SWAP functions
-    uint80 private _totalWeight;
-    address private _controller; // has CONTROL role
-    address private _pendingController;
+    bool    private _publicSwap; // true if PUBLIC can call SWAP functions
     
-    bool private _finalized;
-    bool private _revokedFactoryControl; // if true factory cannot change pool parameters
+    bool    private _finalized;
+    bool    private _revokedFactoryControl; // if true factory cannot change pool parameters
     address immutable private _factory; // Factory address to push token exitFee to
 
-    uint64 private _dynamicCoverageFeesZ;
+    uint8   private _priceStatisticsLookbackInRound;
+    uint8   private _priceStatisticsLookbackStepInRound;
+    uint64  private _dynamicCoverageFeesZ;
     uint256 private _dynamicCoverageFeesHorizon;
-    uint8 private _priceStatisticsLookbackInRound;
     uint256 private _priceStatisticsLookbackInSec;
-    uint8 private _priceStatisticsLookbackStepInRound;
     uint256 private _maxPriceUnpegRatio;
+
+    uint80  private _totalWeight;
+    address private _controller; // has CONTROL role
+    address private _pendingController;
 
     // `setSwapFee` and `finalize` _require CONTROL
     uint256 private _swapFee;
