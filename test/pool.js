@@ -526,13 +526,12 @@ contract('Pool', async (accounts) => {
                 let token = await TToken.at(tokens[i]);
                 let balanceAfter = await token.balanceOf.call(admin);
                 
-                let relDif = balancesBefore[i].sub(tokenAmountsIn[i]);
-
-                assert.equal(relDif.toString(), balanceAfter.toString());
+                assert.equal(balancesBefore[i].sub(tokenAmountsIn[i]).toString(), balanceAfter.toString());
             }
             
             let daiIndex = tokens.indexOf(DAI);
             let calculatedDaiAmountIn = tokenAmountsIn[daiIndex];
+            // Relative difference between user input in the getter function and the real token input in joinPool
             let relDif = web3.utils.toBN(daiAmountIn).sub(calculatedDaiAmountIn);
             assert.isAtMost(relDif.toNumber(), 0);
         });

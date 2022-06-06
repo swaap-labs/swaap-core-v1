@@ -392,6 +392,7 @@ contract Pool is PoolToken {
     external
     view
     _viewlock_
+    _whenNotPaused_
     returns (uint256 poolAmountOut, uint256[] memory tokenAmountsIn)
     {
         _require(_finalized, Err.NOT_FINALIZED);
@@ -403,6 +404,7 @@ contract Pool is PoolToken {
         poolAmountOut = Num.bmul(ratio, poolTotal);
         // ratio is re-evaluated to avoid any calculation discrepancies with joinPool
         ratio = Num.bdiv(poolAmountOut, poolTotal);
+        _require(ratio != 0, Err.MATH_APPROX);
 
         uint256 tokensLength = _tokens.length;
         tokenAmountsIn = new uint256[](tokensLength);
@@ -465,6 +467,8 @@ contract Pool is PoolToken {
     _viewlock_
     returns (uint256[] memory tokenAmountsOut)
     {
+
+        _require(_finalized, Err.NOT_FINALIZED);
 
         uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
