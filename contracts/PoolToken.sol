@@ -39,8 +39,14 @@ contract PoolToken is IERC20 {
 
     function _move(address src, address dst, uint256 amt) internal {
         _require(dst != address(0), Err.NULL_ADDRESS);
-        _balance[src] = _balance[src] - amt;
-        _balance[dst] = _balance[dst] + amt;
+        
+        uint256 fromBalance = _balance[src];
+        _require(fromBalance >= amt, Err.INSUFFICIENT_BALANCE);
+        unchecked {
+            _balance[src] = fromBalance - amt;
+        }
+        _balance[dst] += amt;
+
         emit Transfer(src, dst, amt);
     }
 
@@ -110,11 +116,15 @@ contract PoolToken is IERC20 {
     }
 
     function transferFrom(address src, address dst, uint256 amt) external override returns (bool) {
-        _move(src, dst, amt);
         if (msg.sender != src && _allowance[src][msg.sender] != type(uint256).max) {
-            _allowance[src][msg.sender] = _allowance[src][msg.sender] - amt;
+            uint256 currentAllowance = _allowance[src][msg.sender];
+            _require(currentAllowance >= amt, Err.INSUFFICIENT_ALLOWANCE);
+            unchecked {
+                _allowance[src][msg.sender] = currentAllowance - amt;
+            }
             emit Approval(msg.sender, dst, _allowance[src][msg.sender]);
         }
+        _move(src, dst, amt);
         return true;
     }
 }

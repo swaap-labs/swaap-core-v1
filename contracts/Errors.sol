@@ -97,9 +97,9 @@ library Err {
     uint256 internal constant NON_POSITIVE_PRICE = 16;
     uint256 internal constant NOT_POOL = 17;
     uint256 internal constant MIN_TOKENS = 18;
-    // uint256 internal constant ERC20_FALSE = 19;
+    uint256 internal constant INSUFFICIENT_BALANCE = 19;
     uint256 internal constant NOT_PENDING_SWAAPLABS = 20;
-    // uint256 internal constant MAX_Z = 21;
+    uint256 internal constant INSUFFICIENT_ALLOWANCE = 21;
     uint256 internal constant MIN_HORIZON = 22;
     uint256 internal constant MAX_HORIZON = 23;
     uint256 internal constant MIN_LB_PERIODS = 24;
