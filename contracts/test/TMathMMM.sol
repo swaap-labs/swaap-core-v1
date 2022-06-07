@@ -122,14 +122,15 @@ library TMathMMM {
         return tokenBalanceOut - Num.bdiv(tokenAmountIn, relativePrice);
     }
 
-    function getBasesTotalValue(
+    function getPoolTotalValue(
         address quoteAddress,
+        uint256 quoteBalance,
         uint8 quoteDecimals, // sum of the decimals of the token and its oracle
         address[] memory basesAddress,
         uint256[] memory basesBalance,
         uint8[] memory basesDecimals // sum of the decimals of the token and its oracle
     ) public view returns (uint256) {
-        Struct.TokenRecord memory quoteRecord = Struct.TokenRecord(quoteDecimals, 0, 0); // balance and weight are not used in getTotalValue
+        Struct.TokenRecord memory quoteRecord = Struct.TokenRecord(quoteDecimals, quoteBalance, 0); // balance and weight are not used in getTotalValue
         Struct.LatestRound memory quoteLatestRound = ChainlinkUtils.getLatestRound(quoteAddress);
         Struct.TokenGlobal memory quote = Struct.TokenGlobal(quoteRecord, quoteLatestRound);
         Struct.TokenGlobal[] memory bases = new Struct.TokenGlobal[](basesAddress.length);
@@ -140,7 +141,7 @@ library TMathMMM {
             bases[i] = token;
             unchecked { ++i; }
         }
-        return Math.getBasesTotalValue(quote, bases);
+        return Math.getPoolTotalValue(quote, bases);
     }
 
     function calcSingleOutGivenPoolInMMM(

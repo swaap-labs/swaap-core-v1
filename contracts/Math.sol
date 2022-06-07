@@ -200,7 +200,7 @@ library Math {
             }
         }
         if (blockHasPriceUpdate) {
-            uint256 poolValueInTokenIn = tokenGlobalIn.info.balance + getBasesTotalValue(tokenGlobalIn, remainingTokens);
+            uint256 poolValueInTokenIn = getPoolTotalValue(tokenGlobalIn, remainingTokens);
             fee += calcPoolOutGivenSingleInAdaptiveFees(
                 poolValueInTokenIn,
                 tokenGlobalIn.info.balance,
@@ -304,7 +304,7 @@ library Math {
             }
         }
         if (blockHasPriceUpdate) {
-            uint256 poolValueInTokenOut = tokenGlobalOut.info.balance + getBasesTotalValue(tokenGlobalOut, remainingTokens);
+            uint256 poolValueInTokenOut = getPoolTotalValue(tokenGlobalOut, remainingTokens);
             fee += calcSingleOutGivenPoolInAdaptiveFees(
                 poolValueInTokenOut,
                 tokenGlobalOut.info.balance,
@@ -1122,8 +1122,9 @@ library Math {
     /**
     * @notice Computes the total value of the pool in terms of the quote token
     */
-    function getBasesTotalValue(Struct.TokenGlobal memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
+    function getPoolTotalValue(Struct.TokenGlobal memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
     internal pure returns (uint256 basesTotalValue){
+        basesTotalValue = quoteToken.info.balance;
         for (uint256 i; i < baseTokens.length;) {
             basesTotalValue += Num.bmul(
                 baseTokens[i].info.balance,

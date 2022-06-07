@@ -383,12 +383,17 @@ contract('MMM Math', async (accounts) => {
 		assert.isAtMost(relDif.toNumber(), errorDelta);
 	}
 
-	async function assertGetBasesTotalValue() {
+	async function assertGetPoolTotalValue() {
 
         const allAddresses = [
         	wethOracle.address, mkrOracle.address, daiOracle.address
         ]
         const allBalances = [100, 2000, 100000]
+		/* 
+		    let wethOracle; let wethOraclePrice = 3000;
+    		let mkrOracle; let mkrOraclePrice = 100;
+    		let daiOracle; let daiOraclePrice = 1;
+		*/
         const allPrices = [wethOraclePrice, mkrOraclePrice, daiOraclePrice]
 
 		for (let quoteIdx = 0; quoteIdx < allAddresses.length; quoteIdx++) {
@@ -397,14 +402,15 @@ contract('MMM Math', async (accounts) => {
 			const basesBalance = allBalances.filter((v, idx) => idx != quoteIdx)
 			const basesPrices = allPrices.filter((v, idx) => idx != quoteIdx)
 			// Expected value
-			const expectedValue = basesBalance.reduce((acc, b, idx) => {
+			let expectedValue = basesBalance.reduce((acc, b, idx) => {
 				return acc + b * basesPrices[idx] / allPrices[quoteIdx]
-			}, 0)
-
+			}, 0);
+			expectedValue += allBalances[quoteIdx];
 			// Actual value
 			const decimals = 0
-			const value = await math.getBasesTotalValue(
+			const value = await math.getPoolTotalValue(
 				quoteAddress,
+				toWei(allBalances[quoteIdx].toString()),
 				decimals,
 				basesAddresses,
 				basesBalance.map(v => toWei(v.toString())),
@@ -756,9 +762,9 @@ contract('MMM Math', async (accounts) => {
 		)
 
 		it(
-			`getBasesTotalValue`,
+			`getPoolTotalValue`,
 			async () => {
-				await assertGetBasesTotalValue()
+				await assertGetPoolTotalValue()
 			}
 		)
 
