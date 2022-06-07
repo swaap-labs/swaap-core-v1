@@ -40,7 +40,6 @@ library Math {
     // wO = tokenWeightOut                                                                       //
     // sF = swapFee                                                                              //
     **********************************************************************************************/
-
     function calcSpotPrice(
         uint256 tokenBalanceIn,
         uint256 tokenWeightIn,
@@ -98,20 +97,20 @@ library Math {
     // sF = swapFee                                                                              //
     **********************************************************************************************/
     function calcInGivenOut(
-        uint tokenBalanceIn,
-        uint tokenWeightIn,
-        uint tokenBalanceOut,
-        uint tokenWeightOut,
-        uint tokenAmountOut,
-        uint swapFee
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountOut,
+        uint256 swapFee
     )
         public pure
-        returns (uint tokenAmountIn)
+        returns (uint256 tokenAmountIn)
     {
-        uint weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
-        uint diff = tokenBalanceOut - tokenAmountOut;
-        uint y = Num.bdiv(tokenBalanceOut, diff);
-        uint foo = Num.bpow(y, weightRatio);
+        uint256 weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
+        uint256 diff = tokenBalanceOut - tokenAmountOut;
+        uint256 y = Num.bdiv(tokenBalanceOut, diff);
+        uint256 foo = Num.bpow(y, weightRatio);
         foo = foo - Const.BONE;
         tokenAmountIn = Const.BONE - swapFee;
         tokenAmountIn = Num.bdiv(Num.bmul(tokenBalanceIn, foo), tokenAmountIn);
@@ -129,15 +128,15 @@ library Math {
     // sF = swapFee                \\                                     /         /            //
     **********************************************************************************************/
     function calcPoolOutGivenSingleIn(
-        uint tokenBalanceIn,
-        uint tokenWeightIn,
-        uint poolSupply,
-        uint totalWeight,
-        uint tokenAmountIn,
-        uint swapFee
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 poolSupply,
+        uint256 totalWeight,
+        uint256 tokenAmountIn,
+        uint256 swapFee
     )
         public pure
-        returns (uint poolAmountOut)
+        returns (uint256 poolAmountOut)
     {
         // Charge the trading fee for the proportion of tokenAi
         //  which is implicitly traded to the other pool tokens.
@@ -175,11 +174,11 @@ library Math {
         Struct.HistoricalPricesParameters memory hpParameters
     )
         public view
-        returns (uint poolAmountOut)
+        returns (uint256 poolAmountOut)
     {
 
         // to get the total adjusted weight, we assume all the tokens Out are in shortage
-        uint totalAdjustedWeight = getTotalWeightMMM(
+        uint256 totalAdjustedWeight = getTotalWeightMMM(
             true,
             joinswapParameters.fallbackSpread,
             tokenGlobalIn,
@@ -234,31 +233,31 @@ library Math {
     // eF = exitFee                        \     \      tW /       /                             //
     **********************************************************************************************/
     function calcSingleOutGivenPoolIn(
-        uint tokenBalanceOut,
-        uint tokenWeightOut,
-        uint poolSupply,
-        uint totalWeight,
-        uint poolAmountIn,
-        uint swapFee
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 poolSupply,
+        uint256 totalWeight,
+        uint256 poolAmountIn,
+        uint256 swapFee
     )
     public pure
-    returns (uint tokenAmountOut)
+    returns (uint256 tokenAmountOut)
     {
         // charge exit fee on the pool token side
         // pAiAfterExitFee = pAi*(1-exitFee)
-        uint poolAmountInAfterExitFee = Num.bmul(poolAmountIn, Const.BONE - Const.EXIT_FEE);
-        uint newPoolSupply = poolSupply - poolAmountInAfterExitFee;
-        uint poolRatio = Num.bdiv(newPoolSupply, poolSupply);
+        uint256 poolAmountInAfterExitFee = Num.bmul(poolAmountIn, Const.BONE - Const.EXIT_FEE);
+        uint256 newPoolSupply = poolSupply - poolAmountInAfterExitFee;
+        uint256 poolRatio = Num.bdiv(newPoolSupply, poolSupply);
 
         // newBalTo = poolRatio^(1/weightTo) * balTo;
-        uint tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(totalWeight, tokenWeightOut));
-        uint newTokenBalanceOut = Num.bmul(tokenOutRatio, tokenBalanceOut);
+        uint256 tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(totalWeight, tokenWeightOut));
+        uint256 newTokenBalanceOut = Num.bmul(tokenOutRatio, tokenBalanceOut);
 
-        uint tokenAmountOutBeforeSwapFee = tokenBalanceOut - newTokenBalanceOut;
+        uint256 tokenAmountOutBeforeSwapFee = tokenBalanceOut - newTokenBalanceOut;
 
         // charge swap fee on the output token side
-        //uint tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
-        uint zaz = Num.bmul(Const.BONE - Num.bdiv(tokenWeightOut, totalWeight), swapFee);
+        //uint256 tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
+        uint256 zaz = Num.bmul(Const.BONE - Num.bdiv(tokenWeightOut, totalWeight), swapFee);
         tokenAmountOut = Num.bmul(tokenAmountOutBeforeSwapFee, Const.BONE - zaz);
         return tokenAmountOut;
     }
@@ -280,10 +279,10 @@ library Math {
         Struct.HistoricalPricesParameters memory hpParameters
     )
     public view
-    returns (uint tokenAmountOut)
+    returns (uint256 tokenAmountOut)
     {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
-        uint totalAdjustedWeight = getTotalWeightMMM(
+        uint256 totalAdjustedWeight = getTotalWeightMMM(
             false,
             exitswapParameters.fallbackSpread,
             tokenGlobalOut,
@@ -381,7 +380,8 @@ library Math {
     * @param tokenWeight The token's weight
     * @param gbmEstimation The GBM's 2 first moments estimation
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
-    * @return the modified tokenWeightOut and its corresponding spread
+    * @return adjustedWeight The adjusted weight based on spread
+    * @return spread The spread
     */
     function getMMMWeight(
         bool shortage,
@@ -391,7 +391,7 @@ library Math {
         Struct.GBMParameters memory gbmParameters
     )
     public pure
-    returns (uint256, uint256)
+    returns (uint256 adjustedWeight, uint256 spread)
     {
 
         if (!gbmEstimation.success) {
@@ -419,7 +419,7 @@ library Math {
             return (tokenWeight, 0);
         }
 
-        uint256 spread = spreadFactor - Const.BONE;
+        spread = spreadFactor - Const.BONE;
 
         if (shortage) {
             return (Num.bmul(tokenWeight, spreadFactor), spread);
@@ -448,7 +448,7 @@ library Math {
         Struct.HistoricalPricesParameters memory hpParameters
     )
     internal view
-    returns (uint totalAdjustedWeight)
+    returns (uint256 totalAdjustedWeight)
     {
 
         bool noMoreDataPointPivot;
@@ -475,7 +475,7 @@ library Math {
 
         // to get the total adjusted weight, we apply a spread factor on every weight except from the pivotToken's one.
         totalAdjustedWeight = pivotToken.info.weight;
-        for (uint i; i < otherTokens.length;) {
+        for (uint256 i; i < otherTokens.length;) {
 
             (uint256[] memory pricesOthers,
             uint256[] memory timestampsOthers,
@@ -526,7 +526,7 @@ library Math {
     * @param swapParameters Amount of token in and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
-    * @return The swap execution conditions
+    * @return swapResult The swap result (amount out, spread and tax base in)
     */
     function calcOutGivenInMMM(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -537,7 +537,7 @@ library Math {
         Struct.HistoricalPricesParameters memory hpParameters
     )
     public view
-    returns (Struct.SwapResult memory)
+    returns (Struct.SwapResult memory swapResult)
     {
 
         // determines the balance of tokenIn at equilibrium (cf definitions)
@@ -628,7 +628,7 @@ library Math {
     * @param tokenAmountIn The amount of tokenIn that will be swaped
     * @param baseFee The base fee
     * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
-    * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
+    * @return tokenAmountOut The tokenAmountOut when the tokenOut is in abundance
     */
     function _calcOutGivenInMMMAbundance(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -667,7 +667,8 @@ library Math {
     * @param relativePrice The price of tokenOut in tokenIn terms
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
     * @param balanceInAtEquilibrium TokenIn balance at equilibrium
-    * @return tokenAmountOut The swap execution conditions
+    * @return tokenAmountOut The total amount of token out
+    * @return taxBaseIn The amount of tokenIn swapped when in shortage of tokenOut
     */
     function _calcOutGivenInMMMMixed(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -718,7 +719,7 @@ library Math {
     * @param swapParameters Amount of token out and swap fee
     * @param gbmParameters The GBM forecast parameters (Z, horizon)
     * @param hpParameters The parameters for historical prices retrieval
-    * @return The swap execution conditions
+    * @return swapResult The swap result (amount in, spread and tax base in)
     */
     function calcInGivenOutMMM(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -821,7 +822,7 @@ library Math {
     * @param tokenAmountOut The amount of tokenOut that will be received
     * @param baseFee The base fee
     * @param fallbackSpread The default spread in case the it couldn't be calculated using oracle prices
-    * @return The rate in tokenOut terms for tokenAmountIn of tokenIn
+    * @return tokenAmountIn The amount of tokenIn needed for the swap
     */
     function _calcInGivenOutMMMAbundance(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -862,7 +863,8 @@ library Math {
     * @param swapParameters The parameters of the swap
     * @param relativePrice The price of tokenOut in tokenIn terms
     * @param adjustedTokenWeightOut The spread-augmented tokenOut's weight
-    * @return tokenAmountIn TokenIn Amount needed for the swap 
+    * @return tokenAmountIn The total amount of tokenIn needed for the swap
+    * @return taxBaseIn The amount of tokenIn swapped when in shortage of tokenOut
     */
     function _calcInGivenOutMMMMixed(
         Struct.TokenGlobal memory tokenGlobalIn,
@@ -969,9 +971,9 @@ library Math {
     public pure
     returns (uint256)
     {
-        uint weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
-        uint y = Num.bdiv(tokenBalanceOut, tokenBalanceOut - tokenAmountOut);
-        uint foo = Num.bmul(tokenBalanceIn, Num.bpow(y, weightRatio));
+        uint256 weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
+        uint256 y = Num.bdiv(tokenBalanceOut, tokenBalanceOut - tokenAmountOut);
+        uint256 foo = Num.bmul(tokenBalanceIn, Num.bpow(y, weightRatio));
 
         uint256 afterSwapTokenInBalance = tokenBalanceIn + tokenAmountIn;
 
@@ -1042,6 +1044,16 @@ library Math {
 
     }
 
+    /**
+    * @notice Computes the adaptive fees when joining a pool
+    * @dev Adaptive fees are the fees related to the price increase of tokenIn with respect to tokenOut
+    * reported by the oracles in the same block as the transaction
+    * @param poolValueInTokenIn The pool value in terms of tokenIn
+    * @param tokenBalanceIn The pool's balance of tokenIn
+    * @param normalizedTokenWeightIn The normalized weight of tokenIn
+    * @param tokenAmountIn The amount of tokenIn to be swapped
+    * @return adaptiveFees The adaptive fees (should be added to the pool's swap fees)
+    */
     function calcPoolOutGivenSingleInAdaptiveFees(
         uint256 poolValueInTokenIn,
         uint256 tokenBalanceIn,
@@ -1069,6 +1081,16 @@ library Math {
         );
     }
 
+    /**
+    * @notice Computes the adaptive fees when exiting a pool
+    * @dev Adaptive fees are the fees related to the price increase of tokenIn with respect to tokenOut
+    * reported by the oracles in the same block as the transaction
+    * @param poolValueInTokenOut The pool value in terms of tokenOut
+    * @param tokenBalanceOut The pool's balance of tokenOut
+    * @param normalizedTokenWeightOut The normalized weight of tokenOut
+    * @param normalizedPoolAmountOut The normalized amount of pool token's to be burned
+    * @return adaptiveFees The adaptive fees (should be added to the pool's swap fees)
+    */
     function calcSingleOutGivenPoolInAdaptiveFees(
         uint256 poolValueInTokenOut,
         uint256 tokenBalanceOut,
@@ -1097,9 +1119,12 @@ library Math {
         );
     }
 
+    /**
+    * @notice Computes the total value of the pool in terms of the quote token
+    */
     function getBasesTotalValue(Struct.TokenGlobal memory quoteToken, Struct.TokenGlobal[] memory baseTokens)
     internal pure returns (uint256 basesTotalValue){
-        for (uint i; i < baseTokens.length;) {
+        for (uint256 i; i < baseTokens.length;) {
             basesTotalValue += Num.bmul(
                 baseTokens[i].info.balance,
                 ChainlinkUtils.getTokenRelativePrice(

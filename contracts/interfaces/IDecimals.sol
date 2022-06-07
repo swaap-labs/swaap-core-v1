@@ -15,5 +15,5 @@
 pragma solidity =0.8.12;
 
 interface IDecimals {
-    function decimals() external returns(uint8);
+    function decimals() external view returns(uint8);
 }

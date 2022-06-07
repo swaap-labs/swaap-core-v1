@@ -105,12 +105,12 @@ contract('Factory', async (accounts) => {
             let coverageParams = await pool.getCoverageParameters();
 
             assert.equal(swapFee, toWei('0.01'));
-            assert.equal(coverageParams[0], toWei('0.2'));
-            assert.equal(coverageParams[1], toWei('3'));
-            assert.equal(coverageParams[2], '5');
-            assert.equal(coverageParams[3], '6000');
-            assert.equal(coverageParams[4], '3');
-            assert.equal(coverageParams[5], toWei('1.03'));
+            assert.equal(coverageParams.dynamicCoverageFeesZ, toWei('0.2'));
+            assert.equal(coverageParams.dynamicCoverageFeesHorizon, toWei('3'));
+            assert.equal(coverageParams.priceStatisticsLBInRound, '5');
+            assert.equal(coverageParams.priceStatisticsLBInSec, '6000');
+            assert.equal(coverageParams.priceStatisticsLBStepInRound, '3');
+            assert.equal(coverageParams.maxPriceUnpegRatio, toWei('1.03'));
         });
 
         it('nonadmin fails to set pool parameters', async () => {

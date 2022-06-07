@@ -161,6 +161,7 @@ contract Pool is PoolToken {
     bool    private _revokedFactoryControl; // if true factory cannot change pool parameters
     address immutable private _factory; // Factory address to push token exitFee to
 
+    // Coverage parameters
     uint8   private _priceStatisticsLookbackInRound;
     uint8   private _priceStatisticsLookbackStepInRound;
     uint64  private _dynamicCoverageFeesZ;
@@ -168,12 +169,12 @@ contract Pool is PoolToken {
     uint256 private _priceStatisticsLookbackInSec;
     uint256 private _maxPriceUnpegRatio;
 
+    // Pool's swap fee
+    uint256 private _swapFee;
+
     uint80  private _totalWeight;
     address private _controller; // has CONTROL role
     address private _pendingController;
-
-    // `setSwapFee` and `finalize` _require CONTROL
-    uint256 private _swapFee;
         
     mapping(address=>Struct.OracleState) private _oraclesInitialState;
 
@@ -181,12 +182,14 @@ contract Pool is PoolToken {
     constructor() {
         _controller = msg.sender;
         _factory = msg.sender;
+        // Pool swap fee
         _swapFee = Const.MIN_FEE;
+        // Coverage parameters
         _priceStatisticsLookbackInRound = Const.BASE_LOOKBACK_IN_ROUND;
-        _priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
+        _priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
         _dynamicCoverageFeesZ = Const.BASE_Z;
         _dynamicCoverageFeesHorizon = Const.BASE_HORIZON;
-        _priceStatisticsLookbackStepInRound = Const.LOOKBACK_STEP_IN_ROUND;
+        _priceStatisticsLookbackInSec = Const.BASE_LOOKBACK_IN_SEC;
         _maxPriceUnpegRatio = Const.BASE_MAX_PRICE_UNPEG_RATIO;
     }
 
@@ -249,6 +252,9 @@ contract Pool is PoolToken {
         return _controller;
     }
 
+    /**
+    * @notice Set swap fee
+    */
     function setSwapFee(uint256 swapFee)
     external
     _logs_
@@ -726,6 +732,9 @@ contract Pool is PoolToken {
         _burn(amount);
     }
 
+    // ==
+    // Coverage Parameters setters
+    
     function setDynamicCoverageFeesZ(uint64 dynamicCoverageFeesZ)
     external
     _logs_
@@ -788,20 +797,33 @@ contract Pool is PoolToken {
         _maxPriceUnpegRatio = maxPriceUnpegRatio;
     }
 
+    /**
+    * @notice Returns coverage parameters of the pool
+    */
     function getCoverageParameters()
     external view
-    returns (uint64, uint256, uint8, uint256, uint8, uint256)
+    returns (
+            uint8   priceStatisticsLBInRound,
+            uint8   priceStatisticsLBStepInRound,
+            uint64  dynamicCoverageFeesZ,
+            uint256 dynamicCoverageFeesHorizon,
+            uint256 priceStatisticsLBInSec,
+            uint256 maxPriceUnpegRatio
+        )
     {
         return (
-            _dynamicCoverageFeesZ,
-            _dynamicCoverageFeesHorizon,
-            _priceStatisticsLookbackInRound,
-            _priceStatisticsLookbackInSec,
-            _priceStatisticsLookbackStepInRound,
-            _maxPriceUnpegRatio
+            priceStatisticsLBInRound     = _priceStatisticsLookbackInRound,
+            priceStatisticsLBStepInRound = _priceStatisticsLookbackStepInRound,
+            dynamicCoverageFeesZ         = _dynamicCoverageFeesZ,
+            dynamicCoverageFeesHorizon   = _dynamicCoverageFeesHorizon,
+            priceStatisticsLBInSec       = _priceStatisticsLookbackInSec,
+            maxPriceUnpegRatio           = _maxPriceUnpegRatio
         );
     }
 
+    /**
+    * @notice Returns the token's price when it was binded to the pool
+    */
     function getTokenOracleInitialPrice(address token)
     external view
     returns (uint256)
@@ -810,6 +832,9 @@ contract Pool is PoolToken {
         return _oraclesInitialState[token].price;
     }
 
+    /**
+    * @notice Returns the oracle of a token
+    */
     function getTokenPriceOracle(address token)
     external view
     returns (address)
@@ -819,7 +844,7 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Add a new token to the pool
+    * @notice Bind a new token to the pool
     * @param token The token's address
     * @param balance The token's balance
     * @param denorm The token's weight
@@ -923,7 +948,8 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Remove a new token from the pool
+    * @notice Unbind a token from the pool
+    * @dev The function will return the token's balance back to the controller
     * @param token The token's address
     */
     function unbindMMM(address token)
@@ -956,12 +982,17 @@ contract Pool is PoolToken {
 
     }
 
+    /**
+    * @notice Returns the spot price without fees of a token pair
+    * @return spotPrice The spot price of tokenOut in terms of tokenIn
+    */
     function getSpotPriceSansFee(address tokenIn, address tokenOut)
     external view
     _viewlock_
     returns (uint256 spotPrice)
     {
         _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
+        // The weights are corrected by the price change of each token
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
         return spotPrice = Math.calcSpotPrice(
@@ -980,6 +1011,8 @@ contract Pool is PoolToken {
     * @param tokenOut The address of the received token
     * @param minAmountOut The minimum accepted amount of tokenOut to be received
     * @param maxPrice The maximum spot price accepted before the swap
+    * @return tokenAmountOut The token amount out received
+    * @return spotPriceAfter The spot price of tokenOut in terms of tokenIn after the swap
     */
     function swapExactAmountInMMM(
         address tokenIn,
@@ -1024,6 +1057,8 @@ contract Pool is PoolToken {
     * @param tokenOut The address of the received token
     * @param minAmountOut The minimum amount of tokenOut that can be received
     * @param maxPrice The maximum spot price accepted before the swap
+    * @return swapResult The swap result (amount out, spread and tax base in)
+    * @return priceResult The price result (spot price before & after the swap, latest oracle price in & out)
     */
     function getAmountOutGivenInMMM(
         address tokenIn,
@@ -1034,7 +1069,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory, Struct.PriceResult memory)
+    returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
         return _getAmountOutGivenInMMM(
             tokenIn,
@@ -1160,6 +1195,8 @@ contract Pool is PoolToken {
     * @param tokenOut The address of the received token
     * @param tokenAmountOut The exact amount of tokenOut to be received
     * @param maxPrice The maximum spot price accepted before the swap
+    * @return tokenAmountIn The amount of tokenIn added to the pool
+    * @return spotPriceAfter The spot price of token out in terms of token in after the swap
     */
     function swapExactAmountOutMMM(
         address tokenIn,
@@ -1205,6 +1242,8 @@ contract Pool is PoolToken {
     * @param tokenOut The address of the received token
     * @param tokenAmountOut The fixed accepted amount of tokenOut to be received
     * @param maxPrice The maximum spot price accepted before the swap
+    * @return swapResult The swap result (amount in, spread and tax base in)
+    * @return priceResult The price result (spot price before & after the swap, latest oracle price in & out)
     */
     function getAmountInGivenOutMMM(
         address tokenIn,
@@ -1215,7 +1254,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
-    returns (Struct.SwapResult memory, Struct.PriceResult memory)
+    returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
         return _getAmountInGivenOutMMM(
             tokenIn,
@@ -1495,7 +1534,7 @@ contract Pool is PoolToken {
         }
     }
 
-    function _tryGetTokenDecimals(address token) internal returns (uint8) {
+    function _tryGetTokenDecimals(address token) internal view returns (uint8) {
         try IDecimals(token).decimals() returns (uint8 d) {
             return d;
         } catch {}

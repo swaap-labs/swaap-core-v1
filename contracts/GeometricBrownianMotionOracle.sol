@@ -202,8 +202,8 @@ library GeometricBrownianMotionOracle {
     * @notice Gets asset-pair historical mean/variance from timestamped data
     * @param values The historical values
     * @param timestamps The corresponding time deltas, in seconds
-    * @return The asset-pair historical return's mean
-    * @return The asset-pair historical return's variance
+    * @return mean The asset-pair historical return's mean
+    * @return variance asset-pair historical return's variance
     */
     function getStatistics(int256[] memory values, uint256[] memory timestamps)
     internal pure returns (int256, uint256) {
@@ -245,13 +245,13 @@ library GeometricBrownianMotionOracle {
     * - data point with same timestamp as previous point are tagged with a 'skip=true'
     * - when we reach the last point of a token, we consider it's value constant going forward with the other token
     * As a result the variance of those returns will be underestimated.
-    * @param startIndexIn The tokenIn historical data's last valid index
+    * @param startIndexIn  The tokenIn historical data's last valid index
     * @param startIndexOut The tokenOut historical data's last valid index
-    * @param timestampsIn The timestamps corresponding to the tokenIn's historical prices
+    * @param timestampsIn  The timestamps corresponding to the tokenIn's historical prices
     * @param timestampsOut The timestamps corresponding to the tokenOut's historical prices
-    * @return The 'skip' tag
-    * @return The updated startIndexIn
-    * @return The updated startIndexOut
+    * @return skip The 'skip' tag
+    * @return startIndexIn The updated startIndexIn
+    * @return startIndexOut The updated startIndexOut
     */
     function getNextSample(
         uint256 startIndexIn, uint256 startIndexOut,
@@ -315,10 +315,10 @@ library GeometricBrownianMotionOracle {
     * b) time window induced by hpParameters.lookbackInSec is no more satisfied
     * @param latestRound The round-to-start-from's data including its ID
     * @param hpParameters The parameters for historical prices retrieval
-    * @return The historical prices
-    * @return The historical timestamps
-    * @return The last valid value index
-    * @return True if the reported historical prices reaches the lookback time limit
+    * @return historicalPrices The historical prices of a token
+    * @return historicalTimestamps The timestamps of the reported prices
+    * @return index The last valid index of the returned arrays
+    * @return noMoreDataPoints True if the reported historical prices reaches the lookback time limit
     */
     function getHistoricalPrices(
         Struct.LatestRound memory latestRound,

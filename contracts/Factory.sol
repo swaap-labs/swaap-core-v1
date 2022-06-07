@@ -39,8 +39,6 @@ contract Factory is IPausedFactory {
         address indexed to
     );
 
-    mapping(address=>bool) private _isPool;
-
     modifier _onlySwaapLabs_() {
         _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         _;
@@ -50,13 +48,22 @@ contract Factory is IPausedFactory {
         _require(_isPool[address(pool)], Err.NOT_POOL);
         _;
     }
+    
+    mapping(address=>bool) private _isPool;
+    
+    address private _pendingSwaaplabs;
+    address private _swaaplabs;
+    bool private _paused;
+    uint64 immutable private _setPauseWindow;
 
-    function isPool(address b)
-    external view returns (bool)
-    {
-        return _isPool[b];
+    constructor() {
+        _swaaplabs = msg.sender;
+        _setPauseWindow = uint64(block.timestamp) + Const.PAUSE_WINDOW;
     }
 
+    /**
+    * @notice Create new pool with default parameters
+    */
     function newPool()
     external
     returns (Pool)
@@ -68,17 +75,19 @@ contract Factory is IPausedFactory {
         pool.setControllerAndTransfer(msg.sender);
         return pool;
     }
-
-    address private _pendingSwaaplabs;
-    address private _swaaplabs;
-    bool private _paused;
-    uint64 immutable private _setPauseWindow;
-
-    constructor() {
-        _swaaplabs = msg.sender;
-        _setPauseWindow = uint64(block.timestamp) + Const.PAUSE_WINDOW;
+    
+    /**
+    * @notice Returns if an address corresponds to a pool created by the factory
+    */
+    function isPool(address b)
+    external view returns (bool)
+    {
+        return _isPool[b];
     }
 
+    /**
+    * @notice Returns swaap labs' address
+    */
     function getSwaapLabs()
         external view
         returns (address)
@@ -114,6 +123,9 @@ contract Factory is IPausedFactory {
         emit LOG_NEW_SWAAPLABS(oldOwner, msg.sender);
     }
    
+    /**
+    * @notice Sends the exit fees accumulated to swaap labs
+    */
     function collect(address erc20)
     external
     _onlySwaapLabs_
@@ -122,6 +134,11 @@ contract Factory is IPausedFactory {
         IERC20(erc20).safeTransfer(msg.sender, collected);
     }
 
+    /**
+    * @notice Pause or unpause the factory's pools
+    * @dev Pause disables most of the pools functionalities (swap, joinPool & joinswap)
+    * and only allows for LPs to withdraw their funds
+    */
     function setPause(bool paused) 
     external 
     _onlySwaapLabs_
@@ -130,6 +147,10 @@ contract Factory is IPausedFactory {
         _paused = paused;
     }
 
+    /**
+    * @notice Reverts pools if the factory is paused
+    * @dev This function is called by the pools whenever a swap or a joinPool is being made
+    */
     function whenNotPaused() external view {
         _require(!_paused, Err.PAUSED_FACTORY);
     }

@@ -253,11 +253,11 @@ contract('Pool', async (accounts) => {
             await pool.setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
             await pool.setPriceStatisticsLookbackInSec(priceStatisticsLookbackInSec);
             const expectedCoverageParameters = await pool.getCoverageParameters();
-            assert.equal(fromWei(expectedCoverageParameters[0]), z);
-            assert.equal(fromWei(expectedCoverageParameters[1]), horizon);
-            assert.equal(expectedCoverageParameters[2], priceStatisticsLookbackInRound);
-            assert.equal(expectedCoverageParameters[3], priceStatisticsLookbackInSec);
-            assert.equal(expectedCoverageParameters[4], priceStatisticsLookbackStepInRound);
+            assert.equal(fromWei(expectedCoverageParameters.dynamicCoverageFeesZ), z);
+            assert.equal(fromWei(expectedCoverageParameters.dynamicCoverageFeesHorizon), horizon);
+            assert.equal(expectedCoverageParameters.priceStatisticsLBInRound, priceStatisticsLookbackInRound);
+            assert.equal(expectedCoverageParameters.priceStatisticsLBInSec, priceStatisticsLookbackInSec);
+            assert.equal(expectedCoverageParameters.priceStatisticsLBStepInRound, priceStatisticsLookbackStepInRound);
         });
 
         it('Admin finalizes pool', async () => {
