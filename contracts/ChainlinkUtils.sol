@@ -94,17 +94,17 @@ library ChainlinkUtils {
     returns (uint256) {
         // we consider tokens price to be > 0
         if (decimals_1 > decimals_2) {
-            return Num.bdiv(
-                Num.bmul(price_2, (10**(decimals_1 - decimals_2))*Const.BONE),
+            return Num.div(
+                Num.mul(price_2, (10**(decimals_1 - decimals_2))*Const.ONE),
                 price_1
             );
         } else if (decimals_1 < decimals_2) {
-            return Num.bdiv(
-                Num.bdiv(price_2, price_1),
-                (10**(decimals_2 - decimals_1))*Const.BONE
+            return Num.div(
+                Num.div(price_2, price_1),
+                (10**(decimals_2 - decimals_1))*Const.ONE
             );
         } else { // decimals_1 == decimals_2
-            return Num.bdiv(price_2, price_1);
+            return Num.div(price_2, price_1);
          }
     }
 

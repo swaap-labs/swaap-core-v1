@@ -19,21 +19,21 @@ import "./Errors.sol";
 
 library Num {
 
-    function btoi(uint256 a)
+    function toi(uint256 a)
         internal pure
         returns (uint256)
     {
-        return a / Const.BONE;
+        return a / Const.ONE;
     }
 
-    function bfloor(uint256 a)
+    function floor(uint256 a)
         internal pure
         returns (uint256)
     {
-        return btoi(a) * Const.BONE;
+        return toi(a) * Const.ONE;
     }
 
-    function bsubSign(uint256 a, uint256 b)
+    function subSign(uint256 a, uint256 b)
         internal pure
         returns (uint256, bool)
     {
@@ -44,90 +44,90 @@ library Num {
         }
     }
 
-    function bmul(uint256 a, uint256 b)
+    function mul(uint256 a, uint256 b)
         internal pure
         returns (uint256)
     {
         uint256 c0 = a * b;
-        uint256 c1 = c0 + (Const.BONE / 2);
-        uint256 c2 = c1 / Const.BONE;
+        uint256 c1 = c0 + (Const.ONE / 2);
+        uint256 c2 = c1 / Const.ONE;
         return c2;
     }
 
-    function bmulTruncated(uint256 a, uint256 b)
+    function mulTruncated(uint256 a, uint256 b)
     internal pure
     returns (uint256)
     {
         uint256 c0 = a * b;
-        return c0 / Const.BONE;
+        return c0 / Const.ONE;
     }
 
-    function bdiv(uint256 a, uint256 b)
+    function div(uint256 a, uint256 b)
         internal pure
         returns (uint256)
     {
-        uint256 c0 = a * Const.BONE;
+        uint256 c0 = a * Const.ONE;
         uint256 c1 = c0 + (b / 2);
         uint256 c2 = c1 / b;
         return c2;
     }
 
-    function bdivTruncated(uint256 a, uint256 b)
+    function divTruncated(uint256 a, uint256 b)
     internal pure
     returns (uint256)
     {
-        uint256 c0 = a * Const.BONE;
+        uint256 c0 = a * Const.ONE;
         return c0 / b;
     }
 
     // DSMath.wpow
-    function bpowi(uint256 a, uint256 n)
+    function powi(uint256 a, uint256 n)
         internal pure
         returns (uint256)
     {
-        uint256 z = n % 2 != 0 ? a : Const.BONE;
+        uint256 z = n % 2 != 0 ? a : Const.ONE;
 
         for (n /= 2; n != 0; n /= 2) {
-            a = bmul(a, a);
+            a = mul(a, a);
 
             if (n % 2 != 0) {
-                z = bmul(z, a);
+                z = mul(z, a);
             }
         }
         return z;
     }
 
     // Compute b^(e.w) by splitting it into (b^e)*(b^0.w).
-    // Use `bpowi` for `b^e` and `bpowK` for k iterations
+    // Use `powi` for `b^e` and `powK` for k iterations
     // of approximation of b^0.w
-    function bpow(uint256 base, uint256 exp)
+    function pow(uint256 base, uint256 exp)
         internal pure
         returns (uint256)
     {
-        _require(base >= Const.MIN_BPOW_BASE, Err.BPOW_BASE_TOO_LOW);
-        _require(base <= Const.MAX_BPOW_BASE, Err.BPOW_BASE_TOO_HIGH);
+        _require(base >= Const.MIN_POW_BASE, Err.POW_BASE_TOO_LOW);
+        _require(base <= Const.MAX_POW_BASE, Err.POW_BASE_TOO_HIGH);
 
-        uint256 whole  = bfloor(exp);
+        uint256 whole  = floor(exp);
         uint256 remain = exp - whole;
 
-        uint256 wholePow = bpowi(base, btoi(whole));
+        uint256 wholePow = powi(base, toi(whole));
 
         if (remain == 0) {
             return wholePow;
         }
 
-        uint256 partialResult = bpowApprox(base, remain, Const.BPOW_PRECISION);
-        return bmul(wholePow, partialResult);
+        uint256 partialResult = powApprox(base, remain, Const.POW_PRECISION);
+        return mul(wholePow, partialResult);
     }
 
-    function bpowApprox(uint256 base, uint256 exp, uint256 precision)
+    function powApprox(uint256 base, uint256 exp, uint256 precision)
         internal pure
         returns (uint256)
     {
         // term 0:
         uint256 a     = exp;
-        (uint256 x, bool xneg)  = bsubSign(base, Const.BONE);
-        uint256 term = Const.BONE;
+        (uint256 x, bool xneg)  = subSign(base, Const.ONE);
+        uint256 term = Const.ONE;
         uint256 sum   = term;
         bool negative = false;
 
@@ -137,10 +137,10 @@ library Num {
         // each iteration, multiply previous term by (a-(k-1)) * x / k
         // continue until term is less than precision
         for (uint256 i = 1; term >= precision; i++) {
-            uint256 bigK = i * Const.BONE;
-            (uint256 c, bool cneg) = bsubSign(a, bigK - Const.BONE);
-            term = bmul(term, bmul(c, x));
-            term = bdiv(term, bigK);
+            uint256 bigK = i * Const.ONE;
+            (uint256 c, bool cneg) = subSign(a, bigK - Const.ONE);
+            term = mul(term, mul(c, x));
+            term = div(term, bigK);
             if (term == 0) break;
 
             if (xneg) negative = !negative;
@@ -156,24 +156,24 @@ library Num {
     }
 
     /**
-    * @notice Computes the division of 2 int256 with BONE precision
-    * @dev Converts inputs to uint256 if needed, and then uses bdiv(uint256, uint256)
-    * @param a The int256 representation of a floating point number with BONE precision
-    * @param b The int256 representation of a floating point number with BONE precision
-    * @return b The division of 2 int256 with BONE precision
+    * @notice Computes the division of 2 int256 with ONE precision
+    * @dev Converts inputs to uint256 if needed, and then uses div(uint256, uint256)
+    * @param a The int256 representation of a floating point number with ONE precision
+    * @param b The int256 representation of a floating point number with ONE precision
+    * @return b The division of 2 int256 with ONE precision
     */
-    function bdivInt256(int256 a, int256 b) internal pure returns (int256) {
+    function divInt256(int256 a, int256 b) internal pure returns (int256) {
         if (a < 0) {
             if (b < 0) {
-                return int256(bdiv(uint256(-a), uint256(-b))); // both negative
+                return int256(div(uint256(-a), uint256(-b))); // both negative
             } else {
-                return -int256(bdiv(uint256(-a), uint256(b))); // a < 0, b >= 0
+                return -int256(div(uint256(-a), uint256(b))); // a < 0, b >= 0
             }
         } else {
             if (b < 0) {
-                return -int256(bdiv(uint256(a), uint256(-b))); // a >= 0, b < 0
+                return -int256(div(uint256(a), uint256(-b))); // a >= 0, b < 0
             } else {
-                return int256(bdiv(uint256(a), uint256(b))); // both positive
+                return int256(div(uint256(a), uint256(b))); // both positive
             }
         }
     }

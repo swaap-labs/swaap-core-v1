@@ -12,16 +12,16 @@ contract('TMath', async () => {
         });
 
         it('bmul throws on overflow', async () => {
-            await truffleAssert.reverts(tmath.calc_bmul(2, MAX), 'revert'); // ERR_MUL_OVERFLOW
+            await truffleAssert.reverts(tmath.calc_mul(2, MAX), 'revert'); // ERR_MUL_OVERFLOW
         });
 
         it('bdiv throws on div by 0', async () => {
-            await truffleAssert.reverts(tmath.calc_bdiv(1, 0), 'revert');
+            await truffleAssert.reverts(tmath.calc_div(1, 0), 'revert');
         });
 
         it('bpow throws on base outside range', async () => {
-            await truffleAssert.reverts(tmath.calc_bpow(0, 2), 'SWAAP#39');
-            await truffleAssert.reverts(tmath.calc_bpow(MAX, 2), 'SWAAP#40');
+            await truffleAssert.reverts(tmath.calc_pow(0, 2), 'SWAAP#39');
+            await truffleAssert.reverts(tmath.calc_pow(MAX, 2), 'SWAAP#40');
         });
     });
 });

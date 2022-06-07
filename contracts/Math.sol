@@ -50,9 +50,9 @@ library Math {
     public pure
     returns (uint256 spotPrice)
     {
-        uint256 numer = Num.bmul(tokenBalanceIn, tokenWeightOut);
-        uint256 denom = Num.bmul(Num.bmul(tokenBalanceOut, tokenWeightIn), Const.BONE - swapFee);
-        return (spotPrice = Num.bdiv(numer, denom));
+        uint256 numer = Num.mul(tokenBalanceIn, tokenWeightOut);
+        uint256 denom = Num.mul(Num.mul(tokenBalanceOut, tokenWeightIn), Const.ONE - swapFee);
+        return (spotPrice = Num.div(numer, denom));
     }
 
     /**********************************************************************************************
@@ -76,13 +76,13 @@ library Math {
     public pure
     returns (uint256 tokenAmountOut)
     {
-        uint256 weightRatio = Num.bdiv(tokenWeightIn, tokenWeightOut);
-        uint256 adjustedIn = Const.BONE - swapFee;
-        adjustedIn = Num.bmul(tokenAmountIn, adjustedIn);
-        uint256 y = Num.bdiv(tokenBalanceIn, tokenBalanceIn + adjustedIn);
-        uint256 foo = Num.bpow(y, weightRatio);
-        uint256 bar = Const.BONE - foo;
-        tokenAmountOut = Num.bmul(tokenBalanceOut, bar);
+        uint256 weightRatio = Num.div(tokenWeightIn, tokenWeightOut);
+        uint256 adjustedIn = Const.ONE - swapFee;
+        adjustedIn = Num.mul(tokenAmountIn, adjustedIn);
+        uint256 y = Num.div(tokenBalanceIn, tokenBalanceIn + adjustedIn);
+        uint256 foo = Num.pow(y, weightRatio);
+        uint256 bar = Const.ONE - foo;
+        tokenAmountOut = Num.mul(tokenBalanceOut, bar);
         return tokenAmountOut;
     }
 
@@ -107,13 +107,13 @@ library Math {
         public pure
         returns (uint256 tokenAmountIn)
     {
-        uint256 weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
+        uint256 weightRatio = Num.div(tokenWeightOut, tokenWeightIn);
         uint256 diff = tokenBalanceOut - tokenAmountOut;
-        uint256 y = Num.bdiv(tokenBalanceOut, diff);
-        uint256 foo = Num.bpow(y, weightRatio);
-        foo = foo - Const.BONE;
-        tokenAmountIn = Const.BONE - swapFee;
-        tokenAmountIn = Num.bdiv(Num.bmul(tokenBalanceIn, foo), tokenAmountIn);
+        uint256 y = Num.div(tokenBalanceOut, diff);
+        uint256 foo = Num.pow(y, weightRatio);
+        foo = foo - Const.ONE;
+        tokenAmountIn = Const.ONE - swapFee;
+        tokenAmountIn = Num.div(Num.mul(tokenBalanceIn, foo), tokenAmountIn);
         return tokenAmountIn;
     }
 
@@ -143,18 +143,18 @@ library Math {
         // That proportion is (1- weightTokenIn)
         // tokenAiAfterFee = tAi * (1 - (1-weightTi) * poolFee);
 
-        uint256 innerNumer = Num.bmul(
+        uint256 innerNumer = Num.mul(
             tokenAmountIn,
-            totalWeight -  Num.bmul(
+            totalWeight -  Num.mul(
                 totalWeight - tokenWeightIn,
                 swapFee
             )
         );
-        uint256 innerDenom = Num.bmul(tokenBalanceIn, totalWeight);
+        uint256 innerDenom = Num.mul(tokenBalanceIn, totalWeight);
 
-        uint256 inner = Num.bpow(Num.bdiv(innerNumer, innerDenom) + Const.BONE, Num.bdiv(tokenWeightIn, totalWeight));
+        uint256 inner = Num.pow(Num.div(innerNumer, innerDenom) + Const.ONE, Num.div(tokenWeightIn, totalWeight));
 
-        return (poolAmountOut = Num.bmul(inner, poolSupply) - poolSupply);
+        return (poolAmountOut = Num.mul(inner, poolSupply) - poolSupply);
     }
 
     /**
@@ -204,7 +204,7 @@ library Math {
             fee += calcPoolOutGivenSingleInAdaptiveFees(
                 poolValueInTokenIn,
                 tokenGlobalIn.info.balance,
-                Num.bdiv(tokenGlobalIn.info.weight, totalAdjustedWeight),
+                Num.div(tokenGlobalIn.info.weight, totalAdjustedWeight),
                 joinswapParameters.amount
             );
         }
@@ -245,20 +245,20 @@ library Math {
     {
         // charge exit fee on the pool token side
         // pAiAfterExitFee = pAi*(1-exitFee)
-        uint256 poolAmountInAfterExitFee = Num.bmul(poolAmountIn, Const.BONE - Const.EXIT_FEE);
+        uint256 poolAmountInAfterExitFee = Num.mul(poolAmountIn, Const.ONE - Const.EXIT_FEE);
         uint256 newPoolSupply = poolSupply - poolAmountInAfterExitFee;
-        uint256 poolRatio = Num.bdiv(newPoolSupply, poolSupply);
+        uint256 poolRatio = Num.div(newPoolSupply, poolSupply);
 
         // newBalTo = poolRatio^(1/weightTo) * balTo;
-        uint256 tokenOutRatio = Num.bpow(poolRatio, Num.bdiv(totalWeight, tokenWeightOut));
-        uint256 newTokenBalanceOut = Num.bmul(tokenOutRatio, tokenBalanceOut);
+        uint256 tokenOutRatio = Num.pow(poolRatio, Num.div(totalWeight, tokenWeightOut));
+        uint256 newTokenBalanceOut = Num.mul(tokenOutRatio, tokenBalanceOut);
 
         uint256 tokenAmountOutBeforeSwapFee = tokenBalanceOut - newTokenBalanceOut;
 
         // charge swap fee on the output token side
         //uint256 tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
-        uint256 zaz = Num.bmul(Const.BONE - Num.bdiv(tokenWeightOut, totalWeight), swapFee);
-        tokenAmountOut = Num.bmul(tokenAmountOutBeforeSwapFee, Const.BONE - zaz);
+        uint256 zaz = Num.mul(Const.ONE - Num.div(tokenWeightOut, totalWeight), swapFee);
+        tokenAmountOut = Num.mul(tokenAmountOutBeforeSwapFee, Const.ONE - zaz);
         return tokenAmountOut;
     }
 
@@ -308,8 +308,8 @@ library Math {
             fee += calcSingleOutGivenPoolInAdaptiveFees(
                 poolValueInTokenOut,
                 tokenGlobalOut.info.balance,
-                Num.bdiv(tokenGlobalOut.info.weight, totalAdjustedWeight),
-                Num.bdiv(exitswapParameters.amount, exitswapParameters.poolSupply)
+                Num.div(tokenGlobalOut.info.weight, totalAdjustedWeight),
+                Num.div(exitswapParameters.amount, exitswapParameters.poolSupply)
             );
         }
 
@@ -351,17 +351,17 @@ library Math {
             return 0;
         }
         if (mean < 0) {
-            mean = -int256(Num.bmul(uint256(-mean), horizon));
+            mean = -int256(Num.mul(uint256(-mean), horizon));
         } else {
-            mean = int256(Num.bmul(uint256(mean), horizon));
+            mean = int256(Num.mul(uint256(mean), horizon));
         }
         uint256 diffusion;
         if (variance > 0) {
-            diffusion = Num.bmul(
+            diffusion = Num.mul(
                 z,
                 LogExpMath.pow(
-                    Num.bmul(variance, 2 * horizon),
-                    Const.BONE / 2
+                    Num.mul(variance, 2 * horizon),
+                    Const.ONE / 2
                 )
             );
         }
@@ -396,9 +396,9 @@ library Math {
 
         if (!gbmEstimation.success) {
             if (shortage) {
-                return (Num.bmul(tokenWeight, Const.BONE + fallbackSpread), fallbackSpread);
+                return (Num.mul(tokenWeight, Const.ONE + fallbackSpread), fallbackSpread);
             } else {
-                return (Num.bdiv(tokenWeight, Const.BONE + fallbackSpread), fallbackSpread);
+                return (Num.div(tokenWeight, Const.ONE + fallbackSpread), fallbackSpread);
             }
         }
 
@@ -415,16 +415,16 @@ library Math {
         }
         uint256 spreadFactor = uint256(LogExpMath.exp(logSpreadFactor));
         // if spread < 1 --> rounding error --> set to 1
-        if (spreadFactor <= Const.BONE) {
+        if (spreadFactor <= Const.ONE) {
             return (tokenWeight, 0);
         }
 
-        spread = spreadFactor - Const.BONE;
+        spread = spreadFactor - Const.ONE;
 
         if (shortage) {
-            return (Num.bmul(tokenWeight, spreadFactor), spread);
+            return (Num.mul(tokenWeight, spreadFactor), spread);
         } else {
-            return (Num.bdiv(tokenWeight, spreadFactor), spread);
+            return (Num.div(tokenWeight, spreadFactor), spread);
         }
     }
 
@@ -642,7 +642,7 @@ library Math {
             tokenGlobalIn,
             tokenAmountIn,
             tokenGlobalOut,
-            Num.bdiv(tokenAmountIn, relativePrice),
+            Num.div(tokenAmountIn, relativePrice),
             relativePrice,
             baseFee,
             fallbackSpread
@@ -739,7 +739,7 @@ library Math {
             tokenGlobalOut.info.weight,
             tokenGlobalIn.info.balance,
             tokenGlobalIn.info.weight,
-            Num.bdiv(Const.BONE, relativePrice)
+            Num.div(Const.ONE, relativePrice)
         );
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
@@ -834,7 +834,7 @@ library Math {
     ) public view returns (uint256) {
         uint256 adaptiveFees = getAdaptiveFees(
             tokenGlobalIn,
-            Num.bmul(tokenAmountOut, relativePrice),
+            Num.mul(tokenAmountOut, relativePrice),
             tokenGlobalOut,
             tokenAmountOut,
             relativePrice,
@@ -930,18 +930,18 @@ library Math {
         {
             uint256 weightSum = tokenWeight1 + tokenWeight2;
             // relativePrice * weight1/weight2
-            uint256 foo = Num.bmul(relativePrice, Num.bdiv(tokenWeight1, tokenWeight2));
+            uint256 foo = Num.mul(relativePrice, Num.div(tokenWeight1, tokenWeight2));
             // relativePrice * balance2 * (weight1/weight2)
-            foo = Num.bmul(foo, tokenBalance2);
+            foo = Num.mul(foo, tokenBalance2);
             
-            balance1AtEquilibrium = Num.bmul(
+            balance1AtEquilibrium = Num.mul(
                 LogExpMath.pow(
                     foo,
-                    Num.bdiv(tokenWeight2, weightSum)
+                    Num.div(tokenWeight2, weightSum)
                 ),
                 LogExpMath.pow(
                     tokenBalance1,
-                    Num.bdiv(tokenWeight1, weightSum)
+                    Num.div(tokenWeight1, weightSum)
                 )
             );
         }
@@ -971,9 +971,9 @@ library Math {
     public pure
     returns (uint256)
     {
-        uint256 weightRatio = Num.bdiv(tokenWeightOut, tokenWeightIn);
-        uint256 y = Num.bdiv(tokenBalanceOut, tokenBalanceOut - tokenAmountOut);
-        uint256 foo = Num.bmul(tokenBalanceIn, Num.bpow(y, weightRatio));
+        uint256 weightRatio = Num.div(tokenWeightOut, tokenWeightIn);
+        uint256 y = Num.div(tokenBalanceOut, tokenBalanceOut - tokenAmountOut);
+        uint256 foo = Num.mul(tokenBalanceIn, Num.pow(y, weightRatio));
 
         uint256 afterSwapTokenInBalance = tokenBalanceIn + tokenAmountIn;
 
@@ -982,7 +982,7 @@ library Math {
             return 0;
         }
         return (
-            Num.bdiv(
+            Num.div(
                 afterSwapTokenInBalance - foo,
                 tokenAmountIn
             )
@@ -1060,23 +1060,23 @@ library Math {
         uint256 normalizedTokenWeightIn,
         uint256 tokenAmountIn
     ) internal pure returns (uint256) {
-        uint256 foo = Num.bmul(
-            Num.bdiv(tokenBalanceIn, tokenAmountIn),
-            Num.bpow(
-                Num.bdiv(
+        uint256 foo = Num.mul(
+            Num.div(tokenBalanceIn, tokenAmountIn),
+            Num.pow(
+                Num.div(
                     poolValueInTokenIn + tokenAmountIn,
                     poolValueInTokenIn
                 ),
-                Num.bdiv(Const.BONE, normalizedTokenWeightIn)
-            ) - Const.BONE
+                Num.div(Const.ONE, normalizedTokenWeightIn)
+            ) - Const.ONE
         );
-        if (foo >= Const.BONE) {
+        if (foo >= Const.ONE) {
             return 0;
         }
         return (
-            Num.bdiv(
-                Const.BONE - foo,
-                Const.BONE - normalizedTokenWeightIn
+            Num.div(
+                Const.ONE - foo,
+                Const.ONE - normalizedTokenWeightIn
             )
         );
     }
@@ -1097,24 +1097,24 @@ library Math {
         uint256 normalizedTokenWeightOut,
         uint256 normalizedPoolAmountOut
     ) internal pure returns (uint256) {
-        uint256 foo = Num.bdiv(
-            Num.bmul(poolValueInTokenOut, normalizedPoolAmountOut),
-            Num.bmul(
+        uint256 foo = Num.div(
+            Num.mul(poolValueInTokenOut, normalizedPoolAmountOut),
+            Num.mul(
                 tokenBalanceOut,
-                    Const.BONE -
-                    Num.bpow(
-                        Const.BONE - normalizedPoolAmountOut,
-                        Num.bdiv(Const.BONE, normalizedTokenWeightOut)
+                    Const.ONE -
+                    Num.pow(
+                        Const.ONE - normalizedPoolAmountOut,
+                        Num.div(Const.ONE, normalizedTokenWeightOut)
                     )
             )
         );
-        if (foo >= Const.BONE) {
+        if (foo >= Const.ONE) {
             return 0;
         }
         return (
-        Num.bdiv(
-            Const.BONE - foo,
-            Const.BONE - normalizedTokenWeightOut
+        Num.div(
+            Const.ONE - foo,
+            Const.ONE - normalizedTokenWeightOut
         )
         );
     }
@@ -1126,7 +1126,7 @@ library Math {
     internal pure returns (uint256 basesTotalValue){
         basesTotalValue = quoteToken.info.balance;
         for (uint256 i; i < baseTokens.length;) {
-            basesTotalValue += Num.bmul(
+            basesTotalValue += Num.mul(
                 baseTokens[i].info.balance,
                 ChainlinkUtils.getTokenRelativePrice(
                     quoteToken.latestRound.price,

@@ -117,8 +117,8 @@ library Err {
     uint256 internal constant PAUSED_FACTORY = 36;
     uint256 internal constant X_OUT_OF_BOUNDS = 37;
     uint256 internal constant Y_OUT_OF_BOUNDS = 38;
-    uint256 internal constant BPOW_BASE_TOO_LOW = 39;
-    uint256 internal constant BPOW_BASE_TOO_HIGH = 40;
+    uint256 internal constant POW_BASE_TOO_LOW = 39;
+    uint256 internal constant POW_BASE_TOO_HIGH = 40;
     uint256 internal constant PRODUCT_OUT_OF_BOUNDS = 41;
     uint256 internal constant INVALID_EXPONENT = 42;
     uint256 internal constant OUT_OF_BOUNDS = 43;    

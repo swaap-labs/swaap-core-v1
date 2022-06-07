@@ -15,34 +15,34 @@
 pragma solidity =0.8.12;
 
 library Const {
-    uint256 public constant BONE                       = 10**18;
+    uint256 public constant ONE                       = 10**18;
 
     uint256 public constant MIN_BOUND_TOKENS           = 2;
     uint256 public constant MAX_BOUND_TOKENS           = 8;
 
-    uint256 public constant MIN_FEE                    = BONE / 10**6;
-    uint256 public constant BASE_FEE                   = 25 * BONE / 10**5;
-    uint256 public constant MAX_FEE                    = BONE / 10;
+    uint256 public constant MIN_FEE                    = ONE / 10**6;
+    uint256 public constant BASE_FEE                   = 25 * ONE / 10**5;
+    uint256 public constant MAX_FEE                    = ONE / 10;
     uint256 public constant EXIT_FEE                   = 0;
 
-    uint80 public constant MIN_WEIGHT                  = uint80(BONE);
-    uint80 public constant MAX_WEIGHT                  = uint80(BONE * 50);
-    uint80 public constant MAX_TOTAL_WEIGHT            = uint80(BONE * 50);
-    uint256 public constant MIN_BALANCE                = BONE / 10**12;
+    uint80 public constant MIN_WEIGHT                  = uint80(ONE);
+    uint80 public constant MAX_WEIGHT                  = uint80(ONE * 50);
+    uint80 public constant MAX_TOTAL_WEIGHT            = uint80(ONE * 50);
+    uint256 public constant MIN_BALANCE                = ONE / 10**12;
 
-    uint256 public constant INIT_POOL_SUPPLY           = BONE * 100;
+    uint256 public constant INIT_POOL_SUPPLY           = ONE * 100;
 
-    uint256 public constant MIN_BPOW_BASE              = 1 wei;
-    uint256 public constant MAX_BPOW_BASE              = (2 * BONE) - 1 wei;
-    uint256 public constant BPOW_PRECISION             = BONE / 10**10;
+    uint256 public constant MIN_POW_BASE              = 1 wei;
+    uint256 public constant MAX_POW_BASE              = (2 * ONE) - 1 wei;
+    uint256 public constant POW_PRECISION             = ONE / 10**10;
 
-    uint public constant MAX_IN_RATIO                  = BONE / 2;
-    uint public constant MAX_OUT_RATIO                 = (BONE / 3) + 1 wei;
+    uint public constant MAX_IN_RATIO                  = ONE / 2;
+    uint public constant MAX_OUT_RATIO                 = (ONE / 3) + 1 wei;
 
-    uint64 public constant BASE_Z                      = uint64(6 * BONE / 10);
+    uint64 public constant BASE_Z                      = uint64(6 * ONE / 10);
 
-    uint256 public constant MIN_HORIZON                = 1 * BONE;
-    uint256 public constant BASE_HORIZON               = 300 * BONE;
+    uint256 public constant MIN_HORIZON                = 1 * ONE;
+    uint256 public constant BASE_HORIZON               = 300 * ONE;
 
     uint8 public constant MIN_LOOKBACK_IN_ROUND        = 1;
     uint8 public constant BASE_LOOKBACK_IN_ROUND       = 4;
@@ -51,13 +51,13 @@ library Const {
     uint256 public constant MIN_LOOKBACK_IN_SEC        = 1;
     uint256 public constant BASE_LOOKBACK_IN_SEC       = 3600;
 
-    uint256 public constant MIN_MAX_PRICE_UNPEG_RATIO  = BONE + BONE / 800;
-    uint256 public constant BASE_MAX_PRICE_UNPEG_RATIO = BONE + BONE / 50;
-    uint256 public constant MAX_MAX_PRICE_UNPEG_RATIO  = BONE + BONE / 10;
+    uint256 public constant MIN_MAX_PRICE_UNPEG_RATIO  = ONE + ONE / 800;
+    uint256 public constant BASE_MAX_PRICE_UNPEG_RATIO = ONE + ONE / 50;
+    uint256 public constant MAX_MAX_PRICE_UNPEG_RATIO  = ONE + ONE / 10;
 
     uint64 public constant PAUSE_WINDOW                = 86400 * 60;
 
-    uint256 public constant FALLBACK_SPREAD            = 3 * BONE / 1000;
+    uint256 public constant FALLBACK_SPREAD            = 3 * ONE / 1000;
 
     uint256 public constant ORACLE_TIMEOUT             = 2 * 60;
 

@@ -174,8 +174,8 @@ library GeometricBrownianMotionOracle {
             }
             values = new int256[](count);
             timestamps = new uint256[](count);
-            values[0] = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
-            timestamps[0] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.BONE;
+            values[0] = int256(Num.div(pricesOut[startIndexOut], pricesIn[startIndexIn]));
+            timestamps[0] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.ONE;
         }
 
         // compute actual returns
@@ -187,8 +187,8 @@ library GeometricBrownianMotionOracle {
                     startIndexIn, startIndexOut, timestampsIn, timestampsOut
                 );
                 if (!skip) {
-                    values[count] = int256(Num.bdiv(pricesOut[startIndexOut], pricesIn[startIndexIn]));
-                    timestamps[count] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.BONE;
+                    values[count] = int256(Num.div(pricesOut[startIndexOut], pricesIn[startIndexIn]));
+                    timestamps[count] = Num.max(timestampsOut[startIndexOut], timestampsIn[startIndexIn]) * Const.ONE;
                     count += 1;
                 }
             }
@@ -217,24 +217,24 @@ library GeometricBrownianMotionOracle {
         uint256 tWithPrecision = timestamps[n] - timestamps[0];
 
         // mean
-        int256 mean = Num.bdivInt256(LogExpMath.ln(Num.bdivInt256(values[n], values[0])), int256(tWithPrecision));
+        int256 mean = Num.divInt256(LogExpMath.ln(Num.divInt256(values[n], values[0])), int256(tWithPrecision));
         uint256 meanSquare;
         if (mean < 0) {
-            meanSquare = Num.bmul(uint256(-mean), uint256(-mean));
+            meanSquare = Num.mul(uint256(-mean), uint256(-mean));
         } else {
-            meanSquare = Num.bmul(uint256(mean), uint256(mean));
+            meanSquare = Num.mul(uint256(mean), uint256(mean));
         }
         // variance
-        int256 variance = -int256(Num.bmul(meanSquare, tWithPrecision));
+        int256 variance = -int256(Num.mul(meanSquare, tWithPrecision));
         for (uint256 i = 1; i <= n; i++) {
-            int256 d = LogExpMath.ln(Num.bdivInt256(values[i], values[i - 1]));
+            int256 d = LogExpMath.ln(Num.divInt256(values[i], values[i - 1]));
             if (d < 0) {
                 d = -d;
             }
             uint256 dAbs = uint256(d);
-            variance += int256(Num.bdiv(Num.bmul(dAbs, dAbs), timestamps[i] - timestamps[i - 1]));
+            variance += int256(Num.div(Num.mul(dAbs, dAbs), timestamps[i] - timestamps[i - 1]));
         }
-        variance = Num.bdivInt256(variance, int256(n * Const.BONE));
+        variance = Num.divInt256(variance, int256(n * Const.ONE));
 
         return (mean, Num.positivePart(variance));
     }

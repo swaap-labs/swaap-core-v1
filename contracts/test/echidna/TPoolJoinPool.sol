@@ -21,11 +21,11 @@ contract TPoolJoinPool {
         require(_records_t_balance <= 10 ether);
         require(_records_t_balance >= 10**6);
 
-        uint ratio = Num.bdiv(poolAmountOut, poolTotal);
+        uint ratio = Num.div(poolAmountOut, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         uint bal = _records_t_balance;
-        uint tokenAmountIn = Num.bmul(ratio, bal);
+        uint tokenAmountIn = Num.mul(ratio, bal);
 
         require(poolAmountOut > 0);
         require(tokenAmountIn == 0);

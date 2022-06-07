@@ -13,11 +13,11 @@ contract TPoolJoinExitNoFee {
     function joinPool(uint poolAmountOut, uint poolTotal, uint _records_t_balance)
         internal pure returns(uint)
     {
-        uint ratio = Num.bdiv(poolAmountOut, poolTotal);
+        uint ratio = Num.div(poolAmountOut, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         uint bal = _records_t_balance;
-        uint tokenAmountIn = Num.bmul(ratio, bal);
+        uint tokenAmountIn = Num.mul(ratio, bal);
 
         return tokenAmountIn;
     }
@@ -26,11 +26,11 @@ contract TPoolJoinExitNoFee {
     function exitPoolNoFee(uint poolAmountIn, uint poolTotal, uint _records_t_balance)
         internal pure returns(uint)
     {
-        uint ratio = Num.bdiv(poolAmountIn, poolTotal);
+        uint ratio = Num.div(poolAmountIn, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         uint bal = _records_t_balance;
-        uint tokenAmountOut = Num.bmul(ratio, bal);
+        uint tokenAmountOut = Num.mul(ratio, bal);
 
         return tokenAmountOut;
     }

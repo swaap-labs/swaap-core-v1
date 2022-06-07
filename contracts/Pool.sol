@@ -405,12 +405,12 @@ contract Pool is PoolToken {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(_records[tokenIn].bound, Err.NOT_BOUND);
 
-        uint256 ratio = Num.bdivTruncated(tokenAmountIn, _records[tokenIn].balance);
+        uint256 ratio = Num.divTruncated(tokenAmountIn, _records[tokenIn].balance);
         
         uint256 poolTotal = _totalSupply;
-        poolAmountOut = Num.bmul(ratio, poolTotal);
+        poolAmountOut = Num.mul(ratio, poolTotal);
         // ratio is re-evaluated to avoid any calculation discrepancies with joinPool
-        ratio = Num.bdiv(poolAmountOut, poolTotal);
+        ratio = Num.div(poolAmountOut, poolTotal);
         _require(ratio != 0, Err.MATH_APPROX);
 
         uint256 tokensLength = _tokens.length;
@@ -419,7 +419,7 @@ contract Pool is PoolToken {
         for (uint256 i; i < tokensLength;) {
             address t     = _tokens[i];
             uint256 bal   = _records[t].balance;
-            tokenAmountIn = Num.bmul(ratio, bal);
+            tokenAmountIn = Num.mul(ratio, bal);
             _require(tokenAmountIn != 0, Err.MATH_APPROX);
             tokenAmountsIn[i] = tokenAmountIn;
             unchecked{++i;}
@@ -445,13 +445,13 @@ contract Pool is PoolToken {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(maxAmountsIn.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
-        uint256 ratio = Num.bdiv(poolAmountOut, _totalSupply);
+        uint256 ratio = Num.div(poolAmountOut, _totalSupply);
         _require(ratio != 0, Err.MATH_APPROX);
 
         for (uint256 i; i < maxAmountsIn.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountIn = Num.bmul(ratio, bal);
+            uint256 tokenAmountIn = Num.mul(ratio, bal);
             _require(tokenAmountIn != 0, Err.MATH_APPROX);
             _require(tokenAmountIn <= maxAmountsIn[i], Err.LIMIT_IN);
             _records[t].balance = bal + tokenAmountIn;
@@ -477,9 +477,9 @@ contract Pool is PoolToken {
 
         _require(_finalized, Err.NOT_FINALIZED);
 
-        uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
+        uint256 exitFee = Num.mul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
-        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, _totalSupply);
+        uint256 ratio = Num.divTruncated(pAiAfterExitFee, _totalSupply);
 
         uint256 tokensLength = _tokens.length;
         tokenAmountsOut = new uint256[](tokensLength);
@@ -487,7 +487,7 @@ contract Pool is PoolToken {
         for (uint256 i; i < tokensLength;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountOut = Num.bmulTruncated(ratio, bal);
+            uint256 tokenAmountOut = Num.mulTruncated(ratio, bal);
             _require(tokenAmountOut != 0, Err.MATH_APPROX);
             tokenAmountsOut[i] = tokenAmountOut;
             unchecked{++i;}
@@ -510,9 +510,9 @@ contract Pool is PoolToken {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(minAmountsOut.length == _tokens.length, Err.INPUT_LENGTH_MISMATCH);
 
-        uint256 exitFee = Num.bmul(poolAmountIn, Const.EXIT_FEE);
+        uint256 exitFee = Num.mul(poolAmountIn, Const.EXIT_FEE);
         uint256 pAiAfterExitFee = poolAmountIn - exitFee;
-        uint256 ratio = Num.bdivTruncated(pAiAfterExitFee, _totalSupply);
+        uint256 ratio = Num.divTruncated(pAiAfterExitFee, _totalSupply);
         _require(ratio != 0, Err.MATH_APPROX);
 
         _pullPoolShare(msg.sender, poolAmountIn);
@@ -522,7 +522,7 @@ contract Pool is PoolToken {
         for (uint256 i; i < minAmountsOut.length;) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountOut = Num.bmulTruncated(ratio, bal);
+            uint256 tokenAmountOut = Num.mulTruncated(ratio, bal);
             _require(tokenAmountOut != 0, Err.MATH_APPROX);
             _require(tokenAmountOut >= minAmountsOut[i], Err.LIMIT_OUT);
 
@@ -557,7 +557,7 @@ contract Pool is PoolToken {
     {
         _require(_finalized, Err.NOT_FINALIZED);
         _require(_records[tokenIn].bound, Err.NOT_BOUND);
-        _require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
+        _require(tokenAmountIn <= Num.mul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
 
         Struct.TokenGlobal memory tokenInInfo;
         Struct.TokenGlobal[] memory remainingTokensInfo;
@@ -670,7 +670,7 @@ contract Pool is PoolToken {
                 gbmParameters,
                 hpParameters
             );
-            _require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
+            _require(tokenAmountOut <= Num.mul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
         }
 
         _require(tokenAmountOut >= minAmountOut, Err.LIMIT_OUT);
@@ -679,7 +679,7 @@ contract Pool is PoolToken {
         _checkExitSwapPrices(tokenOutInfo, remainingTokensInfo);
         _records[tokenOut].balance = tokenOutInfo.info.balance;
 
-        uint exitFee =  Num.bmul(poolAmountIn, Const.EXIT_FEE);
+        uint exitFee =  Num.mul(poolAmountIn, Const.EXIT_FEE);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
@@ -917,7 +917,7 @@ contract Pool is PoolToken {
         } else if (balance < oldBalance) {
             // In this case liquidity is being withdrawn, so charge EXIT_FEE
             uint256 tokenBalanceWithdrawn = oldBalance - balance;
-            uint256 tokenExitFee = Num.bmul(tokenBalanceWithdrawn, Const.EXIT_FEE);
+            uint256 tokenExitFee = Num.mul(tokenBalanceWithdrawn, Const.EXIT_FEE);
             _pushUnderlying(token, msg.sender, tokenBalanceWithdrawn - tokenExitFee);
             _pushUnderlying(token, _factory, tokenExitFee);
         }
@@ -963,7 +963,7 @@ contract Pool is PoolToken {
         _require(!_finalized, Err.IS_FINALIZED);
 
         uint256 tokenBalance = _records[token].balance;
-        uint256 tokenExitFee = Num.bmul(tokenBalance, Const.EXIT_FEE);
+        uint256 tokenExitFee = Num.mul(tokenBalance, Const.EXIT_FEE);
 
         _totalWeight = _totalWeight - _records[token].denorm;
 
@@ -1094,7 +1094,7 @@ contract Pool is PoolToken {
         _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
         _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
 
-        _require(tokenAmountIn <= Num.bmul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
+        _require(tokenAmountIn <= Num.mul(_records[tokenIn].balance, Const.MAX_IN_RATIO), Err.MAX_IN_RATIO);
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -1126,13 +1126,13 @@ contract Pool is PoolToken {
         );
 
         _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
-        uint256 maxAmount = Num.bdivTruncated(tokenAmountIn, priceResult.spotPriceBefore);
+        uint256 maxAmount = Num.divTruncated(tokenAmountIn, priceResult.spotPriceBefore);
         if (swapResult.amount > maxAmount) {
             swapResult.amount = maxAmount;
         }
         _require(
-            Num.bdiv(
-                Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
+            Num.div(
+                Num.mul(priceResult.spotPriceAfter, Const.ONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(
                     tokenGlobalIn.latestRound.price,
                     tokenGlobalIn.info.decimals,
@@ -1279,7 +1279,7 @@ contract Pool is PoolToken {
         _require(_records[tokenIn].bound && _records[tokenOut].bound, Err.NOT_BOUND);
         _require(_publicSwap, Err.SWAP_NOT_PUBLIC);
 
-        _require(tokenAmountOut <= Num.bmul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
+        _require(tokenAmountOut <= Num.mul(_records[tokenOut].balance, Const.MAX_OUT_RATIO), Err.MAX_OUT_RATIO);
 
         Struct.TokenGlobal memory tokenGlobalIn = getTokenLatestInfo(tokenIn);
         Struct.TokenGlobal memory tokenGlobalOut = getTokenLatestInfo(tokenOut);
@@ -1312,13 +1312,13 @@ contract Pool is PoolToken {
         );
 
         _require(priceResult.spotPriceAfter >= priceResult.spotPriceBefore, Err.MATH_APPROX);
-        uint256 minAmount = Num.bmul(priceResult.spotPriceBefore, tokenAmountOut) + 1;
+        uint256 minAmount = Num.mul(priceResult.spotPriceBefore, tokenAmountOut) + 1;
         if (swapResult.amount < minAmount) {
             swapResult.amount = minAmount;
         }
         _require(
-            Num.bdiv(
-                Num.bmul(priceResult.spotPriceAfter, Const.BONE - _swapFee),
+            Num.div(
+                Num.mul(priceResult.spotPriceAfter, Const.ONE - _swapFee),
                 ChainlinkUtils.getTokenRelativePrice(
                     tokenGlobalIn.latestRound.price,
                     tokenGlobalIn.info.decimals,
@@ -1382,7 +1382,7 @@ contract Pool is PoolToken {
     */
     function _getTokenPerformance(uint256 initialPrice, uint256 latestPrice)
     internal pure returns (uint256) {
-        return Num.bdiv(
+        return Num.div(
             latestPrice,
             initialPrice
         );
@@ -1407,7 +1407,7 @@ contract Pool is PoolToken {
             record.decimals,
             record.balance,
             // we adjust the token's target weight (in value) based on its appreciation since the inception of the pool.
-            Num.bmul(
+            Num.mul(
                 record.denorm,
                 _getTokenPerformance(
                     initialOracleState.price,
@@ -1478,7 +1478,7 @@ contract Pool is PoolToken {
             );
 
             _require(
-                Num.bdiv(
+                Num.div(
                     spotPriceAfter,
                     ChainlinkUtils.getTokenRelativePrice(
                         tokenInInfo.latestRound.price,
@@ -1519,7 +1519,7 @@ contract Pool is PoolToken {
             );
 
             _require(
-                Num.bdiv(
+                Num.div(
                     spotPriceAfter,
                     ChainlinkUtils.getTokenRelativePrice(
                         remainingTokensInfo[i].latestRound.price,

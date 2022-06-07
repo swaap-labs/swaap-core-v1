@@ -119,7 +119,7 @@ library TMathMMM {
     public pure
     returns (uint256)
     {
-        return tokenBalanceOut - Num.bdiv(tokenAmountIn, relativePrice);
+        return tokenBalanceOut - Num.div(tokenAmountIn, relativePrice);
     }
 
     function getPoolTotalValue(
