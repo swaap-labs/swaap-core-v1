@@ -47,7 +47,7 @@ library Math {
         uint256 tokenWeightOut,
         uint256 swapFee
     )
-    public pure
+    external pure
     returns (uint256 spotPrice)
     {
         uint256 numer = Num.mul(tokenBalanceIn, tokenWeightOut);
@@ -73,7 +73,7 @@ library Math {
         uint256 tokenAmountIn,
         uint256 swapFee
     )
-    public pure
+    internal pure
     returns (uint256 tokenAmountOut)
     {
         uint256 weightRatio = Num.div(tokenWeightIn, tokenWeightOut);
@@ -104,7 +104,7 @@ library Math {
         uint256 tokenAmountOut,
         uint256 swapFee
     )
-        public pure
+        internal pure
         returns (uint256 tokenAmountIn)
     {
         uint256 weightRatio = Num.div(tokenWeightOut, tokenWeightIn);
@@ -135,7 +135,7 @@ library Math {
         uint256 tokenAmountIn,
         uint256 swapFee
     )
-        public pure
+        internal pure
         returns (uint256 poolAmountOut)
     {
         // Charge the trading fee for the proportion of tokenAi
@@ -173,7 +173,7 @@ library Math {
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
-        public view
+        external view
         returns (uint256 poolAmountOut)
     {
 
@@ -240,7 +240,7 @@ library Math {
         uint256 poolAmountIn,
         uint256 swapFee
     )
-    public pure
+    internal pure
     returns (uint256 tokenAmountOut)
     {
         // charge exit fee on the pool token side
@@ -278,7 +278,7 @@ library Math {
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
-    public view
+    external view
     returns (uint256 tokenAmountOut)
     {
         // to get the total adjusted weight, we assume all the remaining tokens are in shortage
@@ -344,7 +344,7 @@ library Math {
         int256 mean, uint256 variance,
         uint256 horizon, uint256 z
     )
-    public pure
+    internal pure
     returns (int256 x)
     {
         if (mean == 0 && variance == 0) {
@@ -390,7 +390,7 @@ library Math {
         Struct.GBMEstimation memory gbmEstimation,
         Struct.GBMParameters memory gbmParameters
     )
-    public pure
+    internal pure
     returns (uint256 adjustedWeight, uint256 spread)
     {
 
@@ -536,7 +536,7 @@ library Math {
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
-    public view
+    external view
     returns (Struct.SwapResult memory swapResult)
     {
 
@@ -637,7 +637,7 @@ library Math {
         uint256 tokenAmountIn,
         uint256 baseFee,
         uint256 fallbackSpread
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 adaptiveFees = getAdaptiveFees(
             tokenGlobalIn,
             tokenAmountIn,
@@ -729,7 +729,7 @@ library Math {
         Struct.GBMParameters memory gbmParameters,
         Struct.HistoricalPricesParameters memory hpParameters
     )
-    public view
+    external view
     returns (Struct.SwapResult memory)
     {
 
@@ -831,7 +831,7 @@ library Math {
         uint256 tokenAmountOut,
         uint256 baseFee,
         uint256 fallbackSpread
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 adaptiveFees = getAdaptiveFees(
             tokenGlobalIn,
             Num.mul(tokenAmountOut, relativePrice),
@@ -924,7 +924,7 @@ library Math {
         uint256 tokenWeight2,
         uint256 relativePrice
     )
-    public pure
+    internal pure
     returns (uint256 balance1AtEquilibrium)
     {
         {
@@ -968,7 +968,7 @@ library Math {
         uint256 tokenAmountOut,
         uint256 tokenWeightOut
     )
-    public pure
+    internal pure
     returns (uint256)
     {
         uint256 weightRatio = Num.div(tokenWeightOut, tokenWeightIn);
