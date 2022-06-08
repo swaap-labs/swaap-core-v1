@@ -23,7 +23,7 @@ import "./structs/Struct.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/IPausedFactory.sol";
+import "./interfaces/IFactory.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/IDecimals.sol";
 
@@ -117,7 +117,7 @@ contract Pool is PoolToken, IPool {
     }
 
     function _whenNotPaused() private view {
-        IPausedFactory(_factory).whenNotPaused();
+        IFactory(_factory).whenNotPaused();
     }
 
     modifier _whenNotPaused_() {

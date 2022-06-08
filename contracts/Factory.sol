@@ -18,10 +18,10 @@ pragma solidity =0.8.12;
 
 import "./Pool.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IPausedFactory.sol";
+import "./interfaces/IFactory.sol";
 import "./Errors.sol";
 
-contract Factory is IPausedFactory {
+contract Factory is IFactory {
 
     using SafeERC20 for IERC20; 
 
