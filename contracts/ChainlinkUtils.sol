@@ -40,7 +40,9 @@ library ChainlinkUtils {
     }
 
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
-        (uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,) = IAggregatorV3(oracle).latestRoundData();
+        (
+            uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,
+        ) = IAggregatorV3(oracle).latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
         _require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, Err.EXCEEDED_ORACLE_TIMEOUT);
         _require(latestPrice > 0, Err.NON_POSITIVE_PRICE);

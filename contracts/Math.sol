@@ -23,7 +23,6 @@ import "./structs/Struct.sol";
 
 /**
 * @title Library in charge of the Swaap pricing computations
-* @author borelien
 * @dev few definitions
 * shortage of tokenOut is when (balanceIn * weightOut) / (balanceOut * weightIn) > oraclePriceOut / oraclePriceIn
 * abundance of tokenOut is when (balanceIn * weightOut) / (balanceOut * weightIn) < oraclePriceOut / oraclePriceIn
@@ -462,7 +461,10 @@ library Math {
             (pricesPivot,
             timestampsPivot,
             startIndexPivot,
-            noMoreDataPointPivot) = GeometricBrownianMotionOracle.getHistoricalPrices(pivotToken.latestRound, hpParameters);
+            noMoreDataPointPivot) = GeometricBrownianMotionOracle.getHistoricalPrices(
+                pivotToken.latestRound,
+                hpParameters
+            );
 
             hpDataPivot = Struct.HistoricalPricesData(startIndexPivot, timestampsPivot, pricesPivot);
 
@@ -480,7 +482,10 @@ library Math {
             (uint256[] memory pricesOthers,
             uint256[] memory timestampsOthers,
             uint256 startIndexOthers,
-            bool noMoreDataPointOthers) = GeometricBrownianMotionOracle.getHistoricalPrices(otherTokens[i].latestRound, hpParameters);
+            bool noMoreDataPointOthers) = GeometricBrownianMotionOracle.getHistoricalPrices(
+                otherTokens[i].latestRound,
+                hpParameters
+            );
 
             Struct.GBMEstimation memory gbmEstimation;
             if (pivotTokenIsInput) {
@@ -551,7 +556,10 @@ library Math {
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
         {
-            if (tokenGlobalIn.info.balance < balanceInAtEquilibrium && swapParameters.amount < balanceInAtEquilibrium - tokenGlobalIn.info.balance) {
+            if (
+                (tokenGlobalIn.info.balance < balanceInAtEquilibrium)
+                && (swapParameters.amount < balanceInAtEquilibrium - tokenGlobalIn.info.balance)
+            ) {
                 return Struct.SwapResult(
                     _calcOutGivenInMMMAbundance(
                         tokenGlobalIn, tokenGlobalOut,
@@ -743,7 +751,10 @@ library Math {
         );
 
         // from abundance of tokenOut to abundance of tokenOut --> no spread
-        if (tokenGlobalOut.info.balance > balanceOutAtEquilibrium && swapParameters.amount < tokenGlobalOut.info.balance - balanceOutAtEquilibrium) {
+        if (
+            (tokenGlobalOut.info.balance > balanceOutAtEquilibrium)
+            && (swapParameters.amount < tokenGlobalOut.info.balance - balanceOutAtEquilibrium)
+        ) {
             return (
                 Struct.SwapResult(
                     _calcInGivenOutMMMAbundance(
@@ -1012,7 +1023,10 @@ library Math {
     ) internal view returns (uint256 alpha) {
 
         // we only consider same block as last price update
-        if ((block.timestamp != tokenGlobalIn.latestRound.timestamp && block.timestamp != tokenGlobalOut.latestRound.timestamp)) {
+        if (
+            (block.timestamp != tokenGlobalIn.latestRound.timestamp)
+            && (block.timestamp != tokenGlobalOut.latestRound.timestamp)
+        ) {
             // no additional fees
             return alpha = baseFee;
         }

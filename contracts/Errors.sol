@@ -48,10 +48,10 @@ function _revert(uint256 errorCode) pure {
         let tenths := add(mod(errorCode, 10), 0x30)
 
         // With the individual characters, we can now construct the full uint256. The SWAAP# part is a known constant
-        // (0x535741415023): we simply shift this by 16 (to provide space for the 2 bytes of the error code), and add the
-        // characters to it, each shifted by a multiple of 8.
-        // The revert reason is then shifted left by 192 bits (256 minus the length of the uint256, 8 characters * 8 bits
-        // per character = 64) to locate it in the most significant part of the 256 slot (the beginning of a byte
+        // (0x535741415023): we simply shift this by 16 (to provide space for the 2 bytes of the error code), and add
+        // the characters to it, each shifted by a multiple of 8.
+        // The revert reason is then shifted left by 192 bits (256 minus the length of the uint256, 8 characters * 8
+        // bits per character = 64) to locate it in the most significant part of the 256 slot (the beginning of a byte
         // array).
 
         let revertReason := shl(192, add(0x5357414150230000, add(units, shl(8, tenths))))

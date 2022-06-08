@@ -69,7 +69,9 @@ library GeometricBrownianMotionOracle {
     internal view returns (Struct.GBMEstimation memory gbmEstimation) {
 
         // retrieve historical prices of tokenIn
-        (uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn) = getHistoricalPrices(
+        (
+            uint256[] memory pricesIn, uint256[] memory timestampsIn, uint256 startIndexIn, bool noMoreDataPointIn
+        ) = getHistoricalPrices(
             latestRoundIn, hpParameters
         );
         if (!noMoreDataPointIn && (startIndexIn < hpParameters.lookbackInRound - 1)) {
@@ -82,7 +84,9 @@ library GeometricBrownianMotionOracle {
         }
 
         // retrieve historical prices of tokenOut
-        (uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut) = getHistoricalPrices(
+        (
+            uint256[] memory pricesOut, uint256[] memory timestampsOut, uint256 startIndexOut, bool noMoreDataPointOut
+        ) = getHistoricalPrices(
             latestRoundOut, hpParameters
         );
         if (!noMoreDataPointOut && (startIndexOut < hpParameters.lookbackInRound - 1)) {
@@ -261,7 +265,10 @@ library GeometricBrownianMotionOracle {
         uint256 nextStartIndexIn = startIndexIn > 0 ? startIndexIn - 1 : startIndexIn;
         uint256 nextStartIndexOut = startIndexOut > 0 ? startIndexOut - 1 : startIndexOut;
         if (timestampsIn[nextStartIndexIn] == timestampsOut[nextStartIndexOut]) {
-            if ((timestampsIn[nextStartIndexIn] != timestampsIn[startIndexIn]) && (timestampsOut[nextStartIndexOut] != timestampsOut[startIndexOut])) {
+            if (
+                (timestampsIn[nextStartIndexIn] != timestampsIn[startIndexIn])
+                && (timestampsOut[nextStartIndexOut] != timestampsOut[startIndexOut])
+            ) {
                 skip = false;
             }
             if (startIndexIn > 0) {
@@ -390,11 +397,17 @@ library GeometricBrownianMotionOracle {
 
         // trim prices/timestamps by adjusting startIndexes
         if (hpDataIn.timestamps[hpDataIn.startIndex] > hpDataOut.timestamps[hpDataOut.startIndex]) {
-            while ((hpDataOut.startIndex > 0) && (hpDataOut.timestamps[hpDataOut.startIndex - 1] <= hpDataIn.timestamps[hpDataIn.startIndex])) {
+            while (
+                (hpDataOut.startIndex > 0)
+                && (hpDataOut.timestamps[hpDataOut.startIndex - 1] <= hpDataIn.timestamps[hpDataIn.startIndex])
+            ) {
                 --hpDataOut.startIndex;
             }
         } else if (hpDataIn.timestamps[hpDataIn.startIndex] < hpDataOut.timestamps[hpDataOut.startIndex]) {
-            while ((hpDataIn.startIndex > 0) && (hpDataIn.timestamps[hpDataIn.startIndex - 1] <= hpDataOut.timestamps[hpDataOut.startIndex])) {
+            while (
+                (hpDataIn.startIndex > 0)
+                && (hpDataIn.timestamps[hpDataIn.startIndex - 1] <= hpDataOut.timestamps[hpDataOut.startIndex])
+            ) {
                 --hpDataIn.startIndex;
             }
         }

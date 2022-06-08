@@ -564,7 +564,10 @@ contract Pool is PoolToken, IPool {
                 Const.FALLBACK_SPREAD,
                 _totalSupply
             );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(
+                _dynamicCoverageFeesZ,
+                _dynamicCoverageFeesHorizon
+            );
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 _priceStatisticsLookbackInRound,
                 _priceStatisticsLookbackInSec,
@@ -649,7 +652,10 @@ contract Pool is PoolToken, IPool {
                 Const.FALLBACK_SPREAD,
                 _totalSupply
             );
-            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
+            Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(
+                _dynamicCoverageFeesZ,
+                _dynamicCoverageFeesHorizon
+            );
             Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
                 _priceStatisticsLookbackInRound,
                 _priceStatisticsLookbackInSec,
@@ -1182,7 +1188,10 @@ contract Pool is PoolToken, IPool {
             _swapFee,
             Const.FALLBACK_SPREAD
         );
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
+        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(
+            _dynamicCoverageFeesZ,
+            _dynamicCoverageFeesHorizon
+        );
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             _priceStatisticsLookbackInRound,
             _priceStatisticsLookbackInSec,
@@ -1369,7 +1378,10 @@ contract Pool is PoolToken, IPool {
             _swapFee,
             Const.FALLBACK_SPREAD
         );
-        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(_dynamicCoverageFeesZ, _dynamicCoverageFeesHorizon);
+        Struct.GBMParameters memory gbmParameters = Struct.GBMParameters(
+            _dynamicCoverageFeesZ,
+            _dynamicCoverageFeesHorizon
+        );
         Struct.HistoricalPricesParameters memory hpParameters = Struct.HistoricalPricesParameters(
             _priceStatisticsLookbackInRound,
             _priceStatisticsLookbackInSec,
