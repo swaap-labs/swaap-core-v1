@@ -699,10 +699,10 @@ contract Pool is PoolToken {
         return tokenAmountOut;
     }
 
-    // ==
-    // 'Underlying' token-manipulation functions make external calls but are NOT locked
-    // You must `_lock_` or otherwise ensure reentry-safety
-
+    /**
+    * @dev 'Underlying' token-manipulation functions make external calls but are NOT locked
+    * You must `_lock_` or otherwise ensure reentry-safety
+    */
     function _pullUnderlying(address erc20, address from, uint256 amount)
     internal
     _checkBalanceAfterTransfer_(erc20, amount)
@@ -710,6 +710,10 @@ contract Pool is PoolToken {
         IERC20(erc20).safeTransferFrom(from, address(this), amount);
     }
 
+    /**
+    * @dev 'Underlying' token-manipulation functions make external calls but are NOT locked
+    * You must `_lock_` or otherwise ensure reentry-safety
+    */
     function _pushUnderlying(address erc20, address to, uint256 amount)
     internal
     {
@@ -740,9 +744,6 @@ contract Pool is PoolToken {
         _burn(amount);
     }
 
-    // ==
-    // Coverage Parameters setters
-    
     function setDynamicCoverageFeesZ(uint64 dynamicCoverageFeesZ)
     external
     _logs_
