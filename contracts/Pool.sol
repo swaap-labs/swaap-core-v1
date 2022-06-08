@@ -24,14 +24,14 @@ import "./structs/Struct.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPausedFactory.sol";
-
+import "./interfaces/IPool.sol";
 import "./interfaces/IDecimals.sol";
 
 import "./ChainlinkUtils.sol";
 
 import "./Errors.sol";
 
-contract Pool is PoolToken {
+contract Pool is PoolToken, IPool {
 
     using SafeERC20 for IERC20; 
 
@@ -193,6 +193,9 @@ contract Pool is PoolToken {
         _maxPriceUnpegRatio = Const.BASE_MAX_PRICE_UNPEG_RATIO;
     }
 
+    /**
+    * @dev Returns true if a trader can swap on the pool
+    */
     function isPublicSwap()
     external view
     _viewlock_
@@ -201,6 +204,10 @@ contract Pool is PoolToken {
         return _publicSwap;
     }
 
+    /**
+    * @dev Returns true if a liquidity provider can join the pool
+    * A trader can swap on the pool if the pool is either finalized or isPublicSwap
+    */
     function isFinalized()
     external view
     _viewlock_
@@ -209,6 +216,9 @@ contract Pool is PoolToken {
         return _finalized;
     }
 
+    /**
+    * @dev Returns true if the token is binded to the pool
+    */
     function isBound(address t)
     external view
     _viewlock_
@@ -217,6 +227,9 @@ contract Pool is PoolToken {
         return _records[t].bound;
     }
 
+    /**
+    * @dev Returns the binded tokens
+    */
     function getTokens()
     external view
     _viewlock_
@@ -225,6 +238,12 @@ contract Pool is PoolToken {
         return _tokens;
     }
 
+    /**
+    * @dev Returns the initial weight of a binded token
+    * The initial weight is the un-adjusted weight set by the controller at bind
+    * The adjusted weight is the corrected weight based on the token's price performance:
+    * adjusted_weight = initial_weight * current_price / initial_price
+    */
     function getDenormalizedWeight(address token)
     external view
     _viewlock_
@@ -234,6 +253,9 @@ contract Pool is PoolToken {
         return _records[token].denorm;
     }
 
+    /**
+    * @dev Returns the balance of a binded token
+    */
     function getBalance(address token)
     external view
     _viewlock_
@@ -243,6 +265,9 @@ contract Pool is PoolToken {
         return _records[token].balance;
     }
 
+    /**
+    * @dev Returns the swap fee of the pool
+    */
     function getSwapFee()
     external view
     _viewlock_
@@ -251,6 +276,9 @@ contract Pool is PoolToken {
         return _swapFee;
     }
 
+    /**
+    * @dev Returns the current controller of the pool
+    */
     function getController()
     external view
     _viewlock_
@@ -260,7 +288,7 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Set swap fee
+    * @notice Sets swap fee
     */
     function setSwapFee(uint256 swapFee)
     external
@@ -280,15 +308,15 @@ contract Pool is PoolToken {
     * This function is useful when creating pools using a proxy contract and transfer pool assets
     * WARNING: Binded assets are also transferred to the new controller if the pool is not finalized
     */  
-    function setControllerAndTransfer(address manager)
+    function setControllerAndTransfer(address controller)
     external
     _lock_
     {
         _require(msg.sender == _controller, Err.NOT_CONTROLLER);
-        _require(manager != address(0), Err.NULL_CONTROLLER);
-        _controller = manager;
+        _require(controller != address(0), Err.NULL_CONTROLLER);
+        _controller = controller;
         _pendingController = address(0);
-        emit LOG_NEW_CONTROLLER(msg.sender, manager);
+        emit LOG_NEW_CONTROLLER(msg.sender, controller);
     }
     
     /**
@@ -296,7 +324,7 @@ contract Pool is PoolToken {
     * @dev The function will revert if there are binded tokens in an un-finalized pool
     * This prevents any accidental loss of funds for the current controller
     */
-    function transferOwnership(address _to)
+    function transferOwnership(address pendingController)
     external
     _logs_
     {
@@ -306,7 +334,7 @@ contract Pool is PoolToken {
             // when the pool is not finalized
             _require(_tokens.length == 0 ,Err.BINDED_TOKENS);
         }
-        _pendingController = _to;
+        _pendingController = pendingController;
     }
 
     /**
@@ -350,14 +378,14 @@ contract Pool is PoolToken {
     * @notice Enables public swaps on the pool but does not finalize the parameters
     * @dev Unfinalized pool enables exclusively the controller to add liquidity into the pool
     */
-    function setPublicSwap(bool public_)
+    function setPublicSwap(bool publicSwap)
     external
     _logs_
     _lock_
     {
         _require(!_finalized, Err.IS_FINALIZED);
         _require(msg.sender == _controller, Err.NOT_CONTROLLER);
-        _publicSwap = public_;
+        _publicSwap = publicSwap;
     }
 
     /**
@@ -744,6 +772,9 @@ contract Pool is PoolToken {
         _burn(amount);
     }
 
+    /**
+    * @notice Sets dynamic coverage fees Z
+    */
     function setDynamicCoverageFeesZ(uint64 dynamicCoverageFeesZ)
     external
     _logs_
@@ -753,6 +784,9 @@ contract Pool is PoolToken {
         _dynamicCoverageFeesZ = dynamicCoverageFeesZ;
     }
 
+    /**
+    * @notice Sets dynamic coverage fees horizon
+    */
     function setDynamicCoverageFeesHorizon(uint256 dynamicCoverageFeesHorizon)
     external
     _logs_
@@ -763,6 +797,9 @@ contract Pool is PoolToken {
         _dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon;
     }
 
+    /**
+    * @notice Sets price statistics maximum lookback in round
+    */
     function setPriceStatisticsLookbackInRound(uint8 priceStatisticsLookbackInRound)
     external
     _logs_
@@ -774,6 +811,9 @@ contract Pool is PoolToken {
         _priceStatisticsLookbackInRound = priceStatisticsLookbackInRound;
     }
 
+    /** 
+    * @notice Sets price statistics maximum lookback in seconds
+    */
     function setPriceStatisticsLookbackInSec(uint256 priceStatisticsLookbackInSec)
     external
     _logs_
@@ -784,6 +824,10 @@ contract Pool is PoolToken {
         _priceStatisticsLookbackInSec = priceStatisticsLookbackInSec;
     }
 
+    /**
+    * @notice Sets price statistics lookback step in round
+    * @dev This corresponds to the roundId lookback step when looking for historical prices
+    */
     function setPriceStatisticsLookbackStepInRound(uint8 priceStatisticsLookbackStepInRound)
     external
     _logs_
@@ -794,6 +838,9 @@ contract Pool is PoolToken {
         _priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound;
     }
 
+    /**
+    * @notice Sets price statistics maximum unpeg ratio
+    */
     function setMaxPriceUnpegRatio(uint256 maxPriceUnpegRatio)
     external
     _logs_
@@ -807,7 +854,7 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Returns coverage parameters of the pool
+    * @dev Returns the coverage parameters of the pool
     */
     function getCoverageParameters()
     external view
@@ -832,7 +879,7 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Returns the token's price when it was binded to the pool
+    * @dev Returns the token's price when it was binded to the pool
     */
     function getTokenOracleInitialPrice(address token)
     external view
@@ -844,7 +891,7 @@ contract Pool is PoolToken {
     }
 
     /**
-    * @notice Returns the oracle of a token
+    * @dev Returns the oracle's address of a token
     */
     function getTokenPriceOracle(address token)
     external view
