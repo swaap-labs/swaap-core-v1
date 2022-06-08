@@ -1,8 +1,8 @@
 const truffleAssert = require('truffle-assertions');
-const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
-const { getOracleDataHistory } = require('../lib/data');
-const { calcOutGivenInMMM, computeMMMSpread } = require('../lib/mmm');
-const { getParametersEstimation, getStartIndices } = require('../lib/gbm_oracle');
+const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('./lib/calc_comparisons');
+const { getOracleDataHistory } = require('./lib/data');
+const { calcOutGivenInMMM, computeMMMSpread } = require('./lib/mmm');
+const { getParametersEstimation, getStartIndices } = require('./lib/gbm_oracle');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');

@@ -1,6 +1,6 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
-const { calcRelativeDiff } = require('../lib/calc_comparisons');
+const { calcRelativeDiff } = require('./lib/calc_comparisons');
 
 const TChainlinkUtils = artifacts.require('TChainlinkUtils');
 const TOracle = artifacts.require('TOracle');

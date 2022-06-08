@@ -6,7 +6,7 @@ const truffleAssert = require('truffle-assertions');
 
 const {
     advanceTimeAndBlock
-} = require('../lib/time');
+} = require('./lib/time');
 
 
 contract('Factory', async (accounts) => {

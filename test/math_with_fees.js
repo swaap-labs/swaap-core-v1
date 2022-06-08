@@ -4,7 +4,7 @@ const {
     calcOutGivenIn,
     calcInGivenOut,
     calcRelativeDiff,
-} = require('../lib/calc_comparisons');
+} = require('./lib/calc_comparisons');
 
 const Pool = artifacts.require('Pool');
 const Factory = artifacts.require('Factory');

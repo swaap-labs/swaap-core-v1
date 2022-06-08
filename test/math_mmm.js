@@ -1,15 +1,15 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
-const { calcRelativeDiff, calcSingleOutGivenPoolIn, calcPoolOutGivenSingleIn } = require('../lib/calc_comparisons');
+const { calcRelativeDiff, calcSingleOutGivenPoolIn, calcPoolOutGivenSingleIn } = require('./lib/calc_comparisons');
 const {
 		getLogSpreadFactor, getMMMWeight,
 		getTokenBalanceAtEquilibrium, calcOutGivenInMMM,
 		calcAdaptiveFeeGivenInAndOut, getOutTargetGivenIn,
 		calcPoolOutGivenSingleInAdaptiveFees,
 		calcSingleOutGivenPoolInAdaptiveFees
-	} = require('../lib/mmm');
+	} = require('./lib/mmm');
 
-const { getInAmountAtPrice } = require('../lib/mmm');
+const { getInAmountAtPrice } = require('./lib/mmm');
 
 const TMathMMM = artifacts.require('TMathMMM');
 const TConstantOracle = artifacts.require('TConstantOracle');

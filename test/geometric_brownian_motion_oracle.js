@@ -1,13 +1,13 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
-const { calcRelativeDiff } = require('../lib/calc_comparisons');
-const { getOracleDataHistoryAsList } = require('../lib/data');
+const { calcRelativeDiff } = require('./lib/calc_comparisons');
+const { getOracleDataHistoryAsList } = require('./lib/data');
 const {
 	getParametersEstimation,
 	getSeries,
 	getStatistics,
 	getStartIndices
-} = require('../lib/gbm_oracle');
+} = require('./lib/gbm_oracle');
 
 const TGeometricBrownianMotionOracle = artifacts.require('TGeometricBrownianMotionOracle');
 const TWETHOracle = artifacts.require('TWETHOracle');
