@@ -67,6 +67,23 @@ module.exports = {
       timeoutBlocks: 50000,
       networkCheckTimeout: 1000000
     },
+    polygon: {
+      provider: () => new HDWalletProvider(
+        //private keys array
+        process.env.MNEMONIC,
+        //url to ethereum node
+        "https://matic-mainnet.chainstacklabs.com",
+        //account index
+        process.env.ACCOUNT_INDEX
+      ),
+      network_id: 137,
+      confirmations: 10,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      chainId: 137,
+      networkCheckTimeoutnetworkCheckTimeout: 10000,
+      timeoutBlocks: 200
+    },
     mumbai: {
       provider: function() {
         return new HDWalletProvider(
