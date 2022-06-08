@@ -195,6 +195,7 @@ contract Pool is PoolToken {
 
     function isPublicSwap()
     external view
+    _viewlock_
     returns (bool)
     {
         return _publicSwap;
@@ -202,6 +203,7 @@ contract Pool is PoolToken {
 
     function isFinalized()
     external view
+    _viewlock_
     returns (bool)
     {
         return _finalized;
@@ -209,6 +211,7 @@ contract Pool is PoolToken {
 
     function isBound(address t)
     external view
+    _viewlock_
     returns (bool)
     {
         return _records[t].bound;
@@ -224,6 +227,7 @@ contract Pool is PoolToken {
 
     function getDenormalizedWeight(address token)
     external view
+    _viewlock_
     returns (uint256)
     {
         _require(_records[token].bound, Err.NOT_BOUND);
@@ -232,6 +236,7 @@ contract Pool is PoolToken {
 
     function getBalance(address token)
     external view
+    _viewlock_
     returns (uint256)
     {
         _require(_records[token].bound, Err.NOT_BOUND);
@@ -240,6 +245,7 @@ contract Pool is PoolToken {
 
     function getSwapFee()
     external view
+    _viewlock_
     returns (uint256)
     {
         return _swapFee;
@@ -247,6 +253,7 @@ contract Pool is PoolToken {
 
     function getController()
     external view
+    _viewlock_
     returns (address)
     {
         return _controller;
@@ -545,6 +552,7 @@ contract Pool is PoolToken {
     external
     view
     _viewlock_
+    _whenNotPaused_
     returns (uint256 poolAmountOut)
     {
         return (poolAmountOut = _getJoinswapExternAmountInMMM(tokenIn, tokenAmountIn));
@@ -802,6 +810,7 @@ contract Pool is PoolToken {
     */
     function getCoverageParameters()
     external view
+    _viewlock_
     returns (
             uint8   priceStatisticsLBInRound,
             uint8   priceStatisticsLBStepInRound,
@@ -826,6 +835,7 @@ contract Pool is PoolToken {
     */
     function getTokenOracleInitialPrice(address token)
     external view
+    _viewlock_
     returns (uint256)
     {
         _require(_records[token].bound, Err.NOT_BOUND);
@@ -837,6 +847,7 @@ contract Pool is PoolToken {
     */
     function getTokenPriceOracle(address token)
     external view
+    _viewlock_
     returns (address)
     {
         _require(_records[token].bound, Err.NOT_BOUND);
@@ -1069,6 +1080,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
+    _whenNotPaused_
     returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
         return _getAmountOutGivenInMMM(
@@ -1254,6 +1266,7 @@ contract Pool is PoolToken {
     )
     external view
     _viewlock_
+    _whenNotPaused_
     returns (Struct.SwapResult memory swapResult, Struct.PriceResult memory priceResult)
     {
         return _getAmountInGivenOutMMM(
