@@ -17,9 +17,9 @@ pragma solidity =0.8.12;
 import "./IPoolHelpers/IPoolLP.sol";
 import "./IPoolHelpers/IPoolSwap.sol";
 import "./IPoolHelpers/IPoolState.sol";
+import "./IPoolHelpers/IPoolToken.sol";
 import "./IPoolHelpers/IPoolEvents.sol";
 import "./IPoolHelpers/IPoolControl.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
 * @title The interface for a Swaap V1 Pool
@@ -28,9 +28,9 @@ interface IPool is
     IPoolLP,
     IPoolSwap,
     IPoolState,
+    IPoolToken,
     IPoolEvents,
-    IPoolControl,
-    IERC20
+    IPoolControl
 {
 
 }

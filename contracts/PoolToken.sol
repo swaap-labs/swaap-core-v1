@@ -14,12 +14,12 @@
 
 pragma solidity =0.8.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IPoolHelpers/IPoolToken.sol";
 import "./Errors.sol";
 
 // Highly opinionated token implementation
 
-contract PoolToken is IERC20 {
+contract PoolToken is IPoolToken {
 
     mapping(address => uint256)                   internal _balance;
     mapping(address => mapping(address=>uint256)) internal _allowance;
@@ -75,19 +75,19 @@ contract PoolToken is IERC20 {
     }
 
 
-    function allowance(address src, address dst) external view override returns (uint256) {
+    function allowance(address src, address dst) external view returns (uint256) {
         return _allowance[src][dst];
     }
 
-    function balanceOf(address whom) external view override returns (uint256) {
+    function balanceOf(address whom) external view returns (uint256) {
         return _balance[whom];
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
-    function approve(address dst, uint256 amt) external override returns (bool) {
+    function approve(address dst, uint256 amt) external returns (bool) {
         _allowance[msg.sender][dst] = amt;
         emit Approval(msg.sender, dst, amt);
         return true;
@@ -110,12 +110,12 @@ contract PoolToken is IERC20 {
         return true;
     }
 
-    function transfer(address dst, uint256 amt) external override returns (bool) {
+    function transfer(address dst, uint256 amt) external returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
     }
 
-    function transferFrom(address src, address dst, uint256 amt) external override returns (bool) {
+    function transferFrom(address src, address dst, uint256 amt) external returns (bool) {
         if (msg.sender != src && _allowance[src][msg.sender] != type(uint256).max) {
             uint256 currentAllowance = _allowance[src][msg.sender];
             _require(currentAllowance >= amt, Err.INSUFFICIENT_ALLOWANCE);
