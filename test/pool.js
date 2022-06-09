@@ -156,12 +156,12 @@ contract('Pool', async (accounts) => {
                 throw 'did not revert';
             }
             catch(e) {
-                assert.equal(e.reason, 'ERR_INSUFFICIENT_SP');
+                assert.equal(e.reason, 'ERR_INSUFFICIENT_BAL');
             }
 
             /*await truffleAssert.reverts(
                 pool.bindMMM(WETH, toWei('51'), toWei('1'), WETHOracleAddress),
-                'ERR_INSUFFICIENT_SP',
+                'ERR_INSUFFICIENT_BAL',
             );*/
 
             try {

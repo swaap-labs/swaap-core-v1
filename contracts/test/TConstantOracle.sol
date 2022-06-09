@@ -18,11 +18,11 @@ import "./TIAggregatorV3.sol";
 
 contract TConstantOracle is TIAggregatorV3 {
 
-    uint256 timestamp;
+    uint256 private timestamp;
 
-    uint80 latestRoundId = 1;
-    uint8 _decimals = 8;
-    int256 _precision = 100000000;
+    uint80 private latestRoundId = 1;
+    uint8 private _decimals = 8;
+    int256 private _precision = 100000000;
 
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;

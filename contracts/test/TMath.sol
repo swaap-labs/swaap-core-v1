@@ -19,35 +19,35 @@ import "../Num.sol";
 
 contract TMath {
 
-    function calc_toi(uint a) external pure returns (uint) {
+    function calcToi(uint a) external pure returns (uint) {
         return Num.toi(a);
     }
 
-    function calc_floor(uint a) external pure returns (uint) {
+    function calcFloor(uint a) external pure returns (uint) {
         return Num.floor(a);
     }
 
-    function calc_subSign(uint a, uint b) external pure returns (uint, bool) {
+    function calcSubSign(uint a, uint b) external pure returns (uint, bool) {
         return Num.subSign(a, b);
     }
 
-    function calc_mul(uint a, uint b) external pure returns (uint) {
+    function calcMul(uint a, uint b) external pure returns (uint) {
         return Num.mul(a, b);
     }
 
-    function calc_div(uint a, uint b) external pure returns (uint) {
+    function calcDiv(uint a, uint b) external pure returns (uint) {
         return Num.div(a, b);
     }
 
-    function calc_powi(uint a, uint n) external pure returns (uint) {
+    function calcPowi(uint a, uint n) external pure returns (uint) {
         return Num.powi(a, n);
     }
 
-    function calc_pow(uint base, uint exp) external pure returns (uint) {
+    function calcPow(uint base, uint exp) external pure returns (uint) {
         return Num.pow(base, exp);
     }
 
-    function calc_powApprox(uint base, uint exp, uint precision) external pure returns (uint) {
+    function calcPowApprox(uint base, uint exp, uint precision) external pure returns (uint) {
         return Num.powApprox(base, exp, precision);
     }
 }

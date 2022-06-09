@@ -18,9 +18,9 @@ import "./TIAggregatorV3.sol";
 
 contract TOracle is TIAggregatorV3 {
 
-    uint80 latestRoundId;
-    uint8 _decimals;
-    int256 _precision = 10;
+    uint80 private latestRoundId;
+    uint8 private _decimals;
+    int256 private _precision = 10;
 
     mapping(uint80 => int256) public prices;
     mapping(uint80 => uint256) public timestamps;

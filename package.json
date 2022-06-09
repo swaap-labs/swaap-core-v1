@@ -27,7 +27,7 @@
     "test": "truffle test test/*.js",
     "test:verbose": "VERBOSE=true truffle test test/*.js",
     "coverage": "yarn solidity-coverage",
-    "lint:contracts": "solhint contracts/*.sol",
+    "lint:contracts": "solhint contracts/**/*.sol",
     "deploy:polygon": "truffle migrate --network polygon",
     "deploy:mumbai": "truffle migrate --network mumbai",
     "deploy:rinkeby": "truffle migrate --network rinkeby"

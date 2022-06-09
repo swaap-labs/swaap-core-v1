@@ -19,7 +19,7 @@ contract TToken {
 
     string private _name;
     string private _symbol;
-    uint8   private _decimals;
+    uint8  private _decimals;
 
     address private _owner;
 
@@ -38,10 +38,10 @@ contract TToken {
 
     // Math
     function add(uint a, uint b) internal pure returns (uint c) {
-        require((c = a + b) >= a);
+        require((c = a + b) >= a, "ERR_MATH_APPROX");
     }
     function sub(uint a, uint b) internal pure returns (uint c) {
-        require((c = a - b) <= a);
+        require((c = a - b) <= a, "ERR_MATH_APPROX");
     }
 
     constructor(
@@ -68,7 +68,7 @@ contract TToken {
     }
 
     function _move(address src, address dst, uint amt) internal {
-        require(_balance[src] >= amt, "ERR_INSUFFICIENT_SP");
+        require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
         _balance[src] = sub(_balance[src], amt);
         _balance[dst] = add(_balance[dst], amt);
         emit Transfer(src, dst, amt);
@@ -112,7 +112,7 @@ contract TToken {
     }
 
     function burn(uint amt) public returns (bool) {
-        require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_SP");
+        require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_BAL");
         _balance[address(this)] = sub(_balance[address(this)], amt);
         _totalSupply = sub(_totalSupply, amt);
         emit Transfer(address(this), address(0), amt);

@@ -18,20 +18,20 @@ import "../ChainlinkUtils.sol";
 library TChainlinkUtils {
 
     function getMaxRelativePriceInLastBlock(
-        address oracleAddress_1,
-        uint8 decimals_1, // sum of the decimals of the token and its oracle
-        address oracleAddress_2,
-        uint8 decimals_2 // sum of the decimals of the token and its oracle
+        address oracleAddress1,
+        uint8 decimals1, // sum of the decimals of the token and its oracle
+        address oracleAddress2,
+        uint8 decimals2 // sum of the decimals of the token and its oracle
     ) public view returns (uint256) {
 
-        Struct.LatestRound memory latestRound_1 = ChainlinkUtils.getLatestRound(oracleAddress_1);
-        Struct.LatestRound memory latestRound_2 = ChainlinkUtils.getLatestRound(oracleAddress_2);
+        Struct.LatestRound memory latestRound1 = ChainlinkUtils.getLatestRound(oracleAddress1);
+        Struct.LatestRound memory latestRound2 = ChainlinkUtils.getLatestRound(oracleAddress2);
 
         return ChainlinkUtils.getMaxRelativePriceInLastBlock(
-            latestRound_1,
-            decimals_1,
-            latestRound_2,
-            decimals_2
+            latestRound1,
+            decimals1,
+            latestRound2,
+            decimals2
         );
     }
 
