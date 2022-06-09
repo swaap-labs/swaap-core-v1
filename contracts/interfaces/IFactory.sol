@@ -18,7 +18,12 @@ pragma solidity =0.8.12;
 * @title The interface for a Swaap V1 Pool Factory
 */
 interface IFactory {
-
+    
+    /*
+    * @notice Create new pool with default parameters
+    */
+    function newPool() external returns (address);
+    
     /**
     * @notice Returns if an address corresponds to a pool created by the factory
     */

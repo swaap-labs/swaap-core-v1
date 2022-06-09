@@ -66,14 +66,14 @@ contract Factory is IFactory {
     */
     function newPool()
     external
-    returns (Pool)
+    returns (address)
     {
         _require(!_paused, Err.PAUSED_FACTORY);
         Pool pool = new Pool();
         _isPool[address(pool)] = true;
         emit LOG_NEW_POOL(msg.sender, address(pool));
         pool.setControllerAndTransfer(msg.sender);
-        return pool;
+        return address(pool);
     }
     
     /**
