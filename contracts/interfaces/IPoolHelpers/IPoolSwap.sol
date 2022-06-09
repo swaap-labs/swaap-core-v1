@@ -19,7 +19,7 @@ import "../../structs/Struct.sol";
 /**
 * @title Contains the useful methods to a trader
 */
-interface IPoolSwaap{
+interface IPoolSwap{
 
     /**
     * @notice Swap two tokens given the exact amount of token in

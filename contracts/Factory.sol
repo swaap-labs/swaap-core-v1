@@ -89,8 +89,8 @@ contract Factory is IFactory {
     * @notice Returns swaap labs' address
     */
     function getSwaapLabs()
-        external view
-        returns (address)
+    external view
+    returns (address)
     {
         return _swaaplabs;
     }
@@ -151,7 +151,8 @@ contract Factory is IFactory {
     * @notice Reverts pools if the factory is paused
     * @dev This function is called by the pools whenever a swap or a joinPool is being made
     */
-    function whenNotPaused() external view {
+    function whenNotPaused()
+    external view {
         _require(!_paused, Err.PAUSED_FACTORY);
     }
 

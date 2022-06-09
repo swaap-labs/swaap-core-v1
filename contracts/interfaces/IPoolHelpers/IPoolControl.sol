@@ -20,7 +20,13 @@ pragma solidity =0.8.12;
 interface IPoolControl {
 
     /**
-    * @notice Gives back factory control over pool parameters
+    * @notice Revokes factory control over pool parameters
+    * @dev Factory control can only be revoked by the factory and not the pool controller
+    */
+    function revokeFactoryControl() external;
+
+    /**
+    * @notice Gives back factory control over the pool parameters
     */
     function giveFactoryControl() external;
     
@@ -111,4 +117,9 @@ interface IPoolControl {
     * @dev This corresponds to the roundId lookback step when looking for historical prices
     */
     function setPriceStatisticsLookbackInSec(uint256 priceStatisticsLookbackInSec) external;
+
+    /**
+    * @notice Sets price statistics maximum unpeg ratio
+    */
+    function setMaxPriceUnpegRatio(uint256 maxPriceUnpegRatio) external;
 }

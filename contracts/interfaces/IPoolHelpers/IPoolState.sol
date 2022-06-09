@@ -85,5 +85,17 @@ interface IPoolState{
     */
     function getTokenPriceOracle(address token) external view returns (address);
 
+    /**
+    * @dev Absorb any tokens that have been sent to this contract into the pool
+    * @param token The token's address
+    */
+    function gulp(address token) external;
 
+    /**
+    * @notice Returns the spot price without fees of a token pair
+    * @return spotPrice The spot price of tokenOut in terms of tokenIn
+    */
+    function getSpotPriceSansFee(address tokenIn, address tokenOut) 
+    external view
+    returns (uint256 spotPrice);
 }

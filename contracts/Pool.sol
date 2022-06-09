@@ -354,6 +354,7 @@ contract Pool is PoolToken, IPool {
 
     /**
     * @notice Revokes factory control over pool parameters
+    * @dev Factory control can only be revoked by the factory and not the pool controller
     */
     function revokeFactoryControl()
     external
@@ -364,7 +365,7 @@ contract Pool is PoolToken, IPool {
     }
 
     /**
-    * @notice Gives back factory control over pool parameters
+    * @notice Gives back factory control over the pool parameters
     */
     function giveFactoryControl()
     external
@@ -408,7 +409,7 @@ contract Pool is PoolToken, IPool {
     }
 
     /**
-    * @notice Absorb any tokens that have been sent to this contract into the pool
+    * @dev Absorb any tokens that have been sent to this contract into the pool
     * @param token The token's address
     */
     function gulp(address token)
