@@ -33,7 +33,7 @@
     "deploy:rinkeby": "truffle migrate --network rinkeby"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.1.7",
+    "@chainlink/contracts": "^0.1.9",
     "@openzeppelin/contracts": "^4.5.0",
     "@truffle/hdwallet-provider": "1.7.0",
     "decimal.js": "^10.2.0",

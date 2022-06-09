@@ -13,7 +13,7 @@
 
 pragma solidity =0.8.12;
 
-import "./interfaces/IAggregatorV3.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./structs/Struct.sol";
 import "./Const.sol";
 import "./Num.sol";
@@ -30,7 +30,7 @@ library ChainlinkUtils {
     * @return The oracle description
     */
     function getTokenLatestPrice(address oracle) internal view returns (uint256, uint8, string memory) {
-        IAggregatorV3 feed = IAggregatorV3(oracle);
+        AggregatorV3Interface feed = AggregatorV3Interface(oracle);
         (, int256 latestPrice, , uint256 latestTimestamp,) = feed.latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
         _require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, Err.EXCEEDED_ORACLE_TIMEOUT);
@@ -41,7 +41,7 @@ library ChainlinkUtils {
     function getLatestRound(address oracle) internal view returns (Struct.LatestRound memory) {
         (
             uint80 latestRoundId, int256 latestPrice, , uint256 latestTimestamp,
-        ) = IAggregatorV3(oracle).latestRoundData();
+        ) = AggregatorV3Interface(oracle).latestRoundData();
         // we assume that block.timestamp >= latestTimestamp, else => revert
         _require(block.timestamp - latestTimestamp <= Const.ORACLE_TIMEOUT, Err.EXCEEDED_ORACLE_TIMEOUT);
         _require(latestPrice > 0, Err.NON_POSITIVE_PRICE);
@@ -64,7 +64,7 @@ library ChainlinkUtils {
     * @return The round timestamp
     */
     function getRoundData(address oracle, uint80 _roundId) internal view returns (uint256, uint256) {
-        try IAggregatorV3(oracle).getRoundData(_roundId) returns (
+        try AggregatorV3Interface(oracle).getRoundData(_roundId) returns (
             uint80 ,
             int256 _price,
             uint256 ,

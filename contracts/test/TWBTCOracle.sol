@@ -13,10 +13,10 @@
 
 pragma solidity =0.8.12;
 
-import "../interfaces/IAggregatorV3.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
-contract TWBTCOracle is IAggregatorV3 {
+contract TWBTCOracle is AggregatorV3Interface {
 
     uint256 private timestamp;
 

@@ -13,10 +13,10 @@
 
 pragma solidity =0.8.12;
 
-import "./TIAggregatorV3.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
-contract TConstantOracle is TIAggregatorV3 {
+contract TConstantOracle is AggregatorV3Interface {
 
     uint256 private timestamp;
 
