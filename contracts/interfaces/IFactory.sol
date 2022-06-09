@@ -19,6 +19,36 @@ pragma solidity =0.8.12;
 */
 interface IFactory {
     
+    /**
+    * @notice Emitted when a controller creates a pool
+    * @param caller The pool's creator
+    * @param pool The created pool's address
+    */
+    event LOG_NEW_POOL(
+        address indexed caller,
+        address indexed pool
+    );
+
+    /**
+    * @notice Emitted when a Swaap labs transfer is requested
+    * @param from The current Swaap labs address
+    * @param to The pending new Swaap labs address
+    */
+    event LOG_TRANSFER_REQUESTED(
+        address indexed from,
+        address indexed to
+    );
+
+    /**
+    * @notice Emitted when a new address accepts the Swaap labs role
+    * @param from The old Swaap labs address
+    * @param to The new Swaap labs address
+    */
+    event LOG_NEW_SWAAPLABS(
+        address indexed from,
+        address indexed to
+    );
+
     /*
     * @notice Create new pool with default parameters
     */

@@ -18,6 +18,7 @@ pragma solidity =0.8.12;
 * @title Contains the useful methods to a liquidity provider
 */
 interface IPoolLP {
+    
     /**
     * @notice Add liquidity to a pool and credit msg.sender
     * @dev The order of maxAmount of each token must be the same as the _tokens' addresses stored in the pool

@@ -25,20 +25,6 @@ contract Factory is IFactory {
 
     using SafeERC20 for IERC20; 
 
-    event LOG_NEW_POOL(
-        address indexed caller,
-        address indexed pool
-    );
-
-    event LOG_TRANSFER_REQUESTED(
-        address indexed from,
-        address indexed to
-    );
-    event LOG_NEW_SWAAPLABS(
-        address indexed from,
-        address indexed to
-    );
-
     modifier _onlySwaapLabs_() {
         _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
         _;

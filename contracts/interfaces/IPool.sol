@@ -17,6 +17,7 @@ pragma solidity =0.8.12;
 import "./IPoolHelpers/IPoolLP.sol";
 import "./IPoolHelpers/IPoolSwap.sol";
 import "./IPoolHelpers/IPoolState.sol";
+import "./IPoolHelpers/IPoolEvents.sol";
 import "./IPoolHelpers/IPoolControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -27,6 +28,7 @@ interface IPool is
     IPoolLP,
     IPoolSwap,
     IPoolState,
+    IPoolEvents,
     IPoolControl,
     IERC20
 {

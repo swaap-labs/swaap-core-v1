@@ -43,49 +43,6 @@ contract Pool is PoolToken, IPool {
         uint256 balance;
     }
 
-    event LOG_SWAP(
-        address indexed caller,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        uint256         tokenAmountIn,
-        uint256         tokenAmountOut,
-        uint256         spread,
-        uint256         taxBaseIn,
-        uint256         priceIn,
-        uint256         priceOut
-    );
-
-    event LOG_JOIN(
-        address indexed caller,
-        address indexed tokenIn,
-        uint256         tokenAmountIn
-    );
-
-    event LOG_EXIT(
-        address indexed caller,
-        address indexed tokenOut,
-        uint256         tokenAmountOut
-    );
-
-    event LOG_CALL(
-        bytes4  indexed sig,
-        address indexed caller,
-        bytes           data
-    ) anonymous;
-
-    event LOG_NEW_CONTROLLER(
-        address indexed from,
-        address indexed to
-    );
-
-    event LOG_NEW_ORACLE_STATE(
-        address indexed token,
-        address oracle,
-        uint256 price,
-        uint8   decimals,
-        string  description
-    );
-
     // putting modifier logic in functions enables contract size optimization
     function _emitLog() private {
         emit LOG_CALL(msg.sig, msg.sender, msg.data);
