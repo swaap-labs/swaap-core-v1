@@ -140,24 +140,24 @@ contract('Factory', async (accounts) => {
         });
 
         it('fails to create new pool when paused', async () => {
-            await factory.setPause(true, {from: admin});
+            await factory.pauseProtocol({from: admin});
             await truffleAssert.reverts(factory.newPool.call(), 'SWAAP#36');
         });
 
         it('nonadmin cannot set/unset pause', async () => {
-            await truffleAssert.reverts(factory.setPause(false, { from: nonAdmin }), 'SWAAP#34');
-            await truffleAssert.reverts(factory.setPause(true, { from: nonAdmin }), 'SWAAP#34');
+            await truffleAssert.reverts(factory.resumeProtocol({ from: nonAdmin }), 'SWAAP#34');
+            await truffleAssert.reverts(factory.pauseProtocol({ from: nonAdmin }), 'SWAAP#34');
         });
         
         it('create pool after unpausing', async () => {
-            await factory.setPause(false, {from: admin});
+            await factory.resumeProtocol({from: admin});
             await factory.newPool.call();
         });
 
         it('admin cannot set/unset pause after time window', async () => {
             await advanceTimeAndBlock(86400 * 61);
-            await truffleAssert.reverts(factory.setPause(true, {from: admin}), 'SWAAP#45');
-            await truffleAssert.reverts(factory.setPause(false, {from: admin}), 'SWAAP#45');
+            await truffleAssert.reverts(factory.pauseProtocol({from: admin}), 'SWAAP#45');
+            await truffleAssert.reverts(factory.resumeProtocol({from: admin}), 'SWAAP#45');
         });
 
         it('admin changes swaaplabs address', async () => {

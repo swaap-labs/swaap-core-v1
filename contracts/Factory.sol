@@ -24,8 +24,12 @@ contract Factory is IFactory {
 
     using SafeERC20 for IERC20; 
 
-    modifier _onlySwaapLabs_() {
+    function _onlySwaapLabs() private view {
         _require(msg.sender == _swaaplabs, Err.NOT_SWAAPLABS);
+    }
+
+    modifier _onlySwaapLabs_() {
+        _onlySwaapLabs();
         _;
     }
 
@@ -39,11 +43,11 @@ contract Factory is IFactory {
     address private _pendingSwaaplabs;
     address private _swaaplabs;
     bool private _paused;
-    uint64 immutable private _setPauseWindow;
+    uint64 immutable private _pauseWindow;
 
     constructor() {
         _swaaplabs = msg.sender;
-        _setPauseWindow = uint64(block.timestamp) + Const.PAUSE_WINDOW;
+        _pauseWindow = uint64(block.timestamp) + Const.PAUSE_WINDOW;
     }
 
     /**
@@ -118,18 +122,30 @@ contract Factory is IFactory {
         uint256 collected = IERC20(erc20).balanceOf(address(this));
         IERC20(erc20).safeTransfer(msg.sender, collected);
     }
+    
+    /**
+    * @notice Pause the factory's pools
+    * @dev Pause disables most of the pools functionalities (swap, joinPool & joinswap)
+    * and only allows LPs to withdraw their funds
+    */
+    function pauseProtocol() 
+    external
+    _onlySwaapLabs_
+    {
+        _require(block.timestamp < _pauseWindow, Err.PAUSE_WINDOW_EXCEEDED);
+        _paused = true;
+    }
 
     /**
-    * @notice Pause or unpause the factory's pools
-    * @dev Pause disables most of the pools functionalities (swap, joinPool & joinswap)
-    * and only allows for LPs to withdraw their funds
+    * @notice Resume the factory's pools
+    * @dev Unpausing re-enables all the pools functionalities
     */
-    function setPause(bool paused) 
+    function resumeProtocol()
     external 
     _onlySwaapLabs_
     {
-        _require(block.timestamp < _setPauseWindow, Err.PAUSE_WINDOW_EXCEEDED);
-        _paused = paused;
+        _require(block.timestamp < _pauseWindow, Err.PAUSE_WINDOW_EXCEEDED);
+        _paused = false;
     }
 
     /**

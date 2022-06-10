@@ -473,7 +473,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Fail swaps when Factory is paused', async () => {
-            await factory.setPause(true, {from: admin});
+            await factory.pauseProtocol({from: admin});
             await truffleAssert.reverts(
                 pool.swapExactAmountInMMM(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), { from: user2 }),
                 'SWAAP#36'
@@ -490,7 +490,7 @@ contract('Pool', async (accounts) => {
         });
 
         it('Admin unpauses pool', async () => {
-            await factory.setPause(false, {from: admin});
+            await factory.resumeProtocol({from: admin});
         })
 
         it('User1 joins pool', async () => {

@@ -80,11 +80,17 @@ interface IFactory {
     function collect(address erc20) external;
 
     /**
-    * @notice Pause or unpause the factory's pools
+    * @notice Pause the factory's pools
     * @dev Pause disables most of the pools functionalities (swap, joinPool & joinswap)
-    * and only allows for LPs to withdraw their funds
+    * and only allows LPs to withdraw their funds
     */
-    function setPause(bool paused) external;
+    function pauseProtocol() external;
+    
+    /**
+    * @notice Resume the factory's pools
+    * @dev Unpausing re-enables all the pools functionalities
+    */
+    function resumeProtocol() external;
     
     /**
     * @notice Reverts pools if the factory is paused
