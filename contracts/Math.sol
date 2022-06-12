@@ -200,11 +200,14 @@ library Math {
         }
         if (blockHasPriceUpdate) {
             uint256 poolValueInTokenIn = getPoolTotalValue(tokenGlobalIn, remainingTokens);
-            fee += calcPoolOutGivenSingleInAdaptiveFees(
-                poolValueInTokenIn,
-                tokenGlobalIn.info.balance,
-                Num.div(tokenGlobalIn.info.weight, totalAdjustedWeight),
-                joinswapParameters.amount
+            fee = Num.min(
+                Const.ONE,
+                fee + calcPoolOutGivenSingleInAdaptiveFees(
+                    poolValueInTokenIn,
+                    tokenGlobalIn.info.balance,
+                    Num.div(tokenGlobalIn.info.weight, totalAdjustedWeight),
+                    joinswapParameters.amount
+                )
             );
         }
 
@@ -304,11 +307,14 @@ library Math {
         }
         if (blockHasPriceUpdate) {
             uint256 poolValueInTokenOut = getPoolTotalValue(tokenGlobalOut, remainingTokens);
-            fee += calcSingleOutGivenPoolInAdaptiveFees(
-                poolValueInTokenOut,
-                tokenGlobalOut.info.balance,
-                Num.div(tokenGlobalOut.info.weight, totalAdjustedWeight),
-                Num.div(exitswapParameters.amount, exitswapParameters.poolSupply)
+            fee = Num.min(
+                Const.ONE,
+                fee + calcSingleOutGivenPoolInAdaptiveFees(
+                    poolValueInTokenOut,
+                    tokenGlobalOut.info.balance,
+                    Num.div(tokenGlobalOut.info.weight, totalAdjustedWeight),
+                    Num.div(exitswapParameters.amount, exitswapParameters.poolSupply)
+                )
             );
         }
 
@@ -988,7 +994,6 @@ library Math {
 
         uint256 afterSwapTokenInBalance = tokenBalanceIn + tokenAmountIn;
 
-        // equivalent to max(0, (foo - afterSwapTokenInBalance / -tokenAmountIn)
         if (foo > afterSwapTokenInBalance) {
             return 0;
         }
@@ -1046,13 +1051,16 @@ library Math {
 
         return (
             // additional fees indexed on price increase and imbalance
-            alpha = baseFee + calcAdaptiveFeeGivenInAndOut(
-                tokenGlobalIn.info.balance,
-                tokenAmountIn,
-                tokenGlobalIn.info.weight,
-                tokenGlobalOut.info.balance,
-                tokenAmountOut,
-                tokenGlobalOut.info.weight
+            alpha = Num.min(
+                Const.ONE,
+                baseFee + calcAdaptiveFeeGivenInAndOut(
+                    tokenGlobalIn.info.balance,
+                    tokenAmountIn,
+                    tokenGlobalIn.info.weight,
+                    tokenGlobalOut.info.balance,
+                    tokenAmountOut,
+                    tokenGlobalOut.info.weight
+                )
             )
         );
 
