@@ -38,20 +38,20 @@ library Const {
     uint public constant MAX_IN_RATIO                  = ONE / 2;
     uint public constant MAX_OUT_RATIO                 = (ONE / 3) + 1 wei;
 
-    uint64 public constant BASE_Z                      = uint64(6 * ONE / 10);
+    uint64 public constant BASE_Z                      = uint64(6 * ONE);
 
     uint256 public constant MIN_HORIZON                = 1 * ONE;
-    uint256 public constant BASE_HORIZON               = 300 * ONE;
+    uint256 public constant BASE_HORIZON               = 5 * ONE;
 
     uint8 public constant MIN_LOOKBACK_IN_ROUND        = 1;
-    uint8 public constant BASE_LOOKBACK_IN_ROUND       = 4;
+    uint8 public constant BASE_LOOKBACK_IN_ROUND       = 5;
     uint8 public constant MAX_LOOKBACK_IN_ROUND        = 100;
 
     uint256 public constant MIN_LOOKBACK_IN_SEC        = 1;
     uint256 public constant BASE_LOOKBACK_IN_SEC       = 3600;
 
     uint256 public constant MIN_MAX_PRICE_UNPEG_RATIO  = ONE + ONE / 800;
-    uint256 public constant BASE_MAX_PRICE_UNPEG_RATIO = ONE + ONE / 50;
+    uint256 public constant BASE_MAX_PRICE_UNPEG_RATIO = ONE + ONE / 40;
     uint256 public constant MAX_MAX_PRICE_UNPEG_RATIO  = ONE + ONE / 10;
 
     uint64 public constant PAUSE_WINDOW                = 86400 * 60;
@@ -61,5 +61,5 @@ library Const {
     uint256 public constant ORACLE_TIMEOUT             = 2 * 60;
 
     uint8 public constant MIN_LOOKBACK_STEP_IN_ROUND   = 1;
-    uint8 public constant LOOKBACK_STEP_IN_ROUND       = 3;
+    uint8 public constant LOOKBACK_STEP_IN_ROUND       = 4;
 }
