@@ -1,6 +1,6 @@
 {
   "name": "@swaap-labs/swaap-core-v1",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Swaap Protocol v1: core smart contracts",
   "license": "GPL-3.0-only",
   "contributors": [
