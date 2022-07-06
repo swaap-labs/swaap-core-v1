@@ -250,6 +250,7 @@ contract('Pool', async (accounts) => {
         it('Admin sets dynamic spread parameters', async () => {
             await pool.setDynamicCoverageFeesZ(toWei(z.toString()));
             await pool.setDynamicCoverageFeesHorizon(toWei(horizon.toString()));
+            await pool.setPriceStatisticsLookbackStepInRound(priceStatisticsLookbackStepInRound);
             await pool.setPriceStatisticsLookbackInRound(priceStatisticsLookbackInRound);
             await pool.setPriceStatisticsLookbackInSec(priceStatisticsLookbackInSec);
             const expectedCoverageParameters = await pool.getCoverageParameters();
