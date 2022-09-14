@@ -26,7 +26,8 @@ interface IPoolEvents {
     * @param tokenAmountIn The amount of the swapped tokenIn
     * @param tokenAmountOut The amount of the swapped tokenOut
     * @param spread The spread
-    * @param taxBaseIn The amount of tokenIn swapped when in shortage of tokenOut
+    * @param taxBaseIn Corresponds to the amountOut of tokens when going from shortage to shortage of tokenOut & selling a fixed amount of tokenOut.
+    * Otherwise, corresponds to the amount of tokenIn sold when tokenOut is in shortage. 
     * @param priceIn The latest price of tokenIn given by the oracle
     * @param priceOut The latest price of tokenOut given by the oracle
     */

@@ -55,6 +55,7 @@ interface IFactory {
     
     /**
     * @notice Returns if an address corresponds to a pool created by the factory
+    * @param b The pool's address
     */
     function isPool(address b) external view returns (bool);
     
@@ -66,6 +67,7 @@ interface IFactory {
     /**
     * @notice Allows an owner to begin transferring ownership to a new address,
     * pending.
+    * @param _to The new pending owner's address
     */
     function transferOwnership(address _to) external;
 
@@ -76,6 +78,7 @@ interface IFactory {
    
     /**
     * @notice Sends the exit fees accumulated to swaap labs
+    * @param erc20 The token's address
     */
     function collect(address erc20) external;
 
@@ -100,41 +103,56 @@ interface IFactory {
 
     /**
     * @notice Revoke factory control over a pool's parameters
+    * @param pool The pool's address
     */
     function revokePoolFactoryControl(address pool) external;
     
     /**
     * @notice Sets a pool's swap fee
+    * @param pool The pool's address
+    * @param swapFee The new pool's swapFee
     */
     function setPoolSwapFee(address pool, uint256 swapFee) external;
     
     /**
     * @notice Sets a pool's dynamic coverage fees Z
+    * @param pool The pool's address
+    * @param dynamicCoverageFeesZ The new dynamic coverage fees' Z parameter
     */
     function setPoolDynamicCoverageFeesZ(address pool, uint64 dynamicCoverageFeesZ) external;
 
     /**
     * @notice Sets a pool's dynamic coverage fees horizon
+    * @param pool The pool's address
+    * @param dynamicCoverageFeesHorizon The new dynamic coverage fees' horizon parameter
     */
     function setPoolDynamicCoverageFeesHorizon(address pool, uint256 dynamicCoverageFeesHorizon) external;
 
     /**
     * @notice Sets a pool's price statistics lookback in round
-    */    
+    * @param pool The pool's address
+    * @param priceStatisticsLookbackInRound The new price statistics maximum round lookback
+    */ 
     function setPoolPriceStatisticsLookbackInRound(address pool, uint8 priceStatisticsLookbackInRound) external;
 
     /**
     * @notice Sets a pool's price statistics lookback in seconds
-    */    
+    * @param pool The pool's address
+    * @param priceStatisticsLookbackInSec The new price statistics maximum lookback in seconds
+    */ 
     function setPoolPriceStatisticsLookbackInSec(address pool, uint64 priceStatisticsLookbackInSec) external;
 
     /**
     * @notice Sets a pool's statistics lookback step in round
+    * @param pool The pool's address
+    * @param priceStatisticsLookbackStepInRound The new price statistics lookback's step
     */
     function setPoolPriceStatisticsLookbackStepInRound(address pool, uint8 priceStatisticsLookbackStepInRound) external;
 
     /**
     * @notice Sets a pool's maximum price unpeg ratio
+    * @param pool The pool's address
+    * @param maxPriceUnpegRatio The new maximum allowed price unpeg ratio
     */
     function setPoolMaxPriceUnpegRatio(address pool, uint256 maxPriceUnpegRatio) external;
 
